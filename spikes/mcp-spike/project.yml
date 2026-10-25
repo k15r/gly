@@ -1,0 +1,81 @@
+# Spike 3 (foundation-spikes): MCP process model, option Y. Throwaway code.
+name: WorkDashMCPSpike
+options:
+  bundleIdPrefix: dev.k15r.workdash
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: DB33H6YGK7
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    ENABLE_HARDENED_RUNTIME: YES
+packages:
+  MCP:
+    url: https://github.com/modelcontextprotocol/swift-sdk.git
+    from: 0.9.0
+  GRDB:
+    url: https://github.com/groue/GRDB.swift.git
+    from: 7.9.0
+  StoreSpike:
+    path: ../store-spike
+targets:
+  WorkDashSpike:
+    type: application
+    platform: macOS
+    sources: [App, Shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.spike
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: WorkDash Spike
+    entitlements:
+      path: App/App.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
+    dependencies:
+      - target: WorkDashAgent
+        embed: true
+        copy: {destination: executables}
+      - target: wd-mcp
+        embed: true
+        copy: {destination: executables}
+    postCompileScripts:
+      - name: Copy launch agent plist
+        script: |
+          mkdir -p "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents"
+          cp "${SRCROOT}/LaunchAgents/dev.k15r.workdash.agent.plist" "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents/"
+        inputFiles: [$(SRCROOT)/LaunchAgents/dev.k15r.workdash.agent.plist]
+        outputFiles: [$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchAgents/dev.k15r.workdash.agent.plist]
+  WorkDashAgent:
+    type: tool
+    platform: macOS
+    sources: [Agent, Shared]
+    dependencies:
+      - package: GRDB
+      - package: StoreSpike
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.agent
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES
+    entitlements:
+      path: Agent/Agent.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
+  wd-mcp:
+    type: tool
+    platform: macOS
+    sources: [Shim, Shared]
+    dependencies:
+      - package: MCP
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.mcp
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES
