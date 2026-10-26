@@ -159,6 +159,16 @@ The app's Settings gets a "Planning" tab next to "Agents".
 - **Effort:** a chip on `TaskRow`, a segmented control or menu on the task page, and S/M/L in the task context menu.
 - **Recomputation:** planning updates from the existing observations (tasks, calendar changes, the annotation and rule query) and the `Clock` tick.
 
+### Q9a: Settings and tag picker (added during manual testing)
+
+- **Calendars move to Settings:** the calendar list becomes a third Settings tab next to Agents and Planning. The sidebar loses its "Calendars" entry.
+- **Tag picker:** `TagField` keeps its chips but replaces the text field with an "Add tag" `Menu`.
+  - The menu tree is built from all live tag names (`TasksModel.allTagNames`).
+  - A group is a submenu. If the group is a tag itself, its first entry selects it.
+  - Each group ends with "New tag in <group>/…", and the top level offers "New tag…". Both open an inline field with the prefix and validate with `TagName`.
+  - Tags already on the item are disabled.
+  - The typed autocomplete requirement is removed in favor of this picker.
+
 ### Q10: MCP
 
 - **`get_schedule`** adds per appointment `counts_as` (`blocks`, `maybe`, `free`) and `reason`, plus `free_minutes`. For today it adds:

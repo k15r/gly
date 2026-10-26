@@ -36,6 +36,13 @@ Neutral test data only (no real names).
 - [x] E3 Set efforts on a few tasks due this week → the states match your own judgement.
 - [x] E4 Ask Claude Code to create a task "Prepare offsite" due in 3 days with effort M and then read today's schedule → the answer includes free time and the task in today / coming up with needed-today or start-by.
 
+## F. Settings and tag picker (tasks 5.5, 5.6)
+
+- [ ] F1 Settings (⌘,) → Calendars lists the calendars by account; hiding one updates the day view at once. The sidebar has no "Calendars" entry anymore.
+- [ ] F2 On a task page: "Add tag" → project ▸ atlas adds `project/atlas`; tags already on the task are greyed out.
+- [ ] F3 "Add tag" → project ▸ "New tag in project/…" → type `gamma` → Return adds `project/gamma`; "New tag…" at the top accepts a full path; `a//b` shows the empty-segment error.
+- [ ] F4 The same picker works on a page.
+
 ## Results
 
 | Date | Checked by | Result | Notes |

@@ -56,6 +56,11 @@ final class TasksModel {
         try? store?.read { try TaskQueries.task($0, id: id) }
     }
 
+    /// All live tag names (the tag picker's tree).
+    func allTagNames() -> [String] {
+        (try? store?.read { try TagQueries.list($0, today: LocalDay(date: Date()).description).map(\.name) }) ?? []
+    }
+
     func autocomplete(_ prefix: String) -> [String] {
         (try? store?.read { try TaskQueries.autocompleteTags($0, prefix) }) ?? []
     }

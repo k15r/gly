@@ -62,8 +62,9 @@ struct WorkDashApp: App {
             TabView {
                 AgentsSettingsView().tabItem { Label("Agents", systemImage: "cpu") }
                 PlanningSettingsView().tabItem { Label("Planning", systemImage: "calendar.badge.clock") }
+                CalendarListView().frame(width: 560, height: 560).tabItem { Label("Calendars", systemImage: "calendar.badge.checkmark") }
             }
-            .environment(app).environment(tasks).environment(planning)
+            .environment(app).environment(tasks).environment(planning).environment(calendars)
         }
     }
 
@@ -140,7 +141,6 @@ struct ContentView: View {
                     Label("Day", systemImage: "calendar").tag(Navigation.Destination.day)
                     Label("Tasks", systemImage: "checklist").tag(Navigation.Destination.tasks)
                     Label("Pages", systemImage: "doc.text").tag(Navigation.Destination.pages)
-                    Label("Calendars", systemImage: "calendar.badge.checkmark").tag(Navigation.Destination.calendars)
                     Section("Tags") { TagTreeView() }
                 }
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240)
@@ -149,7 +149,6 @@ struct ContentView: View {
                 case .day: DayContainer()
                 case .tasks: TaskListContainer()
                 case .pages: PagesListView()
-                case .calendars: CalendarListView()
                 case .page(let id): PageView(id: id)
                 case .task(let id): TaskPageView(id: id)
                 case .tag(let name): TagPageView(name: name)

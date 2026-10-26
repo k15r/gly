@@ -314,67 +314,99 @@ struct TaskEditor: View {
     }
 }
 
-/// Tag entry with chips and autocomplete (specs/tags "Assign and remove tags", "Tag autocomplete").
-/// One form row: label "Tags"; chips wrap, the input field sits below them at full width.
+/// Tag entry: chips plus an "Add tag" menu that mirrors the tag hierarchy (specs/tags "Tag picker").
+/// `input` holds a typed-but-unconfirmed new tag name (committed on save by the editors).
 struct TagField: View {
     @Environment(TasksModel.self) private var tasks
     @Binding var tags: [String]
     @Binding var input: String
+    @State private var newTagPrefix: String?
     @State private var problem: String?
+
+    /// A node of the picker tree built from all existing tag names.
+    struct Node: Identifiable {
+        var id: String { path }
+        let segment: String
+        let path: String
+        var isTag: Bool
+        var children: [Node]
+    }
+
+    static func tree(_ names: [String]) -> [Node] {
+        func build(_ prefix: String, _ paths: [[String]]) -> [Node] {
+            let groups = Dictionary(grouping: paths.filter { !$0.isEmpty }, by: { $0[0] })
+            return groups.keys.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }.map { segment in
+                let path = prefix.isEmpty ? segment : prefix + "/" + segment
+                let rest = groups[segment]!.map { Array($0.dropFirst()) }
+                return Node(segment: segment, path: path, isTag: rest.contains { $0.isEmpty }, children: build(path, rest))
+            }
+        }
+        return build("", names.map { $0.split(separator: "/").map(String.init) })
+    }
 
     var body: some View {
         LabeledContent("Tags") {
             VStack(alignment: .leading, spacing: 6) {
-                if !tags.isEmpty {
-                    FlowLayout(spacing: 6) {
-                        ForEach(tags, id: \.self) { tag in
-                            HStack(spacing: 2) {
-                                TagChip(name: tag, opensTagPage: false)
-                                Button { tags.removeAll { $0 == tag } } label: { Image(systemName: "xmark").font(.caption2) }
-                                    .buttonStyle(.plain).help("Remove tag")
-                            }
+                FlowLayout(spacing: 6) {
+                    ForEach(tags, id: \.self) { tag in
+                        HStack(spacing: 2) {
+                            TagChip(name: tag, opensTagPage: false)
+                            Button { tags.removeAll { $0 == tag } } label: { Image(systemName: "xmark").font(.caption2) }
+                                .buttonStyle(.plain).help("Remove tag")
                         }
                     }
+                    Menu {
+                        ForEach(Self.tree(tasks.allTagNames())) { node in nodeMenu(node) }
+                        Divider()
+                        Button("New tag…") { newTagPrefix = "" }
+                    } label: { Label("Add tag", systemImage: "plus") }
+                    .menuStyle(.borderlessButton).fixedSize()
                 }
-                TextField("Add tag", text: $input, prompt: Text("Add tag, e.g. person/alex"))
-                    .labelsHidden()
-                    .onSubmit(add)
+                if let prefix = newTagPrefix {
+                    HStack {
+                        Text(prefix.isEmpty ? "New tag" : "New tag in \(prefix)/").foregroundStyle(.secondary)
+                        TextField("name", text: $input).frame(minWidth: 160).onSubmit { commit(prefix) }
+                        Button("Add") { commit(prefix) }.disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+                        Button("Cancel") { newTagPrefix = nil; input = ""; problem = nil }
+                    }
                     .onChange(of: input) { problem = nil }
-                if let problem { Text(problem).font(.caption).foregroundStyle(.red) }
-                let suggestions = input.isEmpty ? [] : tasks.autocomplete(input).filter { s in !tags.contains { TagName.key(for: $0) == TagName.key(for: s) } }
-                if !suggestions.isEmpty {
-                    FlowLayout(spacing: 8) {
-                        ForEach(suggestions.prefix(6), id: \.self) { s in
-                            Button(s) {
-                                // A segment completion (e.g. "project" while "project/atlas" exists) continues typing;
-                                // a full tag is added directly.
-                                if suggestions.contains(where: { $0.hasPrefix(s + "/") }) {
-                                    input = s + "/"
-                                } else {
-                                    input = s
-                                    add()
-                                }
-                            }
-                            .buttonStyle(.link).font(.caption)
-                        }
-                    }
                 }
+                if let problem { Text(problem).font(.caption).foregroundStyle(.red) }
             }
         }
     }
 
-    private func add() {
+    /// A submenu for a group (with "use this tag" if it is one, its children and "New tag in …"), a button for a leaf.
+    private func nodeMenu(_ node: Node) -> AnyView {
+        let taken = tags.contains { TagName.key(for: $0) == TagName.key(for: node.path) }
+        if node.children.isEmpty {
+            return AnyView(Button(node.segment) { add(node.path) }.disabled(taken))
+        }
+        return AnyView(Menu(node.segment) {
+            if node.isTag { Button("\(node.path)") { add(node.path) }.disabled(taken); Divider() }
+            ForEach(node.children) { child in nodeMenu(child) }
+            Divider()
+            Button("New tag in \(node.path)/…") { newTagPrefix = node.path }
+        })
+    }
+
+    private func add(_ name: String) {
+        guard !tags.contains(where: { TagName.key(for: $0) == TagName.key(for: name) }) else { return }
+        tags.append(name)
+    }
+
+    private func commit(_ prefix: String) {
+        let raw = prefix.isEmpty ? input : prefix + "/" + input
         do {
-            let name = try TagName(input)
-            if !tags.contains(where: { TagName.key(for: $0) == name.key }) { tags.append(name.display) }
-            input = ""
+            let name = try TagName(raw)
+            add(name.display)
+            input = ""; newTagPrefix = nil
         } catch {
             problem = (error as? TagName.Invalid)?.description ?? "\(error)"
         }
     }
 }
 
-/// Minimal wrapping layout for chips: places subviews left to right and wraps to new rows.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 

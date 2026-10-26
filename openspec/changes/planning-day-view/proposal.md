@@ -26,6 +26,7 @@ The day view shows only what's due today. That's too late for planning: a task d
 - **Appointment identity (foundation for annotations):** an override is stored as a minimal annotation, with the appointment key and a snapshot (title, start, end, calendar).
   - The key and the two-stage matching follow foundation spike D4: exact key, then fuzzy matching on the snapshot, key migration on every calendar change, and the states `active`, `cancelled` and `gone`.
   - Series overrides follow series splits.
+- **Small UI changes from testing:** the calendar list moves into Settings, and tags are added with a hierarchical "Add tag" menu (project ▸ atlas, plus "New tag in project/…") instead of a text field.
 - **MCP:**
   - `get_schedule` also returns the free time, the Today list (reason, work needed today, can't fit) and Coming up (start by).
   - The task tools read and write `effort`.
@@ -45,6 +46,7 @@ Not in this change: appointment notes, prep view, series tag rules and appointme
 - `agent-access`: `get_schedule` includes free time, Today and Coming up, and the task tools carry `effort`.
 - `day-view`: on today, the task section becomes the Today list (overdue, due today, needs work today).
 - `calendar-sources`: the per-account refresh indicator moves into the refresh button's tooltip, which makes room for the capacity header.
+- `tags`: a hierarchical tag picker replaces the typed autocomplete.
 
 ## Impact
 

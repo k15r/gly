@@ -6,7 +6,7 @@ import WorkDashCore
 @Observable
 final class Navigation {
     enum Destination: Hashable {
-        case day, tasks, pages, calendars
+        case day, tasks, pages
         case page(String)       // page id
         case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
