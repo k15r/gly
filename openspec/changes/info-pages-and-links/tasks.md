@@ -42,4 +42,5 @@
 
 - Run `/opsx:verify info-pages-and-links`, then archive after the manual checks pass.
 - Full-featured markdown editor (later): list editing feels odd today (no list continuation on Return, no indent and outdent with Tab), noted in manual check A1.
+- Feature request (later): convert a checklist item into a task. The line would become a link to the new task, and the task would link back to its page.
 - Later changes: link types, properties/templates, appointment notes and links, trash bin, iPhone editor, Obsidian import.
