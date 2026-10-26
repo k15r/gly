@@ -116,14 +116,19 @@ struct PagesListView: View {
                             .frame(width: 30, height: 30)
                             .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
                         VStack(alignment: .leading, spacing: 3) {
-                            // Title stands out; the duplicate qualifier stays quiet next to it.
+                            // Title stands out. A qualifier that is one of the tags isn't repeated: its chip is emphasized
+                            // instead; only a date qualifier ("created …", identical tags) is shown next to the title.
+                            let qualifier = names[page.id]?.qualifier
+                            let qualifierIsTag = qualifier.map { page.tags.contains($0) } ?? false
                             (Text(page.title).font(.headline)
-                             + Text(names[page.id]?.qualifier.map { "  · \($0)" } ?? "").font(.subheadline).foregroundColor(.secondary))
+                             + Text(qualifierIsTag ? "" : qualifier.map { "  · \($0)" } ?? "").font(.subheadline).foregroundColor(.secondary))
                                 .lineLimit(1)
                             let excerpt = TreeLeaf.excerpt(of: page.body)
                             if !excerpt.isEmpty { Text(excerpt).font(.callout).foregroundStyle(.secondary).lineLimit(1) }
                             if !page.tags.isEmpty {
-                                HStack(spacing: 4) { ForEach(page.tags, id: \.self) { TagChip(name: $0) } }.padding(.top, 1)
+                                HStack(spacing: 4) {
+                                    ForEach(page.tags, id: \.self) { TagChip(name: $0, emphasized: qualifierIsTag && $0 == qualifier) }
+                                }.padding(.top, 1)
                             }
                         }
                         Spacer()

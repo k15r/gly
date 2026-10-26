@@ -174,9 +174,11 @@ struct TagChip: View {
     let name: String
     /// Clicking opens the tag page (specs/tag-pages "From a chip"); off in editors.
     var opensTagPage = true
+    /// The tag that tells same-titled items apart (shown semibold instead of repeating it after the title).
+    var emphasized = false
     var body: some View {
         let tint = Self.tint(for: name)
-        Text(name).font(.caption).padding(.horizontal, 5).padding(.vertical, 1)
+        Text(name).font(.caption).fontWeight(emphasized ? .semibold : .regular).padding(.horizontal, 5).padding(.vertical, 1)
             .foregroundStyle(tint)
             .background(tint.opacity(0.15)).clipShape(Capsule())
             .onTapGesture { if opensTagPage { nav.go(.tag(name)) } }
