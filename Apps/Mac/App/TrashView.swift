@@ -51,8 +51,9 @@ struct TrashView: View {
 
     var body: some View {
         HSplitView {
-            list.frame(minWidth: 280, idealWidth: 340)
-            preview.frame(minWidth: 320, maxWidth: .infinity)
+            // Together below the main pane's minimum (600), or the split pushes the sidebar out of the window.
+            list.frame(minWidth: 240, idealWidth: 320)
+            preview.frame(minWidth: 300, maxWidth: .infinity)
         }
         .navigationTitle("Trash")
         .task(id: TrashTaskKey(store: app.store.map(ObjectIdentifier.init), showOlder: showOlder)) {
