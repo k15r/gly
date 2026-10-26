@@ -144,7 +144,8 @@ struct ContentView: View {
                     SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
                     Section("Tags") { TagTreeView() }
                 }
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
+                // max sidebar + min main pane = the window's minimum width (880), so the sidebar never has to slide away.
+                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 280)
             } detail: {
                 Group {
                     switch nav.current {
