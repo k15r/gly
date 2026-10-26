@@ -76,6 +76,19 @@ public enum LinkParser {
         return webLink.stringByReplacingMatches(in: once, range: NSRange(location: 0, length: (once as NSString).length), withTemplate: "$1")
     }
 
+    /// The URL a missing `[[typed]]` link opens. `/` is encoded too, so tag paths (`person/alex/Goals`) survive as one piece.
+    public static func missingURL(_ typed: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed; allowed.remove("/")
+        return "\(scheme)://missing/" + (typed.addingPercentEncoding(withAllowedCharacters: allowed) ?? typed)
+    }
+
+    /// The typed text of a missing-link URL (the whole path, not just its last segment).
+    public static func missingText(_ url: URL) -> String? {
+        guard url.scheme == scheme, url.host == "missing" else { return nil }
+        let text = String(url.path(percentEncoded: false).dropFirst())
+        return text.isEmpty ? nil : text
+    }
+
     /// Canonical markdown for a link.
     public static func canonical(label: String, item id: String) -> String { "[\(escapeLabel(label))](\(scheme)://item/\(id))" }
     public static func canonical(label: String, tag id: String) -> String { "[\(escapeLabel(label))](\(scheme)://tag/\(id))" }

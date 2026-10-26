@@ -82,8 +82,7 @@ public enum MarkdownBlocks {
         let ns = NSMutableString(string: text)
         for link in LinkParser.links(in: text).reversed() {
             if case .missing(let title) = link.target {
-                let encoded = title.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? title
-                ns.replaceCharacters(in: link.range, with: "[\(title)](workdash://missing/\(encoded))")
+                ns.replaceCharacters(in: link.range, with: "[\(title)](\(LinkParser.missingURL(title)))")
             }
         }
         var attributed = (try? AttributedString(markdown: ns as String, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
@@ -177,8 +176,7 @@ public struct MarkdownReadView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // A missing link with candidates asks which one is meant before anything is created.
         .environment(\.openURL, OpenURLAction { url in
-            if url.scheme == LinkParser.scheme, url.host == "missing", onChange != nil {
-                let typed = url.lastPathComponent.removingPercentEncoding ?? url.lastPathComponent
+            if let typed = LinkParser.missingText(url), onChange != nil {
                 let options = candidates(typed)
                 if !options.isEmpty { choosing = (typed, options, url); return .handled }
             }

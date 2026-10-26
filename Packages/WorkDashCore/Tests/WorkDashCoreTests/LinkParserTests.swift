@@ -59,4 +59,10 @@ final class LinkParserTests: XCTestCase {
         XCTAssertEqual(LinkParser.canonical(label: "A [b]", item: page), "[A (b)](workdash://item/\(page))")
         XCTAssertEqual(LinkParser.links(in: LinkParser.canonical(label: "x", tag: tag)).first?.target, .tag(tag))
     }
+
+    func testMissingURLKeepsTagPathWhole() throws {
+        let url = try XCTUnwrap(URL(string: LinkParser.missingURL("person/alex/blargh/Dings & more")))
+        XCTAssertEqual(LinkParser.missingText(url), "person/alex/blargh/Dings & more")
+        XCTAssertNil(LinkParser.missingText(URL(string: "workdash://item/x")!))
+    }
 }

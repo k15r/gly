@@ -150,7 +150,7 @@ final class WikiModel {
             guard let (ref, deleted) = try? store?.read({ try LinkQueries.reference($0, id: id, isTag: true) }), !deleted else { return nil }
             return .tag(ref.title)
         case "missing":
-            return .missing(id.removingPercentEncoding ?? id)
+            return LinkParser.missingText(url).map { .missing($0) }
         default:
             return nil
         }

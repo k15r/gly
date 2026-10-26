@@ -1,5 +1,6 @@
 #if canImport(AppKit)
 import AppKit
+import WorkDashCore
 
 public extension NSAttributedString.Key {
     /// URL string of a link (WorkDash or web); used for ⌘-click.
@@ -113,7 +114,7 @@ public enum MarkdownAttributes {
             case .missingLink(let title):
                 text.addAttribute(.foregroundColor, value: NSColor.systemRed, range: r)
                 text.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue | NSUnderlineStyle.patternDot.rawValue, range: r)
-                text.addAttribute(.wdLink, value: "workdash://missing/" + (title.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? title), range: r)
+                text.addAttribute(.wdLink, value: LinkParser.missingURL(title), range: r)
                 text.addAttribute(.toolTip, value: "Missing page – ⌘-click to create “\(title)”", range: r)
             case .webLink(let url):
                 // Markdown web links get a globe after their "["; bare URLs show the address itself.
