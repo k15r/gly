@@ -7,7 +7,7 @@ Shows what was deleted (pages and tasks, by the user or by agents) and brings it
 ## ADDED Requirements
 
 ### Requirement: Trash contents
-The sidebar SHALL offer a Trash that lists deleted pages and tasks, most recently deleted first. Each entry SHALL show the kind (icon), title, tags, the start of the text, when it was deleted and who deleted it (the user or the agent by name). Selecting an entry SHALL show its title, tags and text read-only.
+The sidebar SHALL offer a Trash, with the number of items deleted in the last 30 days, that lists deleted pages and tasks, most recently deleted first. Each entry SHALL show the kind (icon), title, tags, the start of the text, when it was deleted and who deleted it (the user or the agent by name). Selecting an entry SHALL show its title, tags and text read-only.
 
 #### Scenario: Agent deletes a page
 - **WHEN** Claude Code deletes the page "Goals" tagged `person/bob`

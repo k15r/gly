@@ -59,11 +59,15 @@ The system SHALL support completing (`done`), reopening (`open`), snoozing until
 - **THEN** its status is `open` again
 
 ### Requirement: Delete a task
-The system SHALL let the user delete a task. A deleted task SHALL disappear from all views but SHALL remain recoverable through undo.
+The system SHALL let the user delete a task. A deleted task SHALL disappear from all views but SHALL remain recoverable through undo and from the Trash.
 
 #### Scenario: Delete and undo
 - **WHEN** the user deletes a task and then chooses Undo
 - **THEN** the task returns with all its fields and tags
+
+#### Scenario: Delete and restore later
+- **WHEN** the user deletes a task, makes other changes, and later restores the task from the Trash
+- **THEN** the task returns with all its fields and tags, and the other changes stay
 
 ### Requirement: Undo and redo
 The system SHALL let the user undo the most recent task changes, one change at a time, and redo undone changes, using the standard Undo/Redo commands. A change spanning several fields made in one action SHALL be undone as one step.

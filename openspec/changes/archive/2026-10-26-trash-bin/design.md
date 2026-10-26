@@ -48,8 +48,8 @@ Motivation and scope are in `proposal.md`, behavior in this change's specs.
 
 ### T3: Writer names
 
-`WriterName.display(writer, me:)`:
-- the current user writer is "you"
+`WriterName.display(writer)`:
+- any user writer (`user@…`, on any device) is "you"
 - `agent:claude-code@…` is "Claude Code"
 - other `agent:<client>@…` show the client name as sent by the MCP client, with `-` turned into spaces and capitalized (e.g. Joule)
 - the system writer is "WorkDash"
@@ -61,7 +61,7 @@ This lives in Core so the MCP tools can use it too.
 - **Navigation:** `Navigation.Destination.trash` and a sidebar row "Trash" below Pages, with the 30-day count as a secondary number.
 - **Layout:** a list on the left and a read-only preview on the right. The preview uses `WDMarkdownReadView` without `onChange`, so it is read-only, and its links can be followed.
 - **Rows:** icon, title, tags, the excerpt line, and "deleted <relative> by <name>".
-- **Restore:** a Restore button in the preview and a context menu on rows. After a restore, the undo overlay shows "Restore …", and the row leaves the list (observation).
+- **Restore:** a Restore button in the preview and a context menu on rows. After a restore, the row leaves the list (observation); the Edit menu offers "Undo Restore …", and ⌘Z shows "Restore …" in the undo overlay. The list and preview sit in a plain `HStack` (list 300 pt wide): a nested `HSplitView` reported its own width to the window's split view, which then slid the sidebar out of the window.
 - **"Show older (n)"** at the end of the list toggles the full list.
 
 ### T5: One link menu for missing and deleted targets
