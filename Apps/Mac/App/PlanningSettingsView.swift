@@ -31,10 +31,11 @@ struct PlanningSettingsView: View {
                         DurationRow(effort: e,
                                     minutes: Binding(get: { planning.sizes[e] }, set: { planning.setEffortMinutes(max(5, $0), for: e) }),
                                     dayLength: planning.hours.minutesPerDay,
+                                    defaultMinutes: EffortSizes.defaults(for: planning.hours)[e],
                                     reset: { planning.setEffortMinutes(nil, for: e) })
                     }
                 }
-                Text("Working time a task of each size roughly needs. 1 d = one working day (\(formatMinutes(Double(planning.hours.minutesPerDay)))). L and XL follow the working day until you change them.")
+                Text("Working time a task of each size roughly needs. 1 day = one working day (\(formatMinutes(Double(planning.hours.minutesPerDay)))). Unchanged, L is one and XL three working days, so they follow your working hours.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Work on") {
@@ -52,6 +53,7 @@ struct PlanningSettingsView: View {
         let effort: Effort
         @Binding var minutes: Int
         let dayLength: Int
+        let defaultMinutes: Int
         let reset: () -> Void
 
         var body: some View {
@@ -62,7 +64,13 @@ struct PlanningSettingsView: View {
                 number(d) { minutes = $0 * day + h * 60 + m }
                 number(h) { minutes = d * day + min($0, day / 60) * 60 + m }
                 number(m) { minutes = d * day + h * 60 + min($0, 59) }
-                Button("Default", action: reset).buttonStyle(.link).fixedSize()
+                if minutes != defaultMinutes {
+                    Button("Reset", action: reset).buttonStyle(.link).fixedSize()
+                        .help("Back to the default (\(formatEffort(Double(defaultMinutes), dayLength: dayLength)))"
+                              + (effort >= .l ? ", which follows the working day" : ""))
+                } else {
+                    Color.clear.frame(width: 1, height: 1)
+                }
             }
         }
 
