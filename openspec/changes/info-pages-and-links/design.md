@@ -153,6 +153,7 @@ This is acceptable for a single-user tool. Both versions stay in the change log.
   - Data comes from one query over `item_tags` for pages (`TagQueries.tagTree` returns pages per node), so no new storage is needed.
   - **Drag and drop:** dropping a task or page onto a tag node sends one `updateTask(tags:)` or `updatePage(tags:)`, so it's one undo step.
     - **Every row of a group is a drop target** (the tag row and its items). The row's content ignores the pointer (`allowsHitTesting(false)`), so its text can't swallow a drop, and the row itself takes clicks, drags and drops. A transparent layer on top doesn't work: in the sidebar list on macOS it receives neither drags nor drops (tried and reverted).
+    - **Spring-loading:** a collapsed group expands after the drag has rested on it for 600 ms (added after manual check F).
     - **A shared `TreeDropState`** highlights the hovered group: a tinted, rounded background with an accent bar on the tag row.
     - Changed after manual check B9 (drops only worked on part of the tag row, not on items). Plain = replace the source tag (move), ⌥ = add (alias), "Untagged" = remove the source tag.
   - **Alternative considered and rejected:** a parent/child page tree. It would be a second hierarchy next to tags, and it contradicts the "no folders" principle of the requirements.

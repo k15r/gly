@@ -45,6 +45,7 @@ Use neutral test data only (no real names).
 
 - [ ] F1 Drag a page over the text of a tag row → the tag and its items are highlighted; dropping moves the page there.
 - [ ] F2 Drag a page onto a task or page listed under another tag → that tag group is highlighted; dropping moves the page into that tag.
+- [ ] F4 Hold a dragged item over a collapsed tag for about half a second → it expands; drop onto one of its items or child tags.
 - [ ] F3 Drag with ⌥ held → the item ends up in both tags; dropping onto Untagged (or an untagged item) removes the source tag; each drop is one ⌘Z.
 
 ## D. End to end with an agent (task 6.1)

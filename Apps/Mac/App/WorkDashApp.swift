@@ -211,6 +211,19 @@ final class TreeDropState {
 }
 
 extension View {
+    /// Spring-loading: expands a collapsed group when a drag rests on it for a moment.
+    func springLoaded(_ group: TreeDropState.Target, state: TreeDropState, expanded: Binding<Bool>) -> some View {
+        onChange(of: state.target == group) { _, over in
+            guard over, !expanded.wrappedValue else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(600))
+                if state.target == group { withAnimation { expanded.wrappedValue = true } }
+            }
+        }
+    }
+}
+
+extension View {
     /// Makes the whole row (text included) a click, drag and drop target for a tag group (design P9).
     /// The row's content ignores the pointer (`allowsHitTesting(false)`), so its text can't swallow drops;
     /// the row itself, with a rectangular content shape, takes clicks, drags and drops.
@@ -272,6 +285,7 @@ struct TagTreeView: View {
                         ItemMove.perform(items, to: nil, app: app, wiki: wiki, tasks: tasks)
                     }
             }
+            .springLoaded(.untagged, state: drop, expanded: $untaggedExpanded)
         }
     }
 }
@@ -294,6 +308,7 @@ struct TagTreeNode: View {
                 ForEach(node.children) { TagTreeNode(node: $0, drop: drop) }
                 ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path, drop: drop) }
             } label: { row }
+            .springLoaded(.tag(node.path), state: drop, expanded: $expanded)
         }
     }
 

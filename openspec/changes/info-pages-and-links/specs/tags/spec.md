@@ -18,11 +18,15 @@ The user SHALL be able to drag a task or page in the tag list onto another tag n
 - **THEN** the task is tagged `person/sam` instead of `person/alex`
 
 ### Requirement: Drop targets in the tree
-Every row of a tag group (the tag itself and the items listed under it) SHALL accept drops for that tag, over its whole width including the text. While dragging, the tag group under the pointer SHALL be highlighted.
+Every row of a tag group (the tag itself and the items listed under it) SHALL accept drops for that tag, over its whole width including the text. While dragging, the tag group under the pointer SHALL be highlighted, and a collapsed tag SHALL expand when the drag rests on it for a moment.
 
 #### Scenario: Drop onto an item of a group
 - **WHEN** the user drags a page over a task listed under `project/beta` and drops it there
 - **THEN** `project/beta` and its items are highlighted while hovering, and the page moves to `project/beta`
+
+#### Scenario: Collapsed tag opens while dragging
+- **WHEN** the user drags a page and holds it over the collapsed tag `project` for about half a second
+- **THEN** `project` expands, so the page can be dropped onto one of its child tags or items
 
 #### Scenario: Drop onto the tag text
 - **WHEN** the user drops an item onto the name of a tag in the tree
