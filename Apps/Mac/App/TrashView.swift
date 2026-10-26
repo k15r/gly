@@ -50,10 +50,12 @@ struct TrashView: View {
     @State private var selection: String?
 
     var body: some View {
-        HSplitView {
-            // Together below the main pane's minimum (600), or the split pushes the sidebar out of the window.
-            list.frame(minWidth: 240, idealWidth: 320)
-            preview.frame(minWidth: 300, maxWidth: .infinity)
+        // A plain HStack, not HSplitView: the nested AppKit split reported its own width to the window's split view,
+        // which then slid the sidebar out of the window.
+        HStack(spacing: 0) {
+            list.frame(width: 300)
+            Divider()
+            preview.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .navigationTitle("Trash")
         .task(id: TrashTaskKey(store: app.store.map(ObjectIdentifier.init), showOlder: showOlder)) {
