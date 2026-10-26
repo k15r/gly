@@ -76,6 +76,12 @@ public enum MarkdownBlocks {
         return lines.joined(separator: "\n")
     }
 
+    /// "New page “Goals” in person/alex" / "New task …" for a typed link, nil when that kind can't be created from it.
+    public static func createLabel(_ typed: String, kind: LinkRef.Kind) -> String? {
+        guard let item = LinkResolver.newItem(for: typed, kind: kind) else { return nil }
+        return "New \(kind == .task ? "task" : "page") “\(item.title)”" + (item.tags.first.map { " in \($0)" } ?? "")
+    }
+
     /// Inline markdown → AttributedString; `[[X]]` becomes a `workdash://missing/X` link; WorkDash links get their
     /// current appearance (deleted ones struck through, missing ones red).
     public static func inline(_ text: String, appearance: (ParsedLink.Target) -> LinkAppearance) -> AttributedString {
@@ -176,14 +182,14 @@ public struct MarkdownReadView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // A missing link with candidates asks which one is meant before anything is created.
         .environment(\.openURL, OpenURLAction { url in
-            if let typed = LinkParser.missingText(url), onChange != nil {
-                let options = candidates(typed)
-                if !options.isEmpty { choosing = (typed, options, url); return .handled }
+            if let typed = LinkParser.missingText(url) {
+                choosing = (typed, onChange == nil ? [] : candidates(typed), url)   // candidates need a writable text
+                return .handled
             }
             openURL(url)
             return .handled
         })
-        .confirmationDialog("Which “\(choosing?.typed ?? "")” do you mean?",
+        .confirmationDialog(choosing?.options.isEmpty == false ? "Which “\(choosing?.typed ?? "")” do you mean?" : "Create “\(choosing?.typed ?? "")”",
                             isPresented: Binding(get: { choosing != nil }, set: { if !$0 { choosing = nil } })) {
             if let c = choosing {
                 ForEach(c.options) { o in
@@ -191,7 +197,11 @@ public struct MarkdownReadView: View {
                         onChange?(MarkdownBlocks.pin(text, typed: c.typed, with: o.insert))
                     }
                 }
-                Button("Create page “\(c.typed)”") { openURL(c.url) }
+                ForEach([LinkRef.Kind.page, .task], id: \.self) { kind in
+                    if let label = MarkdownBlocks.createLabel(c.typed, kind: kind), let url = URL(string: LinkParser.missingURL(c.typed, create: kind)) {
+                        Button(label) { openURL(url) }
+                    }
+                }
             }
         }
     }

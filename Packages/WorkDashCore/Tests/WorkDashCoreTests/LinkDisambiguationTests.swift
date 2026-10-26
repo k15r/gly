@@ -109,5 +109,15 @@ extension LinkDisambiguationTests {
         XCTAssertEqual(LinkResolver.newPage(for: "Goals")?.tags, [])
         XCTAssertNil(LinkResolver.newPage(for: "task:Goals"))
         XCTAssertNil(LinkResolver.newPage(for: "person/alex/"), "no title typed yet")
+        XCTAssertEqual(LinkResolver.newItem(for: "task: person/alex/Call", kind: .task)?.title, "Call")
+        XCTAssertEqual(LinkResolver.newItem(for: "person/alex/Call", kind: .task)?.tags, ["person/alex"])
+        XCTAssertNil(LinkResolver.newItem(for: "page:Call", kind: .task))
+        XCTAssertNil(LinkResolver.newItem(for: "Call", kind: .tag))
+    }
+
+    func testNewTaskResolvesWaitingLink() throws {
+        let page = ok(.createPage(PageDraft(title: "P", body: "todo: [[person/alex/Call]]"))).id!
+        let task = ok(.createTask(TaskDraft(title: "Call", tags: ["person/alex"]))).id!
+        XCTAssertEqual(try body(page), "todo: [Call](workdash://item/\(task))")
     }
 }

@@ -64,5 +64,9 @@ final class LinkParserTests: XCTestCase {
         let url = try XCTUnwrap(URL(string: LinkParser.missingURL("person/alex/blargh/Dings & more")))
         XCTAssertEqual(LinkParser.missingText(url), "person/alex/blargh/Dings & more")
         XCTAssertNil(LinkParser.missingText(URL(string: "workdash://item/x")!))
+        XCTAssertEqual(LinkParser.missingCreateKind(url), .page)
+        let task = try XCTUnwrap(URL(string: LinkParser.missingURL("a/b", create: .task)))
+        XCTAssertEqual(LinkParser.missingText(task), "a/b")
+        XCTAssertEqual(LinkParser.missingCreateKind(task), .task)
     }
 }

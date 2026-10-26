@@ -183,14 +183,11 @@ public struct MarkdownEditor: NSViewRepresentable {
                     return true
                 }
                 if command, let url = storage.attribute(.wdLink, at: i, effectiveRange: &range) as? String, let u = URL(string: url) {
-                    // An ambiguous typed link: offer its candidates before creating a page (link-disambiguation K5).
+                    // A typed link without target: offer its candidates (if ambiguous, K5), then a new page or task.
                     if u.host == "missing", let link = LinkParser.links(in: tv.string).first(where: { NSLocationInRange(i, $0.range) }),
                        case .missing(let typed) = link.target {
-                        let options = parent.candidates(typed)
-                        if !options.isEmpty {
-                            showCandidates(options, typed: typed, linkRange: link.range, url: u, at: i)
-                            return true
-                        }
+                        showMissingMenu(parent.candidates(typed), typed: typed, linkRange: link.range, at: i)
+                        return true
                     }
                     commitNow()
                     parent.onOpenLink(u)
@@ -203,7 +200,7 @@ public struct MarkdownEditor: NSViewRepresentable {
         private var candidateActions: [CandidateAction] = []
 
         /// A menu at the link with each candidate and "Create page …".
-        private func showCandidates(_ options: [LinkSuggestion], typed: String, linkRange: NSRange, url: URL, at index: Int) {
+        private func showMissingMenu(_ options: [LinkSuggestion], typed: String, linkRange: NSRange, at index: Int) {
             guard let tv = textView else { return }
             let menu = NSMenu()
             candidateActions = options.map { o in CandidateAction { [weak self] in self?.replace(linkRange, with: o.insert) } }
@@ -214,12 +211,16 @@ public struct MarkdownEditor: NSViewRepresentable {
                 if !o.subtitle.isEmpty { item.toolTip = o.subtitle }
                 menu.addItem(item)
             }
-            menu.addItem(.separator())
-            let create = CandidateAction { [weak self] in self?.commitNow(); self?.parent.onOpenLink(url) }
-            candidateActions.append(create)
-            let item = NSMenuItem(title: "Create page “\(typed)”", action: #selector(CandidateAction.run), keyEquivalent: "")
-            item.target = create
-            menu.addItem(item)
+            if !options.isEmpty { menu.addItem(.separator()) }
+            for kind in [LinkRef.Kind.page, .task] {
+                guard let label = MarkdownBlocks.createLabel(typed, kind: kind), let url = URL(string: LinkParser.missingURL(typed, create: kind)) else { continue }
+                let create = CandidateAction { [weak self] in self?.commitNow(); self?.parent.onOpenLink(url) }
+                candidateActions.append(create)
+                let item = NSMenuItem(title: label, action: #selector(CandidateAction.run), keyEquivalent: "")
+                item.target = create
+                item.image = NSImage(systemSymbolName: kind.linkSymbol, accessibilityDescription: nil)
+                menu.addItem(item)
+            }
             let rect = tv.segmentRects(for: NSRange(location: index, length: 1)).first ?? .zero
             menu.popUp(positioning: nil, at: NSPoint(x: rect.minX, y: rect.maxY + 2), in: tv)
         }

@@ -205,6 +205,8 @@ public struct CommandHandler {
                 "effort": draft.effort?.rawValue,
             ])
             try replaceTags(of: id, with: names, batch: batch)
+            // Like a new page: `[[title]]` (or `[[tag/path/title]]`) elsewhere now points to the task (design P3).
+            try LinkResolver.resolveMissing(title: title, batch: batch)
             return CommandOK(id: id, unresolved: unresolved)
 
         case .updateTask(let id, let patch):

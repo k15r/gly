@@ -77,9 +77,17 @@ public enum LinkParser {
     }
 
     /// The URL a missing `[[typed]]` link opens. `/` is encoded too, so tag paths (`person/alex/Goals`) survive as one piece.
-    public static func missingURL(_ typed: String) -> String {
+    /// `create` asks the app to create that kind (`?create=task`); without it a page is created.
+    public static func missingURL(_ typed: String, create: LinkRef.Kind? = nil) -> String {
         var allowed = CharacterSet.urlPathAllowed; allowed.remove("/")
         return "\(scheme)://missing/" + (typed.addingPercentEncoding(withAllowedCharacters: allowed) ?? typed)
+            + (create.map { "?create=\($0.rawValue)" } ?? "")
+    }
+
+    /// What a missing-link URL asks to create (page unless `?create=task`).
+    public static func missingCreateKind(_ url: URL) -> LinkRef.Kind {
+        let value = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "create" }?.value
+        return value.flatMap(LinkRef.Kind.init(rawValue:)) ?? .page
     }
 
     /// The typed text of a missing-link URL (the whole path, not just its last segment).

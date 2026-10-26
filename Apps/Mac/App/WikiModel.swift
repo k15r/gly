@@ -136,7 +136,7 @@ final class WikiModel {
 
     /// What a link URL opens.
     enum LinkDestination: Equatable {
-        case page(String), task(String), tag(String), missing(String), web(URL)
+        case page(String), task(String), tag(String), missing(String, create: LinkRef.Kind), web(URL)
     }
 
     func destination(for url: URL) -> LinkDestination? {
@@ -150,7 +150,7 @@ final class WikiModel {
             guard let (ref, deleted) = try? store?.read({ try LinkQueries.reference($0, id: id, isTag: true) }), !deleted else { return nil }
             return .tag(ref.title)
         case "missing":
-            return LinkParser.missingText(url).map { .missing($0) }
+            return LinkParser.missingText(url).map { .missing($0, create: LinkParser.missingCreateKind(url)) }
         default:
             return nil
         }
@@ -170,11 +170,18 @@ struct LinkOpener {
         case .page(let id): nav.go(.page(id))
         case .task(let id): nav.go(.task(id))
         case .tag(let name): nav.go(.tag(name))
-        case .missing(let typed):
-            guard let page = LinkResolver.newPage(for: typed) else { NSSound.beep(); return }
-            Task { await createPage(title: page.title, tags: page.tags) }
+        case .missing(let typed, let kind):
+            guard let item = LinkResolver.newItem(for: typed, kind: kind) else { NSSound.beep(); return }
+            Task { kind == .task ? await createTask(title: item.title, tags: item.tags) : await createPage(title: item.title, tags: item.tags) }
         case .web(let u): NSWorkspace.shared.open(u)
         case nil: NSSound.beep()
+        }
+    }
+
+    /// Creates a task (every `[[title]]` elsewhere then points to it) and opens its task page.
+    func createTask(title: String, tags: [String] = []) async {
+        if case .ok(let r) = await app.send(.createTask(TaskDraft(title: title, tags: tags))), let id = r.id {
+            nav.go(.task(id))
         }
     }
 

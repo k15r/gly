@@ -28,11 +28,15 @@ public enum LinkResolver {
         return ([.page, .task, .tag], t)
     }
 
-    /// The page that "New page" creates for a typed link: `person/alex/Goals` → "Goals" tagged `person/alex`
-    /// (so the typed link resolves to it, K1); a `page:` prefix is dropped. nil for `task:`/`tag:` links.
-    public static func newPage(for typed: String) -> (title: String, tags: [String])? {
+    /// The page that "New page" creates for a typed link (see `newItem`).
+    public static func newPage(for typed: String) -> (title: String, tags: [String])? { newItem(for: typed, kind: .page) }
+
+    /// The page or task that "New page"/"New task" creates for a typed link: `person/alex/Goals` → "Goals" tagged
+    /// `person/alex` (so the typed link resolves to it, K1); a matching prefix is dropped. nil when the prefix names
+    /// another kind (`task:` for a page), for tags, or when no title is typed yet.
+    public static func newItem(for typed: String, kind: LinkRef.Kind) -> (title: String, tags: [String])? {
         let (kinds, body) = parse(typed)
-        guard kinds.contains(.page) else { return nil }
+        guard kind != .tag, kinds.contains(kind) else { return nil }
         if let slash = body.lastIndex(of: "/") {
             let path = body[..<slash].trimmingCharacters(in: .whitespaces)
             let title = body[body.index(after: slash)...].trimmingCharacters(in: .whitespaces)

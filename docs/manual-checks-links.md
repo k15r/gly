@@ -19,7 +19,7 @@ Neutral test data only (no real names). Setup: tags `person/alex` and `person/sa
 
 ## C. Typed links and candidates (task 3.3)
 
-- [ ] C1 Type `[[person/alex/Goals]]` and leave the page → it becomes a link to the alex Goals page.
+- [x] C1 Type `[[person/alex/Goals]]` and leave the page → it becomes a link to the alex Goals page.
 - [ ] C2 Type `[[task:Review notes]]` → links the task; `[[page:Review notes]]` stays missing.
 - [ ] C3 Type `[[Goals]]` → it stays a missing link. ⌘-click it in the editor → a menu with both Goals pages, then "Create page …"; choose one → the link is set; one ⌘Z brings back `[[Goals]]`.
 - [ ] C4 Same in the read view: click the missing `[[Goals]]` → a dialog with both choices; choose one → the link is set; ⌘Z (in edit mode) undoes it.
