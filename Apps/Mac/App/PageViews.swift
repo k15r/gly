@@ -110,20 +110,19 @@ struct PagesListView: View {
             } else {
                 let names = wiki.displayNames(wiki.pages.map(\.id))
                 List(wiki.pages) { page in
-                    Button { nav.go(.page(page.id)) } label: {
-                        HStack(alignment: .firstTextBaseline) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(names[page.id]?.display ?? page.title).fontWeight(.medium)
-                                if !page.tags.isEmpty {
-                                    HStack(spacing: 4) { ForEach(page.tags, id: \.self) { TagChip(name: $0) } }
-                                }
+                    // A plain row with a tap, not a Button: a Button swallows the mouse-down and the row couldn't be dragged.
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(names[page.id]?.display ?? page.title).fontWeight(.medium)
+                            if !page.tags.isEmpty {
+                                HStack(spacing: 4) { ForEach(page.tags, id: \.self) { TagChip(name: $0) } }
                             }
-                            Spacer()
-                            Text(page.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.secondary)
                         }
-                        .contentShape(Rectangle())
+                        Spacer()
+                        Text(page.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
+                    .onTapGesture { nav.go(.page(page.id)) }
                     .draggableItem(.page, id: page.id, title: page.title)
                 }
             }
