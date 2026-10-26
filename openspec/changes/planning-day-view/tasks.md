@@ -9,7 +9,7 @@
 - [x] 2.1 Extend `Appointment` with `identity` (calendar, baseID, originalStart), `availability`, `myStatus`, `isOrganizer`, fill them in `EventKitSource` and `FakeEventSource`, and add `AppointmentKey` (occurrence and series keys); verify with tests that RID suffixes are stripped, the original start comes from the RID when present, and keys are equal before and after a simulated move
 - [x] 2.2 Implement `Blocking.classify` (overrides first, then the automatic rules of design Q5) as a pure function; verify with table-driven tests covering "Declined meeting", "Tentative meeting", "Out of office", cancelled, availability free, all-day busy/free, and override precedence ("Exception in an optional series")
 - [x] 2.3 Implement `FreeTime.minutes(from:to:...)` (working window per local day, union of blocking intervals, half of maybe-only intervals); verify with tests for "Overlapping meetings", "Later today", "Change working hours", a DST day, an all-day block, and now inside a meeting
-- [ ] 2.4 Implement `TaskQueries.upcoming` (open tasks due tomorrow…today+N, snoozed only from their snooze date) and `Planning.plan` (needed today, can't fit, Today list, load, Coming up with start by); verify with tests for "Task needing work today", "Due today without estimate", "Can't fit", "Enough time later", "Overbooked day", "Start by", "Horizon", and a timing test for a 14-day horizon with 200 appointments
+- [x] 2.4 Implement `TaskQueries.upcoming` (open tasks due tomorrow…today+N, snoozed only from their snooze date) and `Planning.plan` (needed today, can't fit, Today list, load, Coming up with start by); verify with tests for "Task needing work today", "Due today without estimate", "Can't fit", "Enough time later", "Overbooked day", "Start by", "Horizon", and a timing test for a 14-day horizon with 200 appointments
 
 ## 3. Core: store and commands
 
@@ -21,7 +21,7 @@
 ## 4. Agent and MCP
 
 - [x] 4.1 Run `AnnotationMatcher` in the agent after calendar changes (debounced), at launch and at midnight, written as `system@<device>`; verify with an integration test using `FakeEventSource.change` that a moved occurrence keeps its override
-- [ ] 4.2 Extend `get_schedule` (per appointment `counts_as`/`reason`, `free_minutes`, today's `today` / `coming_up` lists with reasons, needed today, can't fit and start by) and the task tools with `effort`; verify with MCP tests for "Planning data", "Agent estimates a task", and that existing fields are unchanged
+- [x] 4.2 Extend `get_schedule` (per appointment `counts_as`/`reason`, `free_minutes`, today's `today` / `coming_up` lists with reasons, needed today, can't fit and start by) and the task tools with `effort`; verify with MCP tests for "Planning data", "Agent estimates a task", and that existing fields are unchanged
 
 ## 5. App
 
