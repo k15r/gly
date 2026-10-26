@@ -52,17 +52,19 @@ public final class WorkDashTools: @unchecked Sendable {
             case "delete_task": value = try deleteTask(args, writer: writer(client: client))
             default: throw ToolError("Unknown tool \(name).")
             }
-            return CallTool.Result(content: [.text(Self.json(value))], structuredContent: Optional.some(value))
+            return CallTool.Result(content: [Self.text(Self.json(value))], structuredContent: Optional.some(value))
         } catch let error as ToolError {
-            return CallTool.Result(content: [.text(error.message)], isError: true)
+            return CallTool.Result(content: [Self.text(error.message)], isError: true)
         } catch let failure as CommandFailure {
-            return CallTool.Result(content: [.text(failure.message)], isError: true)
+            return CallTool.Result(content: [Self.text(failure.message)], isError: true)
         } catch let invalid as TagName.Invalid {
-            return CallTool.Result(content: [.text(invalid.description)], isError: true)
+            return CallTool.Result(content: [Self.text(invalid.description)], isError: true)
         } catch {
-            return CallTool.Result(content: [.text("Internal error: \(error)")], isError: true)
+            return CallTool.Result(content: [Self.text("Internal error: \(error)")], isError: true)
         }
     }
+
+    static func text(_ s: String) -> Tool.Content { .text(text: s, annotations: nil, _meta: nil) }
 
     // MARK: - Read tools
 

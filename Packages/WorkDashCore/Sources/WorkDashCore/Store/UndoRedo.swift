@@ -85,7 +85,7 @@ extension Database {
     }
 
     /// Describes a normal change batch by its entries: create / delete / status change / edit of an item.
-    func label(ofBatch batchID: String) throws -> String {
+    public func label(ofBatch batchID: String) throws -> String {
         let entries = try Row.fetchAll(self, sql: "SELECT * FROM change_log WHERE batch = ? ORDER BY seq", arguments: [batchID])
         let itemEntries = entries.filter { ($0["table_name"] as String) == "items" }
         var itemIDs = itemEntries.map { $0["row_id"] as String }

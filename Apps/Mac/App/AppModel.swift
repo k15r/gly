@@ -33,7 +33,12 @@ final class AppModel {
     private let client = AgentClient()
     private let service = SMAppService.agent(plistName: WorkDashIDs.agentPlistName)
 
+    let settings: SharedSettings
+    /// Agent-reported state for Settings → Agents, e.g. "calendar: fullAccess".
+    private(set) var agentStatus: String?
+
     init(settings: SharedSettings = .shared()) {
+        self.settings = settings
         // Settings moved to the app group so the agent shares them (design M7); copy old values once.
         settings.migrate(from: .standard)
         let id = settings.deviceID
@@ -105,6 +110,13 @@ final class AppModel {
         try? await Task.sleep(for: .seconds(1.6))
         if undoNotice == notice { undoNotice = nil }
     }
+
+    func refreshAgentStatus() async {
+        if case .ok(let r) = await send(.agentStatus, asSystem: true) { agentStatus = r.message } else { agentStatus = nil }
+    }
+
+    /// Tells the agent to re-read the shared settings (HTTP endpoint).
+    func settingsChanged() async { await send(.reloadSettings, asSystem: true) }
 
     func openLoginItems() { SMAppService.openSystemSettingsLoginItems() }
 

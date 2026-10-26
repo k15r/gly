@@ -13,6 +13,8 @@ final class TasksModel {
     /// What the user's next undo / redo would do (Edit menu titles).
     private(set) var undoLabel: String?
     private(set) var redoLabel: String?
+    /// Recent changes made by agents (Settings → Agents).
+    private(set) var agentChanges: [AgentChange] = []
     var mode: TaskListMode = .open { didSet { observeList() } }
     var tagFilter: TagName? { didSet { observeList() } }
 
@@ -23,6 +25,7 @@ final class TasksModel {
     private var listObservation: AnyDatabaseCancellable?
     private var tagObservation: AnyDatabaseCancellable?
     private var undoObservation: AnyDatabaseCancellable?
+    private var agentObservation: AnyDatabaseCancellable?
 
     func attach(_ store: ReadOnlyStore?, writer: String) {
         guard let store, self.store !== store else { return }
@@ -33,6 +36,9 @@ final class TasksModel {
                                         },
                                         onError: { print("undo observation: \($0)") },
                                         onChange: { [weak self] in self?.undoLabel = $0.undo; self?.redoLabel = $0.redo })
+        agentObservation = store.observe(ValueObservation.tracking { try AgentActivity.recent($0) },
+                                         onError: { print("agent observation: \($0)") },
+                                         onChange: { [weak self] in self?.agentChanges = $0 })
     }
 
     private struct UndoLabels { var undo: String?; var redo: String? }
