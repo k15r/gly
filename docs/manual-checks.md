@@ -35,7 +35,7 @@ Mark each item with ✅ / ❌ and a note. Use neutral test data only (no real na
 - [x] D4 Change priority inline (the priority menu on the row) → list re-sorts immediately.
 - [x] D5 Tick a task in the day view → it disappears there and from the Open list at once.
 - [x] D6 Done / Dropped segments show completed / dropped tasks (most recently completed first).
-- [x] D7 Right-click → Snooze until Tomorrow → task leaves the Open list and today's day view; viewing tomorrow (⌘→) shows it marked "back from snooze".
+- [x] D7 Right-click → Snooze until Tomorrow → task stays in the Open list at its position, marked "until …", and leaves today's day view (it's not shown on tomorrow's view either; tomorrow it's back as a normal/overdue task).
 - [x] D8 Typing `person/` in the tag field suggests `person/alex`. Entering `project//x` shows the empty-segment error. Entering `Person/Alex` reuses the existing tag (no duplicate in the sidebar).
 - [x] D9 Sidebar → Tags shows `person (n)` with `alex`, `project` with `atlas`, with open-task counts. Clicking `project` filters the task list to everything under it; the ✕ clears the filter.
 
@@ -58,7 +58,7 @@ Mark each item with ✅ / ❌ and a note. Use neutral test data only (no real na
 | 2026-10-25 | owner | A ✅ | App shell and agent: all good |
 | 2026-10-25 | owner | B ✅ | Calendars; fixed: visibility toggles didn't update (state read from UserDefaults wasn't observed) |
 | 2026-10-25 | owner | C ✅ | Day view; fixed: ⌘N opened a new window instead of the task editor. Note: a private multi-day Exchange item isn't delivered by Apple Calendar (outside WorkDash, cause under investigation) |
-| 2026-10-26 | owner | D ✅ | Tasks and tags; fixed: ⌘N new window, unconfirmed tag lost on Save, tag field squeezed the editor, ticking now shows the check for 1.5 s before the task leaves, snoozed tasks now show on their snooze day ("back from snooze") and can be snoozed further |
+| 2026-10-26 | owner | D ✅ | Tasks and tags; fixed: ⌘N new window, unconfirmed tag lost on Save, tag field squeezed the editor, ticking now shows the check for 1.5 s before the task leaves, snooze reworked: snoozed tasks stay in the task list with an "until …" marker, are hidden from the day view until their date, and can be snoozed further |
 | 2026-10-26 | owner | E ✅ | Undo/redo; added: overlay (rewind/forward arrow + step with task name) and named Edit menu items; fixed: one editor save was up to three undo steps |
 | 2026-10-26 | owner | F ✅ | End to end: a meeting moved in Outlook showed at the new time without refresh, Exchange indicator updated, tasks survived quit and reboot. EventKit doesn't need Calendar.app running |
 | | | | |

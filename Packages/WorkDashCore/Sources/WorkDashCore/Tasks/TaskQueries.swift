@@ -5,16 +5,12 @@ public enum TaskListMode: String, CaseIterable, Codable {
     case open, done, dropped
 }
 
-/// A task in the day view, with whether it is overdue relative to the displayed day
-/// and whether it shows up because its snooze ends that day.
+/// A task in the day view, with whether it is overdue relative to the displayed day.
 public struct DayTask: Equatable, Identifiable {
     public var id: String { task.id }
     public let task: TaskItem
     public let isOverdue: Bool
-    public let isBackFromSnooze: Bool
-    public init(task: TaskItem, isOverdue: Bool, isBackFromSnooze: Bool = false) {
-        self.task = task; self.isOverdue = isOverdue; self.isBackFromSnooze = isBackFromSnooze
-    }
+    public init(task: TaskItem, isOverdue: Bool) { self.task = task; self.isOverdue = isOverdue }
 }
 
 public enum TaskQueries {
@@ -36,7 +32,8 @@ public enum TaskQueries {
         let order: String
         switch mode {
         case .open:
-            conditions.append(effectivelyOpenSQL)
+            // Snoozed tasks are regular list entries (specs/tasks "Task list"); only the day view hides them.
+            conditions.append("i.status IN ('open', 'snoozed')")
             order = openOrderSQL
         case .done:
             conditions.append("i.status = 'done'")
@@ -57,19 +54,17 @@ public enum TaskQueries {
     }
 
     /// Tasks for the day view (specs/day-view "Tasks for the day"): open tasks due on `day`,
-    /// plus overdue ones when `day` is `today`, plus tasks whose snooze ends on `day` (any due date).
+    /// plus overdue ones when `day` is `today`. Tasks still snoozed on `day` are left out.
     public static func tasksForDay(_ db: Database, day: LocalDay, today: LocalDay) throws -> [DayTask] {
         let includeOverdue = day == today
         let dueCondition = includeOverdue ? "i.due_day <= :day" : "i.due_day = :day"
         let tasks = try fetchTasks(db, sql: """
             SELECT i.* FROM live_items i
-            WHERE i.kind = 'task' AND \(effectivelyOpenSQL) AND (\(dueCondition) OR i.snoozed_until = :day)
+            WHERE i.kind = 'task' AND \(effectivelyOpenSQL) AND \(dueCondition)
             ORDER BY \(openOrderSQL)
             """, arguments: ["today": day.description, "day": day.description])
         return tasks.map { t in
-            DayTask(task: t,
-                    isOverdue: includeOverdue && (t.due.map { $0.day < day.description } ?? false),
-                    isBackFromSnooze: t.snoozedUntil == day.description)
+            DayTask(task: t, isOverdue: includeOverdue && (t.due.map { $0.day < day.description } ?? false))
         }
     }
 

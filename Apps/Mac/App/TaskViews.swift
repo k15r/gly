@@ -37,7 +37,6 @@ struct TaskRow: View {
     @Environment(AppModel.self) private var app
     let task: TaskItem
     var overdue = false
-    var backFromSnooze = false
     var onEdit: () -> Void
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
@@ -80,9 +79,10 @@ struct TaskRow: View {
                     .foregroundStyle(pendingCompletion != nil ? .secondary : .primary)
                 HStack(spacing: 6) {
                     if overdue { Text("overdue").font(.caption.bold()).foregroundStyle(.red) }
-                    if backFromSnooze { Text("back from snooze").font(.caption.bold()).foregroundStyle(.blue) }
                     if let due = task.due { Text(Self.dueText(due)).font(.caption).foregroundStyle(.secondary) }
-                    if task.status == .snoozed, let until = task.snoozedUntil { Text("snoozed until \(until)").font(.caption).foregroundStyle(.secondary) }
+                    if task.isSnoozed(today: LocalDay(date: Date())), let until = task.snoozedUntil.flatMap(LocalDay.init) {
+                        Label("until \(DayView.title(for: until))", systemImage: "moon.zzz").font(.caption).foregroundStyle(.blue)
+                    }
                     ForEach(task.tags, id: \.self) { TagChip(name: $0) }
                 }
             }

@@ -126,10 +126,8 @@ final class CommandTests: XCTestCase {
         let r = ok(.reconcileSnoozes(today: "2026-10-27"), writer: "system@mac")
         XCTAssertEqual(r.message, "1 snoozed task(s) reopened")
         XCTAssertEqual(try row(past)["status"] as String, "open")
-        XCTAssertEqual(try row(past)["snoozed_until"] as String, "2026-10-27", "kept as 'returned on' marker")
+        XCTAssertNil(try row(past)["snoozed_until"] as String?)
         XCTAssertEqual(try row(past)["modified_by"] as String, "system@mac")
-        ok(.setStatus(id: past, .done))
-        XCTAssertNil(try row(past)["snoozed_until"] as String?, "explicit status change clears the marker")
         XCTAssertEqual(try row(future)["status"] as String, "snoozed")
     }
 

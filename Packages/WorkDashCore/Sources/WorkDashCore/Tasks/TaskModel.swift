@@ -24,6 +24,13 @@ public struct Due: Codable, Equatable {
 }
 
 /// A task as read from the store.
+public extension TaskItem {
+    /// Snoozed and its return day hasn't arrived yet ("not now").
+    func isSnoozed(today: LocalDay) -> Bool {
+        status == .snoozed && (snoozedUntil.flatMap(LocalDay.init).map { $0 > today } ?? false)
+    }
+}
+
 public struct TaskItem: Equatable, Identifiable {
     public let id: String
     public var title: String

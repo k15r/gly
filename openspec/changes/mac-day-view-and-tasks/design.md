@@ -128,7 +128,7 @@ Writes are **Codable commands** sent as JSON `Data` over one XPC method (`perfor
 - **Time-based state** (past/current) refreshes via SwiftUI `TimelineView(.everyMinute)`. Crossing midnight while "today" is shown advances the view to the new day.
 - **Keyboard:** ⌘← previous day, ⌘→ next day, ⌘T today, ⌘N new task (due on the displayed day when invoked from the day view).
 - **Snoozed tasks:** queries treat `status = 'snoozed' AND snoozed_until <= today` as open, so the view is correct immediately. The app also sends `reconcileSnoozes(today)` on launch and at midnight to persist the transition (writer `system@<device id>`).
-- **Back from snooze** *(added after manual check D7)*: a task appears in the day view on its snooze day regardless of its due date. `reconcileSnoozes` therefore sets `status = open` but **keeps `snoozed_until`** as a "returned on" marker. Explicit status changes (complete, reopen, drop) clear it.
+- **Snooze = "not now"** *(decided after manual check D7)*: the day view leaves snoozed tasks out until their snooze date (also when viewing future days; a later "peek into the future" will cover that). The task list keeps them at their normal position with an "until <day>" marker. The due date is not touched. `reconcileSnoozes` sets `status = open` and clears `snoozed_until`.
 
 ### L9: Testing strategy
 

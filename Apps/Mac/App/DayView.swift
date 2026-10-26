@@ -92,7 +92,7 @@ struct DayView: View {
                 Text("No tasks").foregroundStyle(.secondary)
             } else {
                 ForEach(model.tasks) { dayTask in
-                    TaskRow(task: dayTask.task, overdue: dayTask.isOverdue, backFromSnooze: dayTask.isBackFromSnooze,
+                    TaskRow(task: dayTask.task, overdue: dayTask.isOverdue,
                             onEdit: { editing = .edit(dayTask.task.id) })
                 }
             }

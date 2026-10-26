@@ -191,8 +191,11 @@ public struct CommandHandler {
             let due = try String.fetchAll(db, sql: """
                 SELECT id FROM live_items WHERE kind = 'task' AND status = 'snoozed' AND snoozed_until <= ?
                 """, arguments: [today])
-            // snoozed_until is kept as a "returned on" marker so the day view can show the task on that day.
-            for id in due { try batch.update("items", id: id, ["status": TaskStatus.open.rawValue]) }
+            for id in due {
+                var fields: Fields = ["status": TaskStatus.open.rawValue]
+                fields.updateValue(nil, forKey: "snoozed_until")
+                try batch.update("items", id: id, fields)
+            }
             return CommandOK(changed: !due.isEmpty, message: "\(due.count) snoozed task(s) reopened")
         }
     }

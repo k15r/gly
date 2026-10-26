@@ -29,14 +29,18 @@ final class TaskQueryTests: XCTestCase {
         }
     }
 
-    func testOpenListIncludesArrivedSnoozesAndExcludesOthers() throws {
+    func testOpenListIncludesSnoozedInNormalOrder() throws {
         try db.write { db in
             try addTask(db, "open")
             try addTask(db, "snooze arrived", status: "snoozed", snoozedUntil: "2026-10-27")
             try addTask(db, "snooze later", status: "snoozed", snoozedUntil: "2026-10-30")
+            try addTask(db, "snooze latest urgent", status: "snoozed", priority: "urgent", snoozedUntil: "2026-10-31")
             try addTask(db, "done", status: "done")
             try addTask(db, "dropped", status: "dropped")
-            XCTAssertEqual(Set(try TaskQueries.taskList(db, mode: .open, today: today).map(\.title)), ["open", "snooze arrived"])
+            let list = try TaskQueries.taskList(db, mode: .open, today: today)
+            XCTAssertEqual(list.first?.title, "snooze latest urgent", "sorted by priority like any task")
+            XCTAssertEqual(Set(list.map(\.title)), ["open", "snooze arrived", "snooze later", "snooze latest urgent"])
+            XCTAssertEqual(Set(list.filter { $0.isSnoozed(today: today) }.map(\.title)), ["snooze later", "snooze latest urgent"])
             XCTAssertEqual(try TaskQueries.taskList(db, mode: .dropped, today: today).map(\.title), ["dropped"])
         }
     }
@@ -88,32 +92,31 @@ final class TaskQueryTests: XCTestCase {
     }
 
     func testSnoozedUntilTomorrowScenario() throws {
-        // specs/day-view: a task due today, snoozed until tomorrow, shows tomorrow ("back from snooze") and not today.
+        // specs/day-view: a task due today, snoozed until tomorrow, is in no day view until tomorrow is today; then it's overdue.
         let h = CommandHandler(writer: db)
         guard case .ok(let r) = h.perform(.createTask(TaskDraft(title: "B", due: Due(day: "2026-10-27"))), writer: "u") else { return XCTFail() }
         _ = h.perform(.setStatus(id: r.id!, .snoozed, snoozedUntil: "2026-10-28"), writer: "u")
+        let nextDay = today.adding(days: 1)
         try db.read { db in
             XCTAssertTrue(try TaskQueries.tasksForDay(db, day: today, today: today).isEmpty, "gone today")
-            let tomorrow = try TaskQueries.tasksForDay(db, day: today.adding(days: 1), today: today)
-            XCTAssertEqual(tomorrow.map(\.task.title), ["B"])
-            XCTAssertTrue(tomorrow[0].isBackFromSnooze)
+            XCTAssertTrue(try TaskQueries.tasksForDay(db, day: nextDay, today: today).isEmpty, "not shown on a future day")
+            // Still a regular entry of the task list, marked snoozed.
+            let list = try TaskQueries.taskList(db, mode: .open, today: today)
+            XCTAssertEqual(list.map(\.title), ["B"])
+            XCTAssertTrue(list[0].isSnoozed(today: today))
         }
-        // On the actual day, after the midnight reconcile, it still shows (as overdue and back from snooze).
-        let nextDay = today.adding(days: 1)
         _ = h.perform(.reconcileSnoozes(today: nextDay.description), writer: "system@test")
         try db.read { db in
             let d = try TaskQueries.tasksForDay(db, day: nextDay, today: nextDay)
             XCTAssertEqual(d.map(\.task.title), ["B"])
             XCTAssertEqual(d.map(\.isOverdue), [true])
-            XCTAssertEqual(d.map(\.isBackFromSnooze), [true])
         }
     }
 
-    func testSnoozedTaskWithoutDueDateShowsOnItsSnoozeDay() throws {
+    func testSnoozedTaskWithoutDueDateNeverInDayView() throws {
         try db.write { db in
             try addTask(db, "no due", status: "snoozed", snoozedUntil: "2026-10-29")
-            XCTAssertTrue(try TaskQueries.tasksForDay(db, day: LocalDay("2026-10-28")!, today: today).isEmpty)
-            XCTAssertEqual(try TaskQueries.tasksForDay(db, day: LocalDay("2026-10-29")!, today: today).map(\.task.title), ["no due"])
+            XCTAssertTrue(try TaskQueries.tasksForDay(db, day: LocalDay("2026-10-29")!, today: today).isEmpty)
         }
     }
 
