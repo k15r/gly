@@ -17,12 +17,12 @@ Use neutral test data only (no real names).
 
 ## B. Pages, navigation, tags (tasks 5.1–5.4)
 
-- [ ] B1 Sidebar → Pages: all pages, most recently changed first; editing an older page moves it to the top.
-- [ ] B2 ⌘1/⌘2/⌘3 switch Day/Tasks/Pages; ⌘[ / ⌘] go back and forward through visited pages and tag pages.
-- [ ] B3 Rename a page (title field, Return) → links to it elsewhere show the new title.
-- [ ] B4 A page shows "Backlinks" with the pages/tasks that link to it and an excerpt; removing the link elsewhere removes the backlink at once.
-- [ ] B5 Delete a page (… menu) → gone from Pages, search and tag pages; ⌘Z brings it back with text and tags.
-- [ ] B6 Click a tag in the sidebar or a tag chip on a task row → its tag page: description (Edit to write one, with `[[` links), open tasks, pages, finished tasks (collapsed), backlinks. "Show in Tasks" filters the task list.
+- [x] B1 Sidebar → Pages: all pages, most recently changed first; editing an older page moves it to the top.
+- [x] B2 ⌘1/⌘2/⌘3 switch Day/Tasks/Pages; ⌘[ / ⌘] go back and forward through visited pages and tag pages.
+- [x] B3 Rename a page (title field, Return) → links to it elsewhere show the new title.
+- [x] B4 A page shows "Backlinks" with the pages/tasks that link to it and an excerpt; removing the link elsewhere removes the backlink at once.
+- [x] B5 Delete a page (… menu) → gone from Pages, search and tag pages; ⌘Z brings it back with text and tags.
+- [x] B6 Click a tag in the sidebar or a tag chip on a task row → its tag page: description (Edit to write one, with `[[` links), open tasks, pages, finished tasks (collapsed), backlinks. "Show in Tasks" filters the task list.
 - [ ] B7 Tag page of a group like `person` lists the items of all `person/…` tags; writing a description there works.
 - [ ] B8 Sidebar tags: expanding `project/atlas` lists its pages after child tags; a page with two tags appears under both with a link icon ("Also in …"); untagged pages appear under "Untagged".
 - [ ] B9 Drag a page from one tag onto another → it moves (one ⌘Z undoes it). Drag with ⌥ held → it's in both. Drag onto "Untagged" → that tag is removed.

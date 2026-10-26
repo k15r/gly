@@ -124,3 +124,18 @@ extension PageQueryTests {
         XCTAssertEqual(try db.read { try TagQueries.untaggedPages($0) }.map(\.title), ["Loose"])
     }
 }
+
+extension PageQueryTests {
+    /// Found in manual check B7: a tag whose only task is snoozed vanished from the tree, and counts differed from the tag page.
+    func testSnoozedTasksCountInTheTagTree() throws {
+        make(.createTask(TaskDraft(title: "open", tags: ["person/alex"])))
+        let snoozed = make(.createTask(TaskDraft(title: "snoozed", tags: ["person/alex", "person/sam"])))
+        _ = h.perform(.setStatus(id: snoozed, .snoozed, snoozedUntil: "2026-11-30"), writer: "u")
+        let person = try db.read { try TagQueries.tagTree($0, today: "2026-10-26") }.first { $0.path == "person" }
+        XCTAssertEqual(person?.openCount, 2)
+        XCTAssertEqual(person?.children.map(\.path), ["person/alex", "person/sam"])
+        XCTAssertEqual(person?.children.first { $0.path == "person/sam" }?.openCount, 1)
+        let tagPage = try db.read { try TagPageQueries.page($0, name: try TagName("person"), today: self.today) }
+        XCTAssertEqual(tagPage.openTasks.count, person?.openCount, "tree count matches the tag page")
+    }
+}

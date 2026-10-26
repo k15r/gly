@@ -78,14 +78,14 @@ public enum TagQueries {
     }
 
     /// Tags assigned to at least one open task or live page, as a hierarchy with roll-up open-task counts.
-    /// "Open" includes snoozed tasks whose snooze date has arrived (`today` = YYYY-MM-DD).
+    /// "Open" includes snoozed tasks, as in the task list (snoozed = not now, still open).
     public static func tagTree(_ db: Database, today: String) throws -> [TagNode] {
         let rows = try Row.fetchAll(db, sql: """
             SELECT it.item_id, t.name, i.kind FROM live_item_tags it
             JOIN live_tags t ON t.id = it.tag_id
             JOIN live_items i ON i.id = it.item_id
-            WHERE (i.kind = 'task' AND \(TaskQueries.effectivelyOpenSQL)) OR i.kind = 'info'
-            """, arguments: ["today": today])
+            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info'
+            """)
         // path key -> (display path, items, isTag)
         var itemsByPath: [String: Set<String>] = [:]
         var displayByPath: [String: String] = [:]

@@ -77,17 +77,17 @@ public struct TagCount: Equatable {
 
 extension TagQueries {
     /// All live tags (optionally below/starting with `prefix`), with open-task counts; unused tags included so agents reuse them.
-    /// "Open" as in the tag list: open, or snoozed with the snooze date reached (`today` = YYYY-MM-DD).
+    /// "Open" as in the tag list and the task list: open or snoozed.
     public static func list(_ db: Database, prefix: String? = nil, today: String) throws -> [TagCount] {
         let key = TagName.key(for: (prefix ?? "").trimmingCharacters(in: .whitespaces))
         let rows = try Row.fetchAll(db, sql: """
             SELECT t.name,
                    (SELECT COUNT(*) FROM live_item_tags it JOIN live_items i ON i.id = it.item_id
-                    WHERE it.tag_id = t.id AND i.kind = 'task' AND \(TaskQueries.effectivelyOpenSQL)) AS open_count
+                    WHERE it.tag_id = t.id AND i.kind = 'task' AND i.status IN ('open', 'snoozed')) AS open_count
             FROM live_tags t
             WHERE t.archived = 0 AND t.name_key LIKE :pattern ESCAPE '\\'
             ORDER BY t.name_key
-            """, arguments: ["pattern": TagFilter.escapeLike(key) + "%", "today": today])
+            """, arguments: ["pattern": TagFilter.escapeLike(key) + "%"])
         return rows.map { TagCount(name: $0["name"], openCount: $0["open_count"]) }
     }
 }

@@ -94,7 +94,7 @@ On rename (`updatePage` or `updateTask` with a new title), labels of canonical l
   - Excerpts come from `snippet()`.
   - Results are joined to live rows.
 - **Measured (task 2.5):** with 10,000 items whose texts all contain the searched words (the worst case: thousands of hits to rank), the median is 14 ms (debug build). That's within the 100 ms requirement. Realistic, sparser text is faster (spike: 3 ms or less).
-- **Tag tree:** the query used by the tag list now also includes tags on live pages, with open-task counts as before.
+- **Tag tree:** the query used by the tag list now also includes tags on live pages. Open-task counts include snoozed tasks, as in the task list and on tag pages (changed after manual check B7: a tag whose only task was snoozed disappeared from the tree, and the counts didn't match the tag page). `list_tags` counts the same way.
 
 ### P6: An edit session is one undo step
 

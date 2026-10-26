@@ -74,7 +74,7 @@ final class TagQueryTests: XCTestCase {
             XCTAssertEqual(person.openCount, 3)
             XCTAssertEqual(person.children.map { "\($0.segment)=\($0.openCount)" }, ["alex=2", "sam=2"])
             XCTAssertTrue(person.children.allSatisfy(\.isTag))
-            XCTAssertEqual(tree[1].openCount, 1, "only the snoozed task whose date arrived")
+            XCTAssertEqual(tree[1].openCount, 2, "snoozed tasks count as open, like in the task list")
         }
     }
 
