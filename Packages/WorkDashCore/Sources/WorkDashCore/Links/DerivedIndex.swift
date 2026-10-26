@@ -33,11 +33,11 @@ public enum DerivedIndex {
         let kind: String, title: String, text: String
         switch table {
         case "items":
-            row = try Row.fetchOne(db, sql: "SELECT kind, title, body FROM items WHERE id = ?", arguments: [id])
+            row = try Row.fetchOne(db, sql: "SELECT kind, title, body, deleted_at FROM items WHERE id = ?", arguments: [id])
             guard let row else { return }
             (kind, title, text) = (row["kind"], row["title"], row["body"])
         case "tags":
-            row = try Row.fetchOne(db, sql: "SELECT name, page_body FROM tags WHERE id = ?", arguments: [id])
+            row = try Row.fetchOne(db, sql: "SELECT name, page_body, deleted_at FROM tags WHERE id = ?", arguments: [id])
             guard let row else { return }
             (kind, title, text) = ("tag", row["name"], row["page_body"])
         default:
@@ -57,8 +57,10 @@ public enum DerivedIndex {
                 """, arguments: [table, id, targetKind, targetID, missingTitle, missingTitle.map(TagName.key(for:)),
                                  link.range.location, link.range.length])
         }
+        // Deleted rows leave the search index (restoring rewrites deleted_at and re-adds them); the link index keeps them.
         let rowid = rowid(for: id)
         try db.execute(sql: "DELETE FROM search_index WHERE rowid = ?", arguments: [rowid])
+        guard (row?["deleted_at"] as Date?) == nil else { return }
         try db.execute(sql: "INSERT INTO search_index (rowid, owner_table, owner_id, kind, title, text) VALUES (?, ?, ?, ?, ?, ?)",
                        arguments: [rowid, table, id, kind, title, LinkParser.plainText(text)])
     }

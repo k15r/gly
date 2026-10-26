@@ -55,7 +55,7 @@ A `v2` migration, additive only, adds:
 
 Both indexes are **not synced and not change-logged**, because they can be rebuilt from the text at any time. A `rebuild` function backfills them in the migration and is reused after sync later.
 
-**Maintenance:** `Batch.insert` and `Batch.update` call `DerivedIndex.refresh(db, table, id)` whenever `title`, `body`, `name`, `page_body` or `deleted_at` of an item or tag changes. The function reparses the row and replaces its index rows. Undo and redo write through `Batch` as well, so they keep the indexes correct with no extra code. Deleted rows are kept in the indexes but filtered by joining live rows, so restoring something brings its links back.
+**Maintenance:** `Batch.insert` and `Batch.update` call `DerivedIndex.refresh(db, table, id)` whenever `title`, `body`, `name`, `page_body` or `deleted_at` of an item or tag changes. The function reparses the row and replaces its index rows. Undo and redo write through `Batch` as well, so they keep the indexes correct with no extra code. Deleted rows stay in `link_index` (backlink queries join live rows, so restoring something brings its links back) but leave `search_index`; restoring rewrites `deleted_at`, which re-indexes them. This keeps search free of joins (task 2.5).
 
 - **Alternative considered:** SQL triggers calling a Swift function. That would need the function registered on every connection, and it would hide the dependency. The hook is explicit, and only the agent writes.
 
@@ -93,6 +93,7 @@ On rename (`updatePage` or `updateTask` with a new title), labels of canonical l
   - Results are ranked by `bm25` within each kind, so groups are never compared by score across kinds.
   - Excerpts come from `snippet()`.
   - Results are joined to live rows.
+- **Measured (task 2.5):** with 10,000 items whose texts all contain the searched words (the worst case: thousands of hits to rank), the median is 14 ms (debug build). That's within the 100 ms requirement. Realistic, sparser text is faster (spike: 3 ms or less).
 - **Tag tree:** the query used by the tag list now also includes tags on live pages, with open-task counts as before.
 
 ### P6: An edit session is one undo step

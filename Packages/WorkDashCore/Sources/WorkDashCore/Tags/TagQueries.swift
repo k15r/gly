@@ -67,14 +67,14 @@ public enum TagQueries {
         return Array(result.prefix(limit))
     }
 
-    /// Tags assigned to at least one open task, as a hierarchy with roll-up counts.
+    /// Tags assigned to at least one open task or live page, as a hierarchy with roll-up open-task counts.
     /// "Open" includes snoozed tasks whose snooze date has arrived (`today` = YYYY-MM-DD).
     public static func tagTree(_ db: Database, today: String) throws -> [TagNode] {
         let rows = try Row.fetchAll(db, sql: """
-            SELECT it.item_id, t.name FROM live_item_tags it
+            SELECT it.item_id, t.name, i.kind FROM live_item_tags it
             JOIN live_tags t ON t.id = it.tag_id
             JOIN live_items i ON i.id = it.item_id
-            WHERE i.kind = 'task' AND \(TaskQueries.effectivelyOpenSQL)
+            WHERE (i.kind = 'task' AND \(TaskQueries.effectivelyOpenSQL)) OR i.kind = 'info'
             """, arguments: ["today": today])
         // path key -> (display path, items, isTag)
         var itemsByPath: [String: Set<String>] = [:]
@@ -83,12 +83,13 @@ public enum TagQueries {
         for row in rows {
             let item: String = row["item_id"]
             let name: String = row["name"]
+            let isTask = (row["kind"] as String) == "task"
             let segments = name.split(separator: "/").map(String.init)
             tagPaths.insert(TagName.key(for: name))
             for depth in 1...segments.count {
                 let path = segments.prefix(depth).joined(separator: "/")
                 let key = TagName.key(for: path)
-                itemsByPath[key, default: []].insert(item)
+                if isTask { itemsByPath[key, default: []].insert(item) } else { itemsByPath[key, default: []] = itemsByPath[key] ?? [] }
                 if displayByPath[key] == nil || depth == segments.count { displayByPath[key] = displayByPath[key] ?? path }
             }
         }

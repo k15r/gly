@@ -74,10 +74,8 @@ public enum TaskQueries {
 
     // MARK: - Mapping
 
-    static func fetchTasks(_ db: Database, sql: String, arguments: StatementArguments) throws -> [TaskItem] {
-        let rows = try Row.fetchAll(db, sql: sql, arguments: arguments)
-        guard !rows.isEmpty else { return [] }
-        let ids = rows.map { $0["id"] as String }
+    /// Live tag names per item, in name order.
+    static func tagsByItem(_ db: Database, ids: [String]) throws -> [String: [String]] {
         var tagsByItem: [String: [String]] = [:]
         // Chunked to stay below SQLite's variable limit.
         for chunk in stride(from: 0, to: ids.count, by: 500).map({ Array(ids[$0..<min($0 + 500, ids.count)]) }) {
@@ -89,6 +87,13 @@ public enum TaskQueries {
                 tagsByItem[r["item_id"], default: []].append(r["name"])
             }
         }
+        return tagsByItem
+    }
+
+    static func fetchTasks(_ db: Database, sql: String, arguments: StatementArguments) throws -> [TaskItem] {
+        let rows = try Row.fetchAll(db, sql: sql, arguments: arguments)
+        guard !rows.isEmpty else { return [] }
+        let tagsByItem = try tagsByItem(db, ids: rows.map { $0["id"] as String })
         return rows.map { r in
             let dueDay: String? = r["due_day"]
             return TaskItem(
