@@ -43,8 +43,8 @@ Use neutral test data only (no real names).
 
 ## D. End to end with an agent (task 6.1)
 
-- [ ] D1 Build a small wiki: tag page for `project/atlas` with a description, two linked pages, one task linking a page.
-- [ ] D2 Ask Claude Code to write meeting notes as a page with `[[…]]` links to existing pages and tag `project/atlas`, then to call `get_context` for it → links resolved, page appears in the app at once, under `project/atlas` in the sidebar.
+- [x] D1 Build a small wiki: tag page for `project/atlas` with a description, two linked pages, one task linking a page.
+- [x] D2 Ask Claude Code to write meeting notes as a page with `[[…]]` links to existing pages and tag `project/atlas`, then to call `get_context` for it → links resolved, page appears in the app at once, under `project/atlas` in the sidebar.
 
 ## Results
 
@@ -54,4 +54,5 @@ Use neutral test data only (no real names).
 | 2026-10-26 | owner | B ✅ | Pages, navigation, tag pages, tree, drag & drop, live agent edits; fixed: tag tree counted snoozed tasks differently from tag pages (B7); added: open tasks as tree leaves next to pages (B8) |
 | 2026-10-26 | owner | C ✅ | Quick open (grouped results, keyboard, create page), markdown task notes with links and backlinks |
 | 2026-10-26 | owner | E ✅ | Task page (added after D1: tasks had no backlinks; tasks now open like pages, changes save at once); fixed: unlabeled due toggles, squeezed field row |
+| 2026-10-26 | owner | D ✅ | End to end: small wiki (tag page, linked pages, task linking a page), meeting notes by Claude Code with resolved links and get_context |
 | | | | |

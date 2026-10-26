@@ -37,7 +37,7 @@
 
 ## 6. End to end
 
-- [ ] 6.1 Manual checks documented in `docs/manual-checks-pages.md`: build a small wiki (a project tag page, two linked pages, a task linking a page), rename a page and see links follow, delete and restore via undo, search and quick open, backlinks update live; an agent (Claude Code) creates a meeting-notes page with `[[…]]` links and reads `get_context`; everything uses neutral test data
+- [x] 6.1 Manual checks documented in `docs/manual-checks-pages.md`: build a small wiki (a project tag page, two linked pages, a task linking a page), rename a page and see links follow, delete and restore via undo, search and quick open, backlinks update live; an agent (Claude Code) creates a meeting-notes page with `[[…]]` links and reads `get_context`; everything uses neutral test data
 
 ## Workflow follow-up
 
