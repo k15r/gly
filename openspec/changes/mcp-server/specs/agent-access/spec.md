@@ -48,7 +48,7 @@ The system SHALL provide an MCP tool `get_task` that returns one task by id with
 - **THEN** it receives a "not found" error
 
 ### Requirement: Create a task
-The system SHALL provide an MCP tool `create_task` that creates a task with a required title and optional notes, priority, due date (with optional time), tags and status. The same validation as in the app SHALL apply. The response SHALL contain the new task's id and fields.
+The system SHALL provide an MCP tool `create_task` that creates an open task with a required title and optional notes, priority, due date (with optional time) and tags. The same validation as in the app SHALL apply. The response SHALL contain the new task's id and fields.
 
 #### Scenario: Task from an email
 - **WHEN** an agent calls `create_task` with title "Send load-test report", priority `high`, due `2026-10-29` and tags `["project/atlas"]`
@@ -136,4 +136,4 @@ The system SHALL offer an MCP endpoint over HTTP that is off by default and swit
 
 #### Scenario: Other machine
 - **WHEN** another computer on the network tries to connect to the port
-- **THEN** the connection is refused
+- **THEN** it can't connect, and no request reaches WorkDash
