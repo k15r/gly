@@ -5,7 +5,7 @@ Use neutral test data only (no real names).
 
 ## A. Editor (tasks 4.2–4.4)
 
-- [ ] A1 New page (⌘⇧N) "Editor test", switch to Edit (⌘E). Type `## Decisions` on a line → shown as a heading; `**bold**`, `*italic*`, `` `code` ``, a fenced code block, `- item`, `> quote` are styled; the markdown stays visible (dimmed).
+- [x] A1 New page (⌘⇧N) "Editor test", switch to Edit (⌘E). Type `## Decisions` on a line → shown as a heading; `**bold**`, `*italic*`, `` `code` ``, a fenced code block, `- item`, `> quote` are styled; the markdown stays visible (dimmed).
 - [ ] A2 Type `- [ ] send agenda`, click the box → becomes `- [x]`, line struck through. Click again → back.
 - [ ] A3 Type `[[` and a few letters of an existing page → picker shows pages/tasks/tags; ↑/↓ and Return insert the link as a chip with the page title. Typing `[[person/` offers tags ("Link to a tag").
 - [ ] A4 ⌘-click the chip → the page opens. ⌘[ goes back.

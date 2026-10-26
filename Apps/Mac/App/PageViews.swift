@@ -25,7 +25,9 @@ struct WDMarkdownEditor: View {
 struct WDMarkdownReadView: View {
     @Environment(WikiModel.self) private var wiki
     let text: String
-    var body: some View { MarkdownReadView(text: text, appearance: { wiki.appearance($0) }) }
+    /// Saves a checkbox toggle (one undo step each).
+    var onChange: ((String) -> Void)?
+    var body: some View { MarkdownReadView(text: text, appearance: { wiki.appearance($0) }, onChange: onChange) }
 }
 
 private struct LinkOpenerKey: EnvironmentKey { static let defaultValue: LinkOpener? = nil }
@@ -211,7 +213,9 @@ struct PageView: View {
                         if page.body.isEmpty {
                             Text("Empty page – switch to Edit (⌘E) to write.").foregroundStyle(.secondary)
                         } else {
-                            WDMarkdownReadView(text: page.body)
+                            WDMarkdownReadView(text: page.body) { new in
+                                Task { await app.send(.updatePage(id: page.id, PagePatch(body: new))) }
+                            }
                         }
                         Divider()
                         BacklinksView(backlinks: backlinks)
@@ -290,7 +294,9 @@ struct TagPageView: View {
                 } else if data.body.isEmpty {
                     Text("No description – click Edit to describe this \(data.name.contains("/") ? "tag" : "group").").foregroundStyle(.secondary)
                 } else {
-                    WDMarkdownReadView(text: data.body)
+                    WDMarkdownReadView(text: data.body) { new in
+                        Task { await app.send(.updateTagPage(name: data.name, body: new)) }
+                    }
                 }
 
                 section("Open tasks", count: data.openTasks.count) {

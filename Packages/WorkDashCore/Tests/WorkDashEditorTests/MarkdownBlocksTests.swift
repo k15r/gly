@@ -10,9 +10,17 @@ final class MarkdownBlocksTests: XCTestCase {
             .heading(level: 1, text: "Title"), .blank, .paragraph("para one\nstill para"),
             .listItem(indent: 0, marker: "-", text: "item"), .listItem(indent: 1, marker: "-", text: "nested"),
             .listItem(indent: 0, marker: "1.", text: "first"),
-            .checklistItem(indent: 0, checked: false, text: "open"), .checklistItem(indent: 0, checked: true, text: "done"),
+            .checklistItem(indent: 0, checked: false, text: "open", line: 7), .checklistItem(indent: 0, checked: true, text: "done", line: 8),
             .quote("quote"), .code("code # here"),
         ])
+    }
+
+    func testToggleChecklist() {
+        let text = "intro\n- [ ] send agenda\n  * [x] nested done\n- not a box"
+        XCTAssertEqual(MarkdownBlocks.toggleChecklist(text, line: 1), "intro\n- [x] send agenda\n  * [x] nested done\n- not a box")
+        XCTAssertEqual(MarkdownBlocks.toggleChecklist(text, line: 2), "intro\n- [ ] send agenda\n  * [ ] nested done\n- not a box")
+        XCTAssertEqual(MarkdownBlocks.toggleChecklist(text, line: 3), text)
+        XCTAssertEqual(MarkdownBlocks.toggleChecklist(text, line: 9), text)
     }
 
     func testInlineLinks() {

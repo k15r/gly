@@ -29,11 +29,15 @@ Markdown links to web addresses (`[text](https://…)`, also `http`, `mailto` an
 - **THEN** it is shown as a link and opens with ⌘-click, and the stored text is unchanged
 
 ### Requirement: Checklists
-Lines starting with `- [ ]` or `- [x]` SHALL be shown as checkboxes that can be toggled by clicking, which changes the text to `- [x]` or `- [ ]`.
+Lines starting with `- [ ]` or `- [x]` SHALL be shown as checkboxes that can be toggled by clicking, in the editor and in the read view, which changes the text to `- [x]` or `- [ ]`. In the read view, each toggle SHALL be saved at once as one undo step.
 
 #### Scenario: Tick a checklist item
 - **WHEN** the user clicks the checkbox of `- [ ] send agenda`
 - **THEN** the line becomes `- [x] send agenda` and is shown as done
+
+#### Scenario: Tick in the read view
+- **WHEN** the user clicks the checkbox of `- [ ] send agenda` while reading a page
+- **THEN** the text is saved with `- [x] send agenda`, the item is shown as done, and Undo unticks it
 
 ### Requirement: Read view
 The user SHALL be able to switch between editing and a rendered read view of the same text. In the read view, markdown is rendered (headings, emphasis, lists, checklists, code, quotes, links) without syntax characters, and a plain click on a link follows it. Pages SHALL open in the read view when they have text and in editing when they're empty.

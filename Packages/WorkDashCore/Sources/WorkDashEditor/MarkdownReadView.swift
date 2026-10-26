@@ -7,7 +7,8 @@ public enum MarkdownBlock: Equatable {
     case heading(level: Int, text: String)
     case paragraph(String)
     case listItem(indent: Int, marker: String, text: String)
-    case checklistItem(indent: Int, checked: Bool, text: String)
+    /// `line`: index of the source line, for toggling.
+    case checklistItem(indent: Int, checked: Bool, text: String, line: Int)
     case quote(String)
     case code(String)
     case blank
@@ -27,7 +28,7 @@ public enum MarkdownBlocks {
         var code: [String]? = nil
         var paragraph: [String] = []
         func flush() { if !paragraph.isEmpty { blocks.append(.paragraph(paragraph.joined(separator: "\n"))); paragraph = [] } }
-        for raw in text.components(separatedBy: "\n") {
+        for (lineIndex, raw) in text.components(separatedBy: "\n").enumerated() {
             let line = raw
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~") {
@@ -41,7 +42,7 @@ public enum MarkdownBlocks {
                 flush(); blocks.append(.heading(level: m[0].count, text: m[1])); continue
             }
             if let m = groups(#"^[-*+]\s+\[([ xX])\]\s?(.*)$"#, trimmed) {
-                flush(); blocks.append(.checklistItem(indent: indent, checked: m[0] != " ", text: m[1])); continue
+                flush(); blocks.append(.checklistItem(indent: indent, checked: m[0] != " ", text: m[1], line: lineIndex)); continue
             }
             if let m = groups(#"^([-*+]|\d{1,3}[.)])\s+(.*)$"#, trimmed) {
                 flush(); blocks.append(.listItem(indent: indent, marker: m[0], text: m[1])); continue
@@ -55,6 +56,18 @@ public enum MarkdownBlocks {
         flush()
         // Collapse runs of blank lines.
         return blocks.enumerated().filter { i, b in !(b == .blank && (i == 0 || blocks[i - 1] == .blank)) }.map(\.1)
+    }
+
+    /// The text with the checklist box on `line` toggled (`[ ]` ↔ `[x]`); unchanged if that line isn't a checklist item.
+    public static func toggleChecklist(_ text: String, line: Int) -> String {
+        var lines = text.components(separatedBy: "\n")
+        guard lines.indices.contains(line),
+              let re = try? NSRegularExpression(pattern: #"^([ \t]*[-*+][ \t]+)\[([ xX])\]"#),
+              let m = re.firstMatch(in: lines[line], range: NSRange(location: 0, length: (lines[line] as NSString).length)) else { return text }
+        let ns = lines[line] as NSString
+        let box = m.range(at: 2)
+        lines[line] = ns.replacingCharacters(in: box, with: ns.substring(with: box) == " " ? "x" : " ")
+        return lines.joined(separator: "\n")
     }
 
     /// Inline markdown → AttributedString; `[[X]]` becomes a `workdash://missing/X` link; WorkDash links get their
@@ -105,9 +118,11 @@ public enum MarkdownBlocks {
 public struct MarkdownReadView: View {
     let text: String
     let appearance: (ParsedLink.Target) -> LinkAppearance
+    /// Called with the new text when a checkbox is clicked; nil = checkboxes are read-only.
+    let onChange: ((String) -> Void)?
 
-    public init(text: String, appearance: @escaping (ParsedLink.Target) -> LinkAppearance) {
-        self.text = text; self.appearance = appearance
+    public init(text: String, appearance: @escaping (ParsedLink.Target) -> LinkAppearance, onChange: ((String) -> Void)? = nil) {
+        self.text = text; self.appearance = appearance; self.onChange = onChange
     }
 
     public var body: some View {
@@ -133,9 +148,12 @@ public struct MarkdownReadView: View {
                 Text(marker.first?.isNumber == true ? marker : "•").foregroundStyle(.secondary)
                 Text(inline(t))
             }.padding(.leading, CGFloat(indent) * 16)
-        case .checklistItem(let indent, let checked, let t):
+        case .checklistItem(let indent, let checked, let t, let line):
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Image(systemName: checked ? "checkmark.square.fill" : "square").foregroundStyle(checked ? Color.accentColor : .secondary)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onChange?(MarkdownBlocks.toggleChecklist(text, line: line)) }
+                    .help(onChange == nil ? "" : (checked ? "Mark as not done" : "Mark as done"))
                 Text(inline(t)).strikethrough(checked).foregroundStyle(checked ? .secondary : .primary)
             }.padding(.leading, CGFloat(indent) * 16)
         case .quote(let t):
