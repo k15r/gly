@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Insert a link
-In any markdown text (page text, task notes, tag page description), typing `[[` SHALL open a picker that searches pages, tasks and tags by title or name as the user types, understanding the `page:`/`task:`/`tag:` prefixes and tag paths as typed links do. Each entry SHALL show its kind (icon), its title with the duplicate qualifier when needed, and a second line with its tags and last change. Choosing an entry SHALL insert a link to it. The picker SHALL also offer to link a page or a task that doesn't exist yet (a task as `[[task:…]]`).
+In any markdown text, typing `[[` SHALL open a picker that searches pages, tasks and tags by title or name as the user types, with prefixes and tag paths as in typed links. Each entry SHALL show its kind (icon), its title with the duplicate qualifier when needed, and its tags and last change. Choosing an entry SHALL insert a link to it. The picker SHALL also offer a page or a task that doesn't exist yet (a task as `[[task:…]]`).
 
 #### Scenario: Link to an existing page
 - **WHEN** the user types `[[atl` in a task's notes and picks the page "Atlas architecture"
@@ -22,7 +22,7 @@ In any markdown text (page text, task notes, tag page description), typing `[[` 
 - **THEN** the picker lists the pages and open tasks tagged `person/alex` or a tag below it, then the tags below it; typing on narrows the list by title
 
 ### Requirement: Links typed as text
-A `[[…]]` typed or pasted as text (also by agents) SHALL be resolved when the text is saved. The text MAY start with `page:`, `task:` or `tag:` to restrict the kind. It SHALL match an item or tag whose title or name equals it (case-insensitive); if none does and the text contains `/`, it SHALL also match a page or task whose title equals the part after the last `/` and that carries the tag before it (or a tag below it). Exactly one match SHALL become a link to it; otherwise the text SHALL stay a "missing page" link.
+A `[[…]]` typed or pasted as text (also by agents) SHALL be resolved when the text is saved; a `page:`, `task:` or `tag:` prefix restricts the kind. It SHALL match an item or tag whose title or name equals it (case-insensitive); if none does and it contains `/`, a page or task titled like the part after the last `/` that carries the tag before it (or one below). Exactly one match SHALL become a link; otherwise it SHALL stay a "missing page" link.
 
 #### Scenario: Unique title
 - **WHEN** an agent writes "see [[Atlas architecture]]" and exactly one page has that title

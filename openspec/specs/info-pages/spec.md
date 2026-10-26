@@ -52,3 +52,10 @@ A change to a page SHALL be reflected in every open view (pages list, page view,
 #### Scenario: Agent edits a page
 - **WHEN** an agent updates the text of a page that is open in the app
 - **THEN** the page view shows the new text without user action, unless the user is editing that text at that moment
+
+### Requirement: Duplicate page titles
+Several pages SHALL be allowed to have the same title (for example a "Goals" page per person). Creating or renaming a page to a title that is already used SHALL succeed; the pages are told apart by their tags (see links "Duplicate titles are distinguishable").
+
+#### Scenario: Profile pages per person
+- **WHEN** the user creates a page "Profile" tagged `person/alex` and another page "Profile" tagged `person/sam`
+- **THEN** both pages exist, and the pages list shows them as "Profile · person/alex" and "Profile · person/sam"
