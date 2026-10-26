@@ -212,31 +212,30 @@ final class TreeDropState {
 
 extension View {
     /// Makes the whole row (text included) a click, drag and drop target for a tag group (design P9).
-    /// A transparent layer on top takes the events, so the row's text can't swallow drops.
+    /// The row's content ignores the pointer (`allowsHitTesting(false)`), so its text can't swallow drops;
+    /// the row itself, with a rectangular content shape, takes clicks, drags and drops.
     func treeRow(group: TreeDropState.Target, state: TreeDropState, drag: String? = nil,
                  onTap: @escaping () -> Void, onDrop: @escaping ([String]) -> Void) -> some View {
         let highlighted = state.target == group
         return self
+            .allowsHitTesting(false)
             .padding(.vertical, 2).padding(.horizontal, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(highlighted ? Color.accentColor.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 5))
             .overlay(alignment: .leading) {
                 if highlighted, case .tag = group {
-                    RoundedRectangle(cornerRadius: 1).fill(Color.accentColor).frame(width: 3)
+                    RoundedRectangle(cornerRadius: 1).fill(Color.accentColor).frame(width: 3).allowsHitTesting(false)
                 }
             }
-            .overlay {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture(perform: onTap)
-                    .modifier(OptionalDrag(payload: drag))
-                    .dropDestination(for: String.self) { items, _ in
-                        state.target = nil
-                        onDrop(items)
-                        return true
-                    } isTargeted: { over in
-                        if over { state.target = group } else if state.target == group { state.target = nil }
-                    }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
+            .modifier(OptionalDrag(payload: drag))
+            .dropDestination(for: String.self) { items, _ in
+                state.target = nil
+                onDrop(items)
+                return true
+            } isTargeted: { over in
+                if over { state.target = group } else if state.target == group { state.target = nil }
             }
     }
 }
