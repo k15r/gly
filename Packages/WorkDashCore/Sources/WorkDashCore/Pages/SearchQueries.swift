@@ -57,19 +57,39 @@ public enum SearchQueries {
             case .tag: results.tags = hits
             }
         }
-        // Tags and last change for the second line of results (link-disambiguation K4).
-        let ids = results.all.map(\.ref.id)
-        if !ids.isEmpty {
-            let tags = try TaskQueries.tagsByItem(db, ids: ids)
-            let marks = ids.map { _ in "?" }.joined(separator: ",")
-            var modified: [String: Date] = [:]
-            for r in try Row.fetchAll(db, sql: "SELECT id, modified_at FROM items WHERE id IN (\(marks)) UNION ALL SELECT id, modified_at FROM tags WHERE id IN (\(marks))",
-                                      arguments: StatementArguments(ids + ids)) { modified[r["id"]] = r["modified_at"] }
-            func enrich(_ hits: [SearchHit]) -> [SearchHit] {
-                hits.map { var h = $0; h.tags = tags[h.ref.id] ?? []; h.modifiedAt = modified[h.ref.id]; return h }
-            }
-            results.pages = enrich(results.pages); results.tasks = enrich(results.tasks); results.tags = enrich(results.tags)
-        }
+        results.pages = try enrich(db, results.pages); results.tasks = try enrich(db, results.tasks); results.tags = try enrich(db, results.tags)
         return results
+    }
+
+    /// What lives under a tag, for the link picker after `[[person/alex/` (no title typed yet): live pages and open tasks
+    /// carrying the tag or a tag below it, most recently changed first, then the tags below it.
+    public static func underTag(_ db: Database, _ tag: TagName, kinds: Set<LinkRef.Kind> = [.page, .task, .tag], limit: Int = 8) throws -> [SearchHit] {
+        let filter = TagFilter(tag)
+        var hits = try Row.fetchAll(db, sql: """
+            SELECT i.id, i.kind, i.title FROM live_items i
+            WHERE ((i.kind = 'info' AND ?) OR (i.kind = 'task' AND i.status IN ('open', 'snoozed') AND ?)) AND \(filter.sql)
+            ORDER BY i.modified_at DESC LIMIT ?
+            """, arguments: [kinds.contains(.page), kinds.contains(.task)] + filter.arguments + [limit]).map { r in
+                SearchHit(ref: LinkRef(kind: (r["kind"] as String) == "info" ? .page : .task, id: r["id"], title: r["title"]), excerpt: "")
+            }
+        if kinds.contains(.tag), hits.count < limit {
+            hits += try Row.fetchAll(db, sql: "SELECT id, name FROM live_tags WHERE name_key LIKE ? ESCAPE '\\' ORDER BY name_key LIMIT ?",
+                                     arguments: [TagFilter.descendantPattern(tag), limit - hits.count]).map { r in
+                SearchHit(ref: LinkRef(kind: .tag, id: r["id"], title: r["name"]), excerpt: "")
+            }
+        }
+        return try enrich(db, hits)
+    }
+
+    /// Tags and last change for the second line of results (link-disambiguation K4).
+    static func enrich(_ db: Database, _ hits: [SearchHit]) throws -> [SearchHit] {
+        let ids = hits.map(\.ref.id)
+        guard !ids.isEmpty else { return hits }
+        let tags = try TaskQueries.tagsByItem(db, ids: ids)
+        let marks = ids.map { _ in "?" }.joined(separator: ",")
+        var modified: [String: Date] = [:]
+        for r in try Row.fetchAll(db, sql: "SELECT id, modified_at FROM items WHERE id IN (\(marks)) UNION ALL SELECT id, modified_at FROM tags WHERE id IN (\(marks))",
+                                  arguments: StatementArguments(ids + ids)) { modified[r["id"]] = r["modified_at"] }
+        return hits.map { var h = $0; h.tags = tags[h.ref.id] ?? []; h.modifiedAt = modified[h.ref.id]; return h }
     }
 }

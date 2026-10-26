@@ -91,9 +91,12 @@ final class WikiModel {
         let slash = body.lastIndex(of: "/")
         let path = slash.map { TagName.key(for: String(body[..<$0])) }
         let term = slash.map { String(body[body.index(after: $0)...]).trimmingCharacters(in: .whitespaces) } ?? body
-        let (exact, hits) = (try? store.read { db in
-            (try LinkResolver.candidates(db, typed: q),
-             term.isEmpty ? [] : try SearchQueries.search(db, term, limit: 12).all)
+        let pathTag = slash.flatMap { try? TagName(String(body[..<$0])) }
+        let (exact, hits) = (try? store.read { db -> ([LinkCandidate], [SearchHit]) in
+            if term.isEmpty, let pathTag {                       // `[[person/alex/`: everything under the tag so far
+                return ([LinkCandidate](), try SearchQueries.underTag(db, pathTag, kinds: kinds))
+            }
+            return (try LinkResolver.candidates(db, typed: q), term.isEmpty ? [] : try SearchQueries.search(db, term, limit: 12).all)
         }) ?? ([], [])
         func under(_ tags: [String]) -> Bool {
             guard let path else { return true }
@@ -101,8 +104,10 @@ final class WikiModel {
         }
         var refs: [(id: String, kind: LinkRef.Kind, title: String, tags: [String], modified: Date?)] =
             exact.map { ($0.id, $0.kind, $0.title, $0.tags, nil) }
-        for hit in hits where kinds.contains(hit.ref.kind) && hit.ref.kind != .tag || (path == nil && kinds.contains(.tag) && hit.ref.kind == .tag) {
-            guard under(hit.tags), !refs.contains(where: { $0.id == hit.ref.id }) else { continue }
+        for hit in hits where kinds.contains(hit.ref.kind) {
+            // Items must carry the path's tag (or one below it); tags must lie below the path.
+            let fits = hit.ref.kind == .tag ? path.map { TagName.key(for: hit.ref.title).hasPrefix($0 + "/") } ?? true : under(hit.tags)
+            guard fits, !refs.contains(where: { $0.id == hit.ref.id }) else { continue }
             refs.append((hit.ref.id, hit.ref.kind, hit.ref.title, hit.tags, hit.modifiedAt))
         }
         refs = Array(refs.prefix(6))

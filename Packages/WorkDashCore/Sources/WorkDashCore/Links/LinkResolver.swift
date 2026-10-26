@@ -36,7 +36,8 @@ public enum LinkResolver {
         if let slash = body.lastIndex(of: "/") {
             let path = body[..<slash].trimmingCharacters(in: .whitespaces)
             let title = body[body.index(after: slash)...].trimmingCharacters(in: .whitespaces)
-            if !path.isEmpty, !title.isEmpty, (try? TagName(path)) != nil { return (title, [path]) }
+            if title.isEmpty { return nil }                       // `person/alex/`: no title typed yet
+            if !path.isEmpty, (try? TagName(path)) != nil { return (title, [path]) }
         }
         return body.isEmpty ? nil : (body, [])
     }

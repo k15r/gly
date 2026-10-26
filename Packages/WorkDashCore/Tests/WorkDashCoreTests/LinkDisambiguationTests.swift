@@ -88,12 +88,26 @@ extension LinkDisambiguationTests {
         XCTAssertNotNil(hit?.modifiedAt)
     }
 
+    func testUnderTagListsItemsAndSubtags() throws {
+        ok(.createPage(PageDraft(title: "Goals", tags: ["person/alex/work"])))
+        ok(.createTask(TaskDraft(title: "Call", tags: ["person/alex"])))
+        let done = ok(.createTask(TaskDraft(title: "Old", tags: ["person/alex"]))).id!
+        ok(.setStatus(id: done, .done))
+        ok(.createPage(PageDraft(title: "Other", tags: ["person/sam"])))
+        let hits = try db.read { try SearchQueries.underTag($0, try TagName("Person/Alex")) }
+        XCTAssertEqual(Set(hits.filter { $0.ref.kind != .tag }.map(\.ref.title)), ["Goals", "Call"], "descendants included, done task and other tags not")
+        XCTAssertEqual(hits.last?.ref.title, "person/alex/work", "subtags after the items")
+        XCTAssertEqual(hits.first { $0.ref.title == "Goals" }?.tags, ["person/alex/work"])
+        let pagesOnly = try db.read { try SearchQueries.underTag($0, try TagName("person/alex"), kinds: [.page]) }
+        XCTAssertEqual(pagesOnly.map(\.ref.title), ["Goals"])
+    }
+
     func testNewPageForTypedLink() {
         XCTAssertEqual(LinkResolver.newPage(for: "person/alex/Goals")?.title, "Goals")
         XCTAssertEqual(LinkResolver.newPage(for: "person/alex/Goals")?.tags, ["person/alex"])
         XCTAssertEqual(LinkResolver.newPage(for: "page: Goals")?.title, "Goals")
         XCTAssertEqual(LinkResolver.newPage(for: "Goals")?.tags, [])
         XCTAssertNil(LinkResolver.newPage(for: "task:Goals"))
-        XCTAssertEqual(LinkResolver.newPage(for: "a/")?.title, "a/", "no title after the slash: taken as typed")
+        XCTAssertNil(LinkResolver.newPage(for: "person/alex/"), "no title typed yet")
     }
 }
