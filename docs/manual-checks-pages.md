@@ -36,10 +36,10 @@ Use neutral test data only (no real names).
 
 ## E. Task page (task 5.7)
 
-- [ ] E1 Click a task (task list, day view, tag tree, tag page) → it opens in the main area like a page: title, field row, notes (Read/Edit ⌘E), backlinks; ⌘[ goes back.
-- [ ] E2 Follow a link to a task from a page → task page opens; its backlinks list the page with an excerpt.
-- [ ] E3 Change the due date, then edit the notes, then leave → both saved without a button; ⌘Z twice reverts them one by one.
-- [ ] E4 Tick the done checkbox, change priority, snooze until a date, change tags → each is saved at once; ⌘N still opens the new-task form.
+- [x] E1 Click a task (task list, day view, tag tree, tag page) → it opens in the main area like a page: title, field row, notes (Read/Edit ⌘E), backlinks; ⌘[ goes back.
+- [x] E2 Follow a link to a task from a page → task page opens; its backlinks list the page with an excerpt.
+- [x] E3 Change the due date, then edit the notes, then leave → both saved without a button; ⌘Z twice reverts them one by one.
+- [x] E4 Tick the done checkbox, change priority, snooze until a date, change tags → each is saved at once; ⌘N still opens the new-task form.
 
 ## D. End to end with an agent (task 6.1)
 
@@ -53,4 +53,5 @@ Use neutral test data only (no real names).
 | 2026-10-26 | owner | A ✅ | Editor: styling, checklists (added: toggling in the read view), `[[` picker, chips, web links, one undo step per session, read view, missing/deleted links. List editing feels odd; full markdown editor is a later change |
 | 2026-10-26 | owner | B ✅ | Pages, navigation, tag pages, tree, drag & drop, live agent edits; fixed: tag tree counted snoozed tasks differently from tag pages (B7); added: open tasks as tree leaves next to pages (B8) |
 | 2026-10-26 | owner | C ✅ | Quick open (grouped results, keyboard, create page), markdown task notes with links and backlinks |
+| 2026-10-26 | owner | E ✅ | Task page (added after D1: tasks had no backlinks; tasks now open like pages, changes save at once); fixed: unlabeled due toggles, squeezed field row |
 | | | | |
