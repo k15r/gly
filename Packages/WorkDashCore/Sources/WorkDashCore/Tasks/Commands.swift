@@ -143,10 +143,13 @@ public struct CommandOK: Codable, Equatable {
     /// For undo/redo: whether there was anything to do.
     public var changed: Bool
     public var message: String?
-    /// `[[Title]]` links that stayed unresolved in the written text.
+    /// `[[…]]` links that stayed unresolved in the written text (their typed text).
     public var unresolved: [String]?
-    public init(id: String? = nil, changed: Bool = true, message: String? = nil, unresolved: [String]? = nil) {
-        self.id = id; self.changed = changed; self.message = message; self.unresolved = unresolved
+    /// The same, with candidates for ambiguous ones.
+    public var unresolvedLinks: [UnresolvedLink]?
+    public init(id: String? = nil, changed: Bool = true, message: String? = nil, unresolved: [UnresolvedLink]? = nil) {
+        self.id = id; self.changed = changed; self.message = message
+        self.unresolvedLinks = unresolved; self.unresolved = unresolved?.map(\.text)
     }
 }
 
@@ -203,7 +206,7 @@ public struct CommandHandler {
         case .updateTask(let id, let patch):
             try requireTask(id, db)
             var fields: Fields = [:]
-            var unresolved: [String]?
+            var unresolved: [UnresolvedLink]?
             if let t = patch.title { fields["title"] = try Validate.title(t) }
             if let b = patch.body { let r = try LinkResolver.resolve(b, db: db); fields["body"] = r.text; unresolved = r.unresolved }
             if let p = patch.priority { fields["priority"] = p.rawValue }
@@ -239,7 +242,7 @@ public struct CommandHandler {
         case .updatePage(let id, let patch):
             try requirePage(id, db)
             var fields: Fields = [:]
-            var unresolved: [String]?
+            var unresolved: [UnresolvedLink]?
             if let t = patch.title { fields["title"] = try Validate.title(t) }
             if let b = patch.body { let r = try LinkResolver.resolve(b, db: db); fields["body"] = r.text; unresolved = r.unresolved }
             let tagNames = try patch.tags.map { try $0.map(TagName.init) }
