@@ -130,6 +130,35 @@ final class WikiModel {
         }
     }
 
+    /// The menu of a link without live target (trash-bin T5): missing → candidates and new page/task;
+    /// deleted page/task → Restore (with when and by whom), same-titled live items, Show in Trash. nil = just open it.
+    func linkMenu(_ target: ParsedLink.Target) -> LinkMenuModel? {
+        switch target {
+        case .missing(let typed):
+            return .missing(typed: typed, candidates: candidates(typed))
+        case .tag:
+            return nil
+        case .item(let id):
+            guard let store, let (ref, deleted) = try? store.read({ try LinkQueries.reference($0, id: id, isTag: false) }), deleted,
+                  let entry = try? store.read({ try TrashQueries.entry($0, id: ref.id) }) else { return nil }
+            let others = (try? store.read { db in
+                try LinkResolver.candidates(db, typed: (ref.kind == .task ? "task:" : "page:") + ref.title)
+            })?.filter { $0.id != ref.id } ?? []
+            let names = displayNames(others.map(\.id))
+            let when = RelativeDateTimeFormatter().localizedString(for: entry.deletedAt, relativeTo: Date())
+            return LinkMenuModel([
+                [.open(title: "Restore “\(ref.title)”", symbol: "arrow.uturn.backward", url: URL(string: "\(LinkParser.scheme)://restore/\(ref.id)")!),
+                 .info("deleted \(when) by \(WriterName.display(entry.deletedBy))")],
+                others.map { c in
+                    .replace(LinkSuggestion(id: c.id, symbol: c.kind.linkSymbol, title: "Link to “\(names[c.id]?.display ?? c.title)” instead",
+                                            subtitle: Self.secondLine(kind: c.kind, tags: c.tags, modified: nil),
+                                            insert: LinkParser.canonical(label: c.title, item: c.id)))
+                },
+                [.open(title: "Show in Trash", symbol: "trash", url: URL(string: "\(LinkParser.scheme)://trash/\(ref.id)")!)],
+            ])
+        }
+    }
+
     func search(_ query: String) -> SearchResults {
         (try? store?.read { try SearchQueries.search($0, query, limit: 8) }) ?? SearchResults()
     }
@@ -137,6 +166,8 @@ final class WikiModel {
     /// What a link URL opens.
     enum LinkDestination: Equatable {
         case page(String), task(String), tag(String), missing(String, create: LinkRef.Kind), web(URL)
+        /// Restore a deleted page or task / show it in the Trash (trash-bin T5).
+        case restore(String), trash(String)
     }
 
     func destination(for url: URL) -> LinkDestination? {
@@ -151,6 +182,10 @@ final class WikiModel {
             return .tag(ref.title)
         case "missing":
             return LinkParser.missingText(url).map { .missing($0, create: LinkParser.missingCreateKind(url)) }
+        case "restore":
+            return .restore(id)
+        case "trash":
+            return .trash(id)
         default:
             return nil
         }
@@ -174,6 +209,8 @@ struct LinkOpener {
             guard let item = LinkResolver.newItem(for: typed, kind: kind) else { NSSound.beep(); return }
             Task { kind == .task ? await createTask(title: item.title, tags: item.tags) : await createPage(title: item.title, tags: item.tags) }
         case .web(let u): NSWorkspace.shared.open(u)
+        case .restore(let id): Task { await app.send(.restore(id: id)) }      // links to it come alive in place
+        case .trash(let id): nav.showTrash(selecting: id)
         case nil: NSSound.beep()
         }
     }

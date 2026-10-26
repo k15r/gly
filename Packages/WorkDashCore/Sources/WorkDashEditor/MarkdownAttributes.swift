@@ -103,7 +103,7 @@ public enum MarkdownAttributes {
                 case .deleted:
                     text.addAttribute(.foregroundColor, value: NSColor.secondaryLabelColor, range: r)
                     text.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: r)
-                    text.addAttribute(.toolTip, value: "link target deleted", range: r)
+                    text.addAttribute(.toolTip, value: "link target deleted – ⌘-click to restore it", range: r)
                 case .missing:
                     text.addAttribute(.foregroundColor, value: NSColor.systemRed, range: r)
                 }

@@ -141,6 +141,7 @@ struct ContentView: View {
                     Label("Day", systemImage: "calendar").tag(Navigation.Destination.day)
                     Label("Tasks", systemImage: "checklist").tag(Navigation.Destination.tasks)
                     Label("Pages", systemImage: "doc.text").tag(Navigation.Destination.pages)
+                    TrashSidebarRow().tag(Navigation.Destination.trash)
                     Section("Tags") { TagTreeView() }
                 }
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240)
@@ -149,6 +150,7 @@ struct ContentView: View {
                 case .day: DayContainer()
                 case .tasks: TaskListContainer()
                 case .pages: PagesListView()
+                case .trash: TrashView()
                 case .page(let id): PageView(id: id)
                 case .task(let id): TaskPageView(id: id)
                 case .tag(let name): TagPageView(name: name)

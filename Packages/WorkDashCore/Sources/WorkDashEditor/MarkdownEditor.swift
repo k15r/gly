@@ -28,8 +28,9 @@ public struct MarkdownEditor: NSViewRepresentable {
     public var appearance: (ParsedLink.Target) -> LinkAppearance
     public var onOpenLink: (URL) -> Void
     public var suggestions: (String) -> [LinkSuggestion]
-    /// Targets an ambiguous typed link could mean (link-disambiguation K5); empty = none.
-    public var candidates: (String) -> [LinkSuggestion]
+    /// The menu a link without live target opens on ⌘-click (missing: candidates, new page/task; deleted: restore,
+    /// same-titled items, show in trash; trash-bin T5); nil = open the link.
+    public var linkMenu: (ParsedLink.Target) -> LinkMenuModel?
 
     public init(text: String,
                 onChange: ((String) -> Void)? = nil,
@@ -37,9 +38,9 @@ public struct MarkdownEditor: NSViewRepresentable {
                 appearance: @escaping (ParsedLink.Target) -> LinkAppearance,
                 onOpenLink: @escaping (URL) -> Void,
                 suggestions: @escaping (String) -> [LinkSuggestion],
-                candidates: @escaping (String) -> [LinkSuggestion] = { _ in [] }) {
+                linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard) {
         self.text = text; self.onChange = onChange; self.onCommit = onCommit
-        self.appearance = appearance; self.onOpenLink = onOpenLink; self.suggestions = suggestions; self.candidates = candidates
+        self.appearance = appearance; self.onOpenLink = onOpenLink; self.suggestions = suggestions; self.linkMenu = linkMenu
     }
 
     public func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -183,10 +184,10 @@ public struct MarkdownEditor: NSViewRepresentable {
                     return true
                 }
                 if command, let url = storage.attribute(.wdLink, at: i, effectiveRange: &range) as? String, let u = URL(string: url) {
-                    // A typed link without target: offer its candidates (if ambiguous, K5), then a new page or task.
-                    if u.host == "missing", let link = LinkParser.links(in: tv.string).first(where: { NSLocationInRange(i, $0.range) }),
-                       case .missing(let typed) = link.target {
-                        showMissingMenu(parent.candidates(typed), typed: typed, linkRange: link.range, at: i)
+                    // A link without live target (missing or deleted) opens its menu instead (trash-bin T5).
+                    if let link = LinkParser.links(in: tv.string).first(where: { NSLocationInRange(i, $0.range) }),
+                       let model = parent.linkMenu(link.target) {
+                        showLinkMenu(model, linkRange: link.range, at: i)
                         return true
                     }
                     commitNow()
@@ -197,14 +198,13 @@ public struct MarkdownEditor: NSViewRepresentable {
             return false
         }
 
-        /// The missing-link menu at the link: candidates, then new page / new task.
-        private func showMissingMenu(_ options: [LinkSuggestion], typed: String, linkRange: NSRange, at index: Int) {
+        /// The link menu at the link; replacements edit the text (undo, session save), actions go to the app.
+        private func showLinkMenu(_ model: LinkMenuModel, linkRange: NSRange, at index: Int) {
             guard let tv = textView else { return }
             let rect = tv.segmentRects(for: NSRange(location: index, length: 1)).first ?? .zero
-            MissingLinkMenu.show(typed: typed, options: options,
-                                 pick: { [weak self] in self?.replace(linkRange, with: $0.insert) },
-                                 create: { [weak self] in self?.commitNow(); self?.parent.onOpenLink($0) },
-                                 at: NSPoint(x: rect.minX, y: rect.maxY + 2), in: tv)
+            LinkMenu.show(model, replace: { [weak self] in self?.replace(linkRange, with: $0.insert) },
+                          open: { [weak self] in self?.commitNow(); self?.parent.onOpenLink($0) },
+                          at: NSPoint(x: rect.minX, y: rect.maxY + 2), in: tv)
         }
 
         // MARK: `[[` picker
@@ -258,39 +258,48 @@ public struct MarkdownEditor: NSViewRepresentable {
     }
 }
 
-/// Target-action wrapper for menu items built from closures.
-/// The menu for a typed link without target (editor ⌘-click, read-view click): candidates of an ambiguous link
-/// (link-disambiguation K5), then "New page …" and "New task …". A native menu: Esc or a click outside dismisses it.
-enum MissingLinkMenu {
+/// The native menu for a `LinkMenuModel` (editor ⌘-click, read-view click). Esc or a click outside dismisses it.
+enum LinkMenu {
     /// Menu items hold their targets weakly; keep the actions until the next menu replaces them.
     private static var retained: [CandidateAction] = []
 
     /// - Parameter view: the view `point` is in; nil = screen coordinates.
-    static func show(typed: String, options: [LinkSuggestion], pick: @escaping (LinkSuggestion) -> Void,
-                     create: @escaping (URL) -> Void, at point: NSPoint, in view: NSView?) {
+    static func show(_ model: LinkMenuModel, replace: @escaping (LinkSuggestion) -> Void, open: @escaping (URL) -> Void,
+                     at point: NSPoint, in view: NSView?) {
         let menu = NSMenu()
+        menu.autoenablesItems = false
         var actions: [CandidateAction] = []
-        func add(_ title: String, symbol: String, tip: String?, _ run: @escaping () -> Void) {
-            let action = CandidateAction(run)
-            actions.append(action)
-            let item = NSMenuItem(title: title, action: #selector(CandidateAction.run), keyEquivalent: "")
-            item.target = action
-            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        func add(_ title: String, symbol: String?, tip: String?, _ run: (() -> Void)?) {
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            if let run {
+                let action = CandidateAction(run)
+                actions.append(action)
+                item.target = action
+                item.action = #selector(CandidateAction.run)
+            } else {
+                item.isEnabled = false
+            }
+            item.image = symbol.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
             item.toolTip = tip
             menu.addItem(item)
         }
-        for o in options { add(o.title, symbol: o.symbol, tip: o.subtitle.isEmpty ? nil : o.subtitle) { pick(o) } }
-        if !options.isEmpty { menu.addItem(.separator()) }
-        for kind in [LinkRef.Kind.page, .task] {
-            guard let label = MarkdownBlocks.createLabel(typed, kind: kind),
-                  let url = URL(string: LinkParser.missingURL(typed, create: kind)) else { continue }
-            add(label, symbol: kind.linkSymbol, tip: nil) { create(url) }
+        for section in model.sections where !section.isEmpty {
+            if !menu.items.isEmpty { menu.addItem(.separator()) }
+            for entry in section {
+                switch entry {
+                case .replace(let s): add(s.title, symbol: s.symbol, tip: s.subtitle.isEmpty ? nil : s.subtitle) { replace(s) }
+                case .open(let title, let symbol, let url): add(title, symbol: symbol, tip: nil) { open(url) }
+                case .info(let text): add(text, symbol: nil, tip: nil, nil)
+                }
+            }
         }
+        guard !menu.items.isEmpty else { return }
         retained = actions
         menu.popUp(positioning: nil, at: point, in: view)
     }
 }
 
+/// Target-action wrapper for menu items built from closures.
 final class CandidateAction: NSObject {
     let action: () -> Void
     init(_ action: @escaping () -> Void) { self.action = action }

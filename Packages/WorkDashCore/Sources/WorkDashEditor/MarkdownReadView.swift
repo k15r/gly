@@ -63,7 +63,12 @@ public enum MarkdownBlocks {
 
     /// The text with the first `[[typed]]` replaced by `insert` (a canonical link).
     public static func pin(_ text: String, typed: String, with insert: String) -> String {
-        guard let link = LinkParser.links(in: text).first(where: { $0.target == .missing(typed) }) else { return text }
+        pin(text, target: .missing(typed), with: insert)
+    }
+
+    /// The text with the first link to `target` replaced by `insert` (a candidate, or a same-titled item for a deleted target).
+    public static func pin(_ text: String, target: ParsedLink.Target, with insert: String) -> String {
+        guard let link = LinkParser.links(in: text).first(where: { $0.target.matches(target) }) else { return text }
         return (text as NSString).replacingCharacters(in: link.range, with: insert)
     }
 
@@ -165,13 +170,13 @@ public struct MarkdownReadView: View {
     let appearance: (ParsedLink.Target) -> LinkAppearance
     /// Called with the new text when a checkbox is clicked or an ambiguous link is pinned; nil = read-only.
     let onChange: ((String) -> Void)?
-    /// Targets an ambiguous typed link could mean (link-disambiguation K5).
-    let candidates: (String) -> [LinkSuggestion]
+    /// The menu a link without live target opens (trash-bin T5); nil = open the link.
+    let linkMenu: (ParsedLink.Target) -> LinkMenuModel?
     @Environment(\.openURL) private var openURL
 
     public init(text: String, appearance: @escaping (ParsedLink.Target) -> LinkAppearance, onChange: ((String) -> Void)? = nil,
-                candidates: @escaping (String) -> [LinkSuggestion] = { _ in [] }) {
-        self.text = text; self.appearance = appearance; self.onChange = onChange; self.candidates = candidates
+                linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard) {
+        self.text = text; self.appearance = appearance; self.onChange = onChange; self.linkMenu = linkMenu
     }
 
     public var body: some View {
@@ -182,16 +187,15 @@ public struct MarkdownReadView: View {
         }
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // A missing link: the same native menu as the editor's ⌘-click, at the pointer (candidates, new page, new task).
+        // A link without live target: the same native menu as the editor's ⌘-click, at the pointer (trash-bin T5).
         .environment(\.openURL, OpenURLAction { url in
-            if let typed = LinkParser.missingText(url) {
-                let options = onChange == nil ? [] : candidates(typed)   // pinning a candidate needs a writable text
+            if let target = ParsedLink.Target(url: url), var model = linkMenu(target) {
+                if onChange == nil { model = model.withoutReplacements }   // replacing a link needs a writable text
                 let text = text, onChange = onChange, openURL = openURL
                 #if canImport(AppKit)
                 DispatchQueue.main.async {
-                    MissingLinkMenu.show(typed: typed, options: options,
-                                         pick: { onChange?(MarkdownBlocks.pin(text, typed: typed, with: $0.insert)) },
-                                         create: { openURL($0) }, at: NSEvent.mouseLocation, in: nil)
+                    LinkMenu.show(model, replace: { onChange?(MarkdownBlocks.pin(text, target: target, with: $0.insert)) },
+                                  open: { openURL($0) }, at: NSEvent.mouseLocation, in: nil)
                 }
                 return .handled
                 #endif

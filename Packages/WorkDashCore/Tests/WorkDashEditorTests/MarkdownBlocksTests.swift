@@ -36,4 +36,30 @@ final class MarkdownBlocksTests: XCTestCase {
         let a = MarkdownBlocks.inline("[x](workdash://item/\(id))") { _ in .deleted(title: "x") }
         XCTAssertEqual(a.runs.first?.strikethroughStyle, .single)
     }
+
+    // MARK: trash-bin 3.1 (link menu)
+
+    func testPinADeletedTargetToASameTitledItem() {
+        let old = "0F8B6C3E-2D4A-4E1B-9C7D-5A6B7C8D9E0F", new = "1A2B3C4D-5E6F-4A1B-8C2D-3E4F5A6B7C8D"
+        let text = "see [Goals](workdash://item/\(old)) and again [Goals](workdash://item/\(old))"
+        let pinned = MarkdownBlocks.pin(text, target: .item(old.lowercased()), with: "[Goals](workdash://item/\(new))")
+        XCTAssertEqual(pinned, "see [Goals](workdash://item/\(new)) and again [Goals](workdash://item/\(old))", "first link only, ids case-insensitive")
+        XCTAssertEqual(MarkdownBlocks.pin(text, target: .item(new), with: "x"), text, "no such link: unchanged")
+    }
+
+    func testTargetFromURL() {
+        XCTAssertEqual(ParsedLink.Target(url: URL(string: "workdash://item/abc")!), .item("ABC"))
+        XCTAssertEqual(ParsedLink.Target(url: URL(string: LinkParser.missingURL("person/alex/Goals"))!), .missing("person/alex/Goals"))
+        XCTAssertNil(ParsedLink.Target(url: URL(string: "https://example.com")!))
+    }
+
+    func testMissingMenuModelAndReadOnlyFilter() {
+        let candidate = LinkSuggestion(id: "1", symbol: "doc.text", title: "Goals · alex", subtitle: "", insert: "[Goals](workdash://item/1)")
+        let model = LinkMenuModel.missing(typed: "person/alex/Call", candidates: [candidate])
+        XCTAssertEqual(model.sections[0], [.replace(candidate)])
+        XCTAssertEqual(model.sections[1].compactMap { if case .open(let title, _, _) = $0 { title } else { nil } },
+                       ["New page “Call” in person/alex", "New task “Call” in person/alex"])
+        XCTAssertEqual(model.withoutReplacements.sections[0], [])
+        XCTAssertNil(LinkMenuModel.standard(.item("x")))
+    }
 }

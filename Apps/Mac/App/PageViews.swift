@@ -18,7 +18,7 @@ struct WDMarkdownEditor: View {
                        appearance: { wiki.appearance($0) },
                        onOpenLink: { opener?.open($0) },
                        suggestions: { wiki.suggestions($0) },
-                       candidates: { wiki.candidates($0) })
+                       linkMenu: { wiki.linkMenu($0) })
     }
 }
 
@@ -29,7 +29,7 @@ struct WDMarkdownReadView: View {
     /// Saves a checkbox toggle (one undo step each).
     var onChange: ((String) -> Void)?
     var body: some View {
-        MarkdownReadView(text: text, appearance: { wiki.appearance($0) }, onChange: onChange, candidates: { wiki.candidates($0) })
+        MarkdownReadView(text: text, appearance: { wiki.appearance($0) }, onChange: onChange, linkMenu: { wiki.linkMenu($0) })
     }
 }
 

@@ -7,7 +7,7 @@ import WorkDashCore
 @Observable
 final class Navigation {
     enum Destination: Hashable {
-        case day, tasks, pages
+        case day, tasks, pages, trash
         case page(String)       // page id
         case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
@@ -44,6 +44,14 @@ final class Navigation {
 
     var canGoBack: Bool { !backStack.isEmpty }
     var canGoForward: Bool { !forwardStack.isEmpty }
+
+    /// The Trash entry to select when the Trash opens (from a broken link's "Show in Trash").
+    var trashSelection: String?
+
+    func showTrash(selecting id: String?) {
+        trashSelection = id
+        go(.trash)
+    }
 
     func go(_ destination: Destination) {
         guard destination != current else { return }
