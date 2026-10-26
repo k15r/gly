@@ -23,10 +23,10 @@ Use neutral test data only (no real names).
 - [x] B4 A page shows "Backlinks" with the pages/tasks that link to it and an excerpt; removing the link elsewhere removes the backlink at once.
 - [x] B5 Delete a page (… menu) → gone from Pages, search and tag pages; ⌘Z brings it back with text and tags.
 - [x] B6 Click a tag in the sidebar or a tag chip on a task row → its tag page: description (Edit to write one, with `[[` links), open tasks, pages, finished tasks (collapsed), backlinks. "Show in Tasks" filters the task list.
-- [ ] B7 Tag page of a group like `person` lists the items of all `person/…` tags; writing a description there works.
-- [ ] B8 Sidebar tags: expanding `project/atlas` lists its open tasks (snoozed marked) and then its pages, after child tags; an item with two tags appears under both with a link icon ("Also in …"); untagged open tasks and pages appear under "Untagged". Clicking a task opens the task editor.
-- [ ] B9 Drag a page or a task from one tag onto another → it moves (one ⌘Z undoes it). Drag with ⌥ held → it's in both. Drag onto "Untagged" → that tag is removed.
-- [ ] B10 While an agent (Claude Code) edits a page you have open but aren't typing in, the page updates by itself.
+- [x] B7 Tag page of a group like `person` lists the items of all `person/…` tags; writing a description there works.
+- [x] B8 Sidebar tags: expanding `project/atlas` lists its open tasks (snoozed marked) and then its pages, after child tags; an item with two tags appears under both with a link icon ("Also in …"); untagged open tasks and pages appear under "Untagged". Clicking a task opens the task editor.
+- [x] B9 Drag a page or a task from one tag onto another → it moves (one ⌘Z undoes it). Drag with ⌥ held → it's in both. Drag onto "Untagged" → that tag is removed.
+- [x] B10 While an agent (Claude Code) edits a page you have open but aren't typing in, the page updates by itself.
 
 ## C. Search and task notes (tasks 5.5, 5.6)
 
@@ -44,4 +44,5 @@ Use neutral test data only (no real names).
 | Date | Checked by | Result | Notes |
 |---|---|---|---|
 | 2026-10-26 | owner | A ✅ | Editor: styling, checklists (added: toggling in the read view), `[[` picker, chips, web links, one undo step per session, read view, missing/deleted links. List editing feels odd; full markdown editor is a later change |
+| 2026-10-26 | owner | B ✅ | Pages, navigation, tag pages, tree, drag & drop, live agent edits; fixed: tag tree counted snoozed tasks differently from tag pages (B7); added: open tasks as tree leaves next to pages (B8) |
 | | | | |
