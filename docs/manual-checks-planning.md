@@ -27,6 +27,7 @@ Neutral test data only (no real names).
 - [ ] D2 Circle menu → This occurrence → Ignore → the circle turns empty/accented, free time grows; the next week's occurrence still blocks. ⌘Z undoes it.
 - [ ] D3 On a recurring meeting: Whole series → Optional → every occurrence counts half; a single occurrence set to Blocks overrides the series. Non-recurring meetings don't offer "Whole series".
 - [ ] D4 Automatic → back to the calendar's classification.
+- [x] D5 An all-day appointment (not blocking by default) can be set to Blocks; the menu shows ✓ at the current choice per section (found: an occurrence "Ignore" silently overrode a series "Blocks" until the checkmarks were added).
 
 ## E. End to end (task 6.1)
 
