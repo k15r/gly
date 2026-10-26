@@ -154,7 +154,7 @@ The app's Settings gets a "Planning" tab next to "Agents".
 - **Sections:** **Today**, with a load header ("needs 7h · free 5h 30m · ⚠ 1h 30m short"; rows show overdue, due today or "today ≥ …", and "can't fit"), then **Coming up** with the horizon picker (rows show "start by <day>" or "no estimate").
 - **Appointment rows:**
   - a small menu button and a context menu: Automatic / Blocks / Optional / Ignore, × This occurrence / Whole series
-  - an icon showing a non-automatic weight (dimmed for ignore, half-filled for optional)
+  - a circle showing the weight (filled = blocks, half-filled = maybe, empty = free), accented when set by an override; the menu marks the current choice per section with a checkmark
   - the ambiguity banner (Q4)
 - **Effort:** a chip on `TaskRow`, a segmented control or menu on the task page, and S/M/L in the task context menu.
 - **Recomputation:** planning updates from the existing observations (tasks, calendar changes, the annotation and rule query) and the `Clock` tick.

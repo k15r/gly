@@ -56,34 +56,6 @@ public struct TreeLeaf: Equatable, Identifiable {
 }
 
 public enum TagQueries {
-    /// Suggestions while typing a tag: next-segment completions first, then full tag names,
-    /// both ordered by how often the tag is used.
-    public static func autocomplete(_ db: Database, prefix typed: String, limit: Int = 10) throws -> [String] {
-        let key = TagName.key(for: typed.trimmingCharacters(in: .whitespaces))
-        let escaped = TagFilter.escapeLike(key)
-        let rows = try Row.fetchAll(db, sql: """
-            SELECT t.name, COUNT(it.id) AS uses FROM live_tags t
-            LEFT JOIN live_item_tags it ON it.tag_id = t.id
-            WHERE t.archived = 0 AND t.name_key LIKE ? ESCAPE '\\'
-            GROUP BY t.id ORDER BY uses DESC, t.name_key
-            """, arguments: [escaped + "%"])
-        var segmentCompletions: [String] = []
-        var fullNames: [String] = []
-        for row in rows {
-            let name: String = row["name"]
-            fullNames.append(name)
-            // Next-segment completion: cut after the segment the user is typing.
-            let rest = name.dropFirst(typed.count)
-            if let slash = rest.firstIndex(of: "/") {
-                let completion = String(name[..<slash])
-                if !segmentCompletions.contains(completion) && !fullNames.contains(completion) { segmentCompletions.append(completion) }
-            }
-        }
-        var result: [String] = []
-        for s in segmentCompletions + fullNames where !result.contains(s) { result.append(s) }
-        return Array(result.prefix(limit))
-    }
-
     /// Tags assigned to at least one open task or live page, as a hierarchy with roll-up open-task counts.
     /// "Open" includes snoozed tasks, as in the task list (snoozed = not now, still open).
     public static func tagTree(_ db: Database, today: String) throws -> [TagNode] {

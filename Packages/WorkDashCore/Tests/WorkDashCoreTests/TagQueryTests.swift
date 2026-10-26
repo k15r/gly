@@ -46,19 +46,6 @@ final class TagQueryTests: XCTestCase {
         }
     }
 
-    func testAutocompleteSuggestsPrefixMatchesAndNextSegment() throws {
-        try db.write { db in
-            try addTask(db, "A", tags: ["person/alex"])
-            try addTask(db, "B", tags: ["person/alex"])
-            try addTask(db, "C", tags: ["person/sam"])
-            try addTask(db, "D", tags: ["project/atlas/logs"])
-            XCTAssertEqual(try TagQueries.autocomplete(db, prefix: "person/"), ["person/alex", "person/sam"], "ordered by usage")
-            XCTAssertEqual(try TagQueries.autocomplete(db, prefix: "pro"), ["project", "project/atlas/logs"])
-            XCTAssertEqual(try TagQueries.autocomplete(db, prefix: "project/"), ["project/atlas", "project/atlas/logs"])
-            XCTAssertEqual(try TagQueries.autocomplete(db, prefix: "PERSON/S"), ["person/sam"])
-        }
-    }
-
     func testTagTreeWithRollUpCounts() throws {
         try db.write { db in
             try addTask(db, "A", tags: ["person/alex"])

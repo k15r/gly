@@ -224,6 +224,7 @@ struct AmbiguityBanner: View {
         ForEach(mine) { a in
             let candidates = calendars.appointments.filter {
                 $0.calendarID == a.calendarID && TagName.key(for: $0.title) == TagName.key(for: a.title)
+                    && ($0.organizer ?? "") == (a.organizer ?? "")
             }
             VStack(alignment: .leading, spacing: 6) {
                 Label("Which appointment does “\(a.title)” (\(a.blocking?.rawValue ?? "override")) belong to?", systemImage: "questionmark.circle")

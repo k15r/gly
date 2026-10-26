@@ -61,9 +61,6 @@ final class TasksModel {
         (try? store?.read { try TagQueries.list($0, today: LocalDay(date: Date()).description).map(\.name) }) ?? []
     }
 
-    func autocomplete(_ prefix: String) -> [String] {
-        (try? store?.read { try TaskQueries.autocompleteTags($0, prefix) }) ?? []
-    }
 
     private func observeDay() {
         guard let store else { return }
@@ -90,8 +87,3 @@ final class TasksModel {
     }
 }
 
-extension TaskQueries {
-    static func autocompleteTags(_ db: Database, _ prefix: String) throws -> [String] {
-        try TagQueries.autocomplete(db, prefix: prefix)
-    }
-}
