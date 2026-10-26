@@ -78,6 +78,10 @@ public enum Command: Codable, Equatable {
     case undo
     case redo
     case reconcileSnoozes(today: String)
+    /// Agent state for the app (calendar access in the agent, design M5/M8). Answered by `AgentService`.
+    case agentStatus
+    /// Tells the agent that the shared settings changed (HTTP endpoint, design M7). No store change.
+    case reloadSettings
 }
 
 public enum CommandResult: Codable, Equatable {
@@ -185,6 +189,12 @@ public struct CommandHandler {
         case .redo:
             guard let redone = try db.redo(writer: writer, at: now) else { return CommandOK(changed: false, message: "Nothing to redo.") }
             return CommandOK(message: try db.label(ofChange: redone))
+
+        case .agentStatus:
+            return CommandOK(changed: false, message: "calendar: unknown")
+
+        case .reloadSettings:
+            return CommandOK(changed: false)
 
         case .reconcileSnoozes(let today):
             try Validate.day(today)

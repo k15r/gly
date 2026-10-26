@@ -18,18 +18,19 @@ final class CalendarModel {
     private(set) var shownDay: LocalDay = LocalDay(date: Date())
     private let source: EventSource
     private let tracker: SourceActivityTracker
-    private let defaults: UserDefaults
-    private static let hiddenKey = "hiddenCalendarIDs"
+    private let settings: SharedSettings
 
-    /// Hidden calendar IDs. A stored property so SwiftUI observes it; persisted to UserDefaults on change.
+    /// Hidden calendar IDs. A stored property so SwiftUI observes it; persisted to the shared settings
+    /// on change, where the agent reads them for `get_schedule` (design M7).
     private(set) var hiddenIDs: Set<String> {
-        didSet { defaults.set(Array(hiddenIDs).sorted(), forKey: Self.hiddenKey) }
+        didSet { settings.hiddenCalendarIDs = hiddenIDs }
     }
 
-    init(source: EventSource = EventKitSource(), defaults: UserDefaults = .standard) {
+    init(source: EventSource = EventKitSource(), settings: SharedSettings = .shared()) {
         self.source = source
-        self.defaults = defaults
-        hiddenIDs = Set(defaults.stringArray(forKey: Self.hiddenKey) ?? [])
+        self.settings = settings
+        settings.migrate(from: .standard)
+        hiddenIDs = settings.hiddenCalendarIDs
         tracker = SourceActivityTracker(source: source)
         source.onChange = { [weak self] in
             Task { @MainActor in self?.systemCalendarChanged() }

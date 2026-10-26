@@ -142,3 +142,11 @@ final class CommandTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(CommandResult.self, from: JSONEncoder().encode(result)), result)
     }
 }
+
+extension CommandTests {
+    func testReloadSettingsAndAgentStatusDontWrite() throws {
+        XCTAssertFalse(ok(.reloadSettings).changed)
+        XCTAssertFalse(ok(.agentStatus).changed)
+        XCTAssertEqual(try db.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM change_log") }, 0)
+    }
+}

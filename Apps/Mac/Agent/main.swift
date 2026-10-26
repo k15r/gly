@@ -10,7 +10,12 @@ do {
     let url = try StoreFactory.defaultDatabaseURL()
     let pool = try StoreFactory.openReadWrite(at: url)
     try pool.write { _ in }        // make sure the WAL file exists for the app's change watcher
-    let delegate = AgentListenerDelegate(service: AgentService(writer: pool))
+    let calendar = EventKitSource()
+    let delegate = AgentListenerDelegate(service: AgentService(writer: pool, status: {
+        // Ask for calendar access in the background (a prompt may take longer than the XPC timeout); report the current state.
+        if calendar.authorization == .notDetermined { Task { _ = await calendar.requestAccess() } }
+        return "calendar: \(calendar.authorization)"
+    }))
     let listener = NSXPCListener(machServiceName: WorkDashIDs.agentMachService)
     listener.delegate = delegate
     listener.resume()

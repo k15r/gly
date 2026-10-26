@@ -33,19 +33,12 @@ final class AppModel {
     private let client = AgentClient()
     private let service = SMAppService.agent(plistName: WorkDashIDs.agentPlistName)
 
-    init() {
-        let id = AppModel.deviceID()
+    init(settings: SharedSettings = .shared()) {
+        // Settings moved to the app group so the agent shares them (design M7); copy old values once.
+        settings.migrate(from: .standard)
+        let id = settings.deviceID
         writer = "user@\(id)"
         systemWriter = "system@\(id)"
-    }
-
-    /// Stable random device id; deliberately not the host name (which can contain personal data).
-    static func deviceID() -> String {
-        let key = "deviceID"
-        if let id = UserDefaults.standard.string(forKey: key) { return id }
-        let id = "mac-" + UUID().uuidString.prefix(6).lowercased()
-        UserDefaults.standard.set(id, forKey: key)
-        return id
     }
 
     var canWrite: Bool { agentState == .ready }

@@ -10,16 +10,29 @@ import GRDB
 /// Agent side: decodes commands and runs them through the `CommandHandler`.
 public final class AgentService: NSObject, WorkDashAgentXPC {
     private let handler: CommandHandler
+    /// Answers `agentStatus` (agent process state that the store doesn't know).
+    private let status: (() -> String)?
+    /// Called on `reloadSettings`.
+    private let reloadSettings: (() -> Void)?
 
-    public init(writer: DatabaseWriter) {
+    public init(writer: DatabaseWriter, status: (() -> String)? = nil, reloadSettings: (() -> Void)? = nil) {
         handler = CommandHandler(writer: writer)
+        self.status = status
+        self.reloadSettings = reloadSettings
     }
 
     public func perform(_ command: Data, writer: String, reply: @escaping (Data) -> Void) {
         let result: CommandResult
         do {
             let decoded = try JSONDecoder().decode(Command.self, from: command)
-            result = handler.perform(decoded, writer: writer)
+            if decoded == .agentStatus, let status {
+                result = .ok(CommandOK(changed: false, message: status()))
+            } else if decoded == .reloadSettings {
+                reloadSettings?()
+                result = .ok(CommandOK(changed: false))
+            } else {
+                result = handler.perform(decoded, writer: writer)
+            }
         } catch {
             result = .failure(CommandFailure(.validation, "Unreadable command: \(error)"))
         }

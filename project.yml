@@ -58,6 +58,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.agent
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "WorkDash's background agent reads your calendars so AI agents can see your schedule."
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         SKIP_INSTALL: YES
     entitlements:
@@ -65,3 +66,4 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
+        com.apple.security.personal-information.calendars: true

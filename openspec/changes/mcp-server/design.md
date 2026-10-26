@@ -52,6 +52,11 @@ There is no session state, so stdio and HTTP use the same handler. The SDK is th
 
 Task 1.1 decides between the two in under an hour.
 
+**Result (task 1.1): the SDK path, with SDK 0.12.1.** `StatelessHTTPServerTransport.handleRequest(HTTPRequest) -> HTTPResponse` is framework-agnostic, and `initialize`, `tools/list` and notifications work without a session (`SDKProbeTests`). The MCP library doesn't link SwiftNIO; only the SDK's conformance executables do.
+- **One shared server.** The agent runs one `Server` + stateless transport. HTTP requests are passed through as they are. A stdio message from `wd-mcp` is wrapped as a `POST` `HTTPRequest`, with header `X-WorkDash-Client: <clientInfo.name>`, and marked as coming over XPC, so the Origin and token checks (M6) don't apply to it.
+- **Writer from the request.** Tool handlers read `Server.currentHandlerContext?.httpContext` to find the writer: the `X-WorkDash-Client` header for stdio, otherwise `User-Agent` (M4).
+- **Unique request ids.** The transport matches responses to waiting requests by JSON-RPC `id`. Two clients using the same id at the same time would collide. So the agent replaces each incoming request id with a unique one and restores the original in the response.
+
 ### M3: The tool layer lives in a new `WorkDashMCP` library target
 
 `Packages/WorkDashCore` gets a second library target, `WorkDashMCP` (depends on `WorkDashCore` + MCP SDK). It contains the tool definitions with JSON input schemas, argument parsing and validation, and the mapping to existing `Command`s and queries. The output encoding is JSON text content, plus `structuredContent` where the SDK supports it. The app doesn't link the MCP SDK.
@@ -104,6 +109,8 @@ The agent uses the existing `EventKitSource`. Changes:
   - While the app runs, it registers an anonymous XPC endpoint with the agent, and the agent asks the app for a day's appointments.
   - Without the app running, `get_schedule` returns tasks plus "appointments unavailable: open WorkDash", as the spec allows for missing access.
   - The fallback changes only M5's internals, not the tools.
+
+**Result (task 1.2):** on the SAP Mac, the agent reports `fullAccess` (Developer → Check Agent Calendar Access). WorkDash.app already had full access, and the agent got it without a prompt: macOS applies the app's permission to the launch agent in its bundle. So the agent reads EventKit itself. The app fallback isn't built. `agentStatus` stays as a permanent read-only command for the Agents pane (M8).
 
 ### M6: Local HTTP listener (Network.framework)
 

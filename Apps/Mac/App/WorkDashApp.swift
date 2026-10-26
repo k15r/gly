@@ -43,6 +43,12 @@ struct WorkDashApp: App {
             CommandMenu("Developer") {
                 Button("Re-check Agent") { Task { await app.refreshAgentState() } }
                 Button("Unregister Agent") { Task { await app.unregisterAgent() } }
+                Button("Check Agent Calendar Access") {
+                    Task {
+                        let r = await app.send(.agentStatus)
+                        if case .ok(let ok) = r { app.lastError = "Agent: \(ok.message ?? "?")" }
+                    }
+                }
             }
         }
     }
