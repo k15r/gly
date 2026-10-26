@@ -28,9 +28,6 @@ public enum LinkResolver {
         return ([.page, .task, .tag], t)
     }
 
-    /// The page that "New page" creates for a typed link (see `newItem`).
-    public static func newPage(for typed: String) -> (title: String, tags: [String])? { newItem(for: typed, kind: .page) }
-
     /// The page or task that "New page"/"New task" creates for a typed link: `person/alex/Goals` → "Goals" tagged
     /// `person/alex` (so the typed link resolves to it, K1); a matching prefix is dropped. nil when the prefix names
     /// another kind (`task:` for a page), for tags, or when no title is typed yet.

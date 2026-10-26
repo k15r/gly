@@ -103,12 +103,12 @@ extension LinkDisambiguationTests {
     }
 
     func testNewPageForTypedLink() {
-        XCTAssertEqual(LinkResolver.newPage(for: "person/alex/Goals")?.title, "Goals")
-        XCTAssertEqual(LinkResolver.newPage(for: "person/alex/Goals")?.tags, ["person/alex"])
-        XCTAssertEqual(LinkResolver.newPage(for: "page: Goals")?.title, "Goals")
-        XCTAssertEqual(LinkResolver.newPage(for: "Goals")?.tags, [])
-        XCTAssertNil(LinkResolver.newPage(for: "task:Goals"))
-        XCTAssertNil(LinkResolver.newPage(for: "person/alex/"), "no title typed yet")
+        XCTAssertEqual(LinkResolver.newItem(for: "person/alex/Goals", kind: .page)?.title, "Goals")
+        XCTAssertEqual(LinkResolver.newItem(for: "person/alex/Goals", kind: .page)?.tags, ["person/alex"])
+        XCTAssertEqual(LinkResolver.newItem(for: "page: Goals", kind: .page)?.title, "Goals")
+        XCTAssertEqual(LinkResolver.newItem(for: "Goals", kind: .page)?.tags, [])
+        XCTAssertNil(LinkResolver.newItem(for: "task:Goals", kind: .page))
+        XCTAssertNil(LinkResolver.newItem(for: "person/alex/", kind: .page), "no title typed yet")
         XCTAssertEqual(LinkResolver.newItem(for: "task: person/alex/Call", kind: .task)?.title, "Call")
         XCTAssertEqual(LinkResolver.newItem(for: "person/alex/Call", kind: .task)?.tags, ["person/alex"])
         XCTAssertNil(LinkResolver.newItem(for: "page:Call", kind: .task))

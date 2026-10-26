@@ -87,6 +87,7 @@ One native `NSMenu` (`MissingLinkMenu`) serves both views; Esc or a click outsid
 
 - **Picker:** the `[[` query is parsed like a typed link (prefix, tag path). Exact candidates come first, then title search on the part after the last `/`, kept to the allowed kinds and to items carrying the path's tag or one below it. Right after a `/`, `SearchQueries.underTag` lists the pages and open tasks under the tag (most recently changed first), then its subtags.
 - **New item:** `LinkResolver.newItem(for:kind:)` turns `person/alex/Goals` into the title "Goals" with the tag `person/alex`, drops a matching prefix, and gives nil for the other kind's prefix or an empty title. So a link created from a tag path can't carry `/` in its title; the New Page sheet still allows that.
+- **Picker entries for new items:** "New page …" inserts `[[title]]`, "New task …" inserts `[[task:title]]`. Nothing exists yet, so the prefix keeps the choice until the link is opened; the menu then offers only the new task.
 - **Waiting links:** creating a task now resolves waiting links (`resolveMissing`), like creating a page; the tags are set first, so tag paths match.
 
 ### K6: MCP
