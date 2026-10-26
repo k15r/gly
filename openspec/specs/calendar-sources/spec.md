@@ -29,7 +29,7 @@ The system SHALL request full calendar access on first use and SHALL show a clea
 - **THEN** the day view shows "No calendar access" with a button that opens the Calendars privacy settings, and the task section still works
 
 ### Requirement: Calendar visibility and colors
-The system SHALL list all available calendars grouped by account and SHALL let the user show or hide each one. Hidden calendars SHALL not contribute appointments to any view. Each calendar SHALL be displayed with its system color. The visibility choice SHALL persist across app restarts.
+The system SHALL list all available calendars grouped by account and SHALL let the user show or hide each one. Hidden calendars SHALL not contribute appointments to any view, nor to the schedule agents read over MCP. Each calendar SHALL be displayed with its system color. The visibility choice SHALL persist across app restarts.
 
 #### Scenario: Hiding a calendar
 - **WHEN** the user hides the calendar "Birthdays"
@@ -38,6 +38,10 @@ The system SHALL list all available calendars grouped by account and SHALL let t
 #### Scenario: Newly added calendar
 - **WHEN** a calendar is added to the system calendar
 - **THEN** it appears in the calendar list and is visible by default
+
+#### Scenario: Hidden calendar and agents
+- **WHEN** the user hides the calendar "Birthdays" and an agent reads today's schedule over MCP
+- **THEN** the schedule contains no birthday appointments
 
 ### Requirement: Live updates from the system calendar
 The system SHALL reflect changes in the system calendar (new, moved, renamed, cancelled or deleted appointments) without a manual refresh, within a few seconds of the system calendar having the change.
