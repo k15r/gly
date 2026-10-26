@@ -151,7 +151,10 @@ This is acceptable for a single-user tool. Both versions stay in the change log.
   - Annotated appointments will join as a third kind of leaf once they exist, so the leaf type has a kind.
   - The tag page of a node still lists everything below it.
   - Data comes from one query over `item_tags` for pages (`TagQueries.tagTree` returns pages per node), so no new storage is needed.
-  - **Drag and drop:** dropping a task or page onto a tag node sends one `updateTask(tags:)` or `updatePage(tags:)`, so it's one undo step. Plain = replace the source tag (move), ⌥ = add (alias), "Untagged" = remove the source tag.
+  - **Drag and drop:** dropping a task or page onto a tag node sends one `updateTask(tags:)` or `updatePage(tags:)`, so it's one undo step.
+    - **Every row of a group is a drop target** (the tag row and its items). A transparent layer on top of each row takes clicks, drags and drops, so the row text can't swallow a drop.
+    - **A shared `TreeDropState`** highlights the hovered group: a tinted, rounded background with an accent bar on the tag row.
+    - Changed after manual check B9 (drops only worked on part of the tag row, not on items). Plain = replace the source tag (move), ⌥ = add (alias), "Untagged" = remove the source tag.
   - **Alternative considered and rejected:** a parent/child page tree. It would be a second hierarchy next to tags, and it contradicts the "no folders" principle of the requirements.
 - **`PageView`:**
   - title field

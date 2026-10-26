@@ -41,6 +41,12 @@ Use neutral test data only (no real names).
 - [x] E3 Change the due date, then edit the notes, then leave → both saved without a button; ⌘Z twice reverts them one by one.
 - [x] E4 Tick the done checkbox, change priority, snooze until a date, change tags → each is saved at once; ⌘N still opens the new-task form.
 
+## F. Drag and drop follow-up (after B9)
+
+- [ ] F1 Drag a page over the text of a tag row → the tag and its items are highlighted; dropping moves the page there.
+- [ ] F2 Drag a page onto a task or page listed under another tag → that tag group is highlighted; dropping moves the page into that tag.
+- [ ] F3 Drag with ⌥ held → the item ends up in both tags; dropping onto Untagged (or an untagged item) removes the source tag; each drop is one ⌘Z.
+
 ## D. End to end with an agent (task 6.1)
 
 - [x] D1 Build a small wiki: tag page for `project/atlas` with a description, two linked pages, one task linking a page.

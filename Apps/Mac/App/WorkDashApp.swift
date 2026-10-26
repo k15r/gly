@@ -202,26 +202,75 @@ struct TaskListContainer: View {
     }
 }
 
+/// Which tag group a drag is over, so the whole group (tag row + its items) can be highlighted.
+@MainActor
+@Observable
+final class TreeDropState {
+    enum Target: Equatable { case tag(String), untagged }
+    var target: Target?
+}
+
+extension View {
+    /// Makes the whole row (text included) a click, drag and drop target for a tag group (design P9).
+    /// A transparent layer on top takes the events, so the row's text can't swallow drops.
+    func treeRow(group: TreeDropState.Target, state: TreeDropState, drag: String? = nil,
+                 onTap: @escaping () -> Void, onDrop: @escaping ([String]) -> Void) -> some View {
+        let highlighted = state.target == group
+        return self
+            .padding(.vertical, 2).padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(highlighted ? Color.accentColor.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 5))
+            .overlay(alignment: .leading) {
+                if highlighted, case .tag = group {
+                    RoundedRectangle(cornerRadius: 1).fill(Color.accentColor).frame(width: 3)
+                }
+            }
+            .overlay {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: onTap)
+                    .modifier(OptionalDrag(payload: drag))
+                    .dropDestination(for: String.self) { items, _ in
+                        state.target = nil
+                        onDrop(items)
+                        return true
+                    } isTargeted: { over in
+                        if over { state.target = group } else if state.target == group { state.target = nil }
+                    }
+            }
+    }
+}
+
+private struct OptionalDrag: ViewModifier {
+    let payload: String?
+    func body(content: Content) -> some View {
+        if let payload { content.draggable(payload) } else { content }
+    }
+}
+
 /// The tag hierarchy, which doubles as the tree of everything tagged (specs/tags "Tag list", "Move items in the tree"):
 /// tag rows open their tag page; open tasks and pages are leaves under their exact tags; untagged items at the end.
-/// Dragging an item onto a tag moves it there (⌥ adds the tag instead).
+/// Dropping onto a tag or onto any item of its group moves the dragged item there (⌥ adds the tag instead);
+/// the group being dropped into is highlighted.
 struct TagTreeView: View {
     @Environment(TasksModel.self) private var tasks
     @Environment(WikiModel.self) private var wiki
     @Environment(AppModel.self) private var app
+    @State private var drop = TreeDropState()
+    @State private var untaggedExpanded = false
 
     var body: some View {
         if tasks.tagTree.isEmpty && wiki.untagged.isEmpty {
             Text("No tags yet").font(.caption).foregroundStyle(.secondary)
         }
-        ForEach(tasks.tagTree) { node in TagTreeNode(node: node) }
+        ForEach(tasks.tagTree) { node in TagTreeNode(node: node, drop: drop) }
         if !wiki.untagged.isEmpty {
-            DisclosureGroup {
-                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil) }
+            DisclosureGroup(isExpanded: $untaggedExpanded) {
+                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil, drop: drop) }
             } label: {
                 Label("Untagged (\(wiki.untagged.count))", systemImage: "tray").foregroundStyle(.secondary)
-                    .dropDestination(for: String.self) { items, _ in
-                        ItemMove.perform(items, to: nil, app: app, wiki: wiki, tasks: tasks); return true
+                    .treeRow(group: .untagged, state: drop, onTap: { untaggedExpanded.toggle() }) { items in
+                        ItemMove.perform(items, to: nil, app: app, wiki: wiki, tasks: tasks)
                     }
             }
         }
@@ -235,6 +284,7 @@ struct TagTreeNode: View {
     @Environment(TasksModel.self) private var tasks
     @Environment(AppModel.self) private var app
     let node: TagNode
+    let drop: TreeDropState
     @State private var expanded = false
 
     var body: some View {
@@ -242,8 +292,8 @@ struct TagTreeNode: View {
             row
         } else {
             DisclosureGroup(isExpanded: $expanded) {
-                ForEach(node.children) { TagTreeNode(node: $0) }
-                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path) }
+                ForEach(node.children) { TagTreeNode(node: $0, drop: drop) }
+                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path, drop: drop) }
             } label: { row }
         }
     }
@@ -254,19 +304,21 @@ struct TagTreeNode: View {
             Spacer()
             if node.openCount > 0 { Text("\(node.openCount)").foregroundStyle(.secondary).monospacedDigit() }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { nav.go(.tag(node.path)) }
-        .dropDestination(for: String.self) { items, _ in
-            ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks); return true
+        .treeRow(group: .tag(node.path), state: drop, onTap: { nav.go(.tag(node.path)) }) { items in
+            ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks)
         }
     }
 }
 
-/// A task or page leaf in the tag tree.
+/// A task or page leaf in the tag tree. Dropping onto it drops into its tag group.
 struct TreeLeafRow: View {
     @Environment(Navigation.self) private var nav
+    @Environment(WikiModel.self) private var wiki
+    @Environment(TasksModel.self) private var tasks
+    @Environment(AppModel.self) private var app
     let leaf: TreeLeaf
     let fromTag: String?
+    let drop: TreeDropState
 
     private var symbol: String {
         switch leaf.kind {
@@ -285,19 +337,21 @@ struct TreeLeafRow: View {
             Spacer()
             if !leaf.otherTags.isEmpty {
                 Image(systemName: "link").font(.caption2).foregroundStyle(.tertiary)
-                    .help("Also in " + leaf.otherTags.joined(separator: ", "))
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            switch leaf.kind {
-            case .page: nav.go(.page(leaf.itemID))
-            case .task: nav.go(.task(leaf.itemID))
-            case .tag: break
-            }
+        .help(([leaf.snoozed ? "Snoozed" : nil] + [leaf.otherTags.isEmpty ? nil : "Also in " + leaf.otherTags.joined(separator: ", ")])
+            .compactMap { $0 }.joined(separator: " · "))
+        .treeRow(group: fromTag.map { .tag($0) } ?? .untagged, state: drop,
+                 drag: leaf.kind.rawValue + "\n" + leaf.itemID + "\n" + (fromTag ?? ""),
+                 onTap: {
+                     switch leaf.kind {
+                     case .page: nav.go(.page(leaf.itemID))
+                     case .task: nav.go(.task(leaf.itemID))
+                     case .tag: break
+                     }
+                 }) { items in
+            ItemMove.perform(items, to: fromTag, app: app, wiki: wiki, tasks: tasks)
         }
-        .help(leaf.snoozed ? "Snoozed" : "")
-        .draggable(leaf.kind.rawValue + "\n" + leaf.itemID + "\n" + (fromTag ?? ""))
     }
 }
 
