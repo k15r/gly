@@ -3,7 +3,7 @@
 ## 1. Store: v2 migration and derived indexes
 
 - [ ] 1.1 Add the `v2` migration (design P2): `change_log.session`, `link_index`, `search_index` (FTS5, `unicode61 remove_diacritics 2`, `prefix='2 3 4'`), with backfill from existing tasks and tags; check how an older migrator treats a database with `v2` applied and record the rollback path in `design.md`; verify with schema tests that a v1 database migrates, backfills, and that the new tables aren't in `Schema.syncedTables`
-- [ ] 1.2 Implement the link parser (canonical `[label](workdash://item|tag/<uuid>)`, missing `[[Title]]`, ranges; ignores links inside code spans/fences) and plain-text extraction for search; verify with unit tests for each form, nested brackets, code exclusion and ranges
+- [ ] 1.2 Implement the link parser (canonical `[label](workdash://item|tag/<uuid>)`, missing `[[Title]]`, ranges; ignores links inside code spans/fences and web links) and plain-text extraction for search; verify with unit tests for each form, nested brackets, code exclusion, web links not indexed, and ranges
 - [ ] 1.3 Implement `DerivedIndex.refresh` and hook it into `Batch.insert`/`update` for `title`, `body`, `name`, `page_body`, `deleted_at` of items and tags, plus `DerivedIndex.rebuild`; verify with tests that create, edit, delete, undo and redo of a task leave `link_index` and `search_index` matching a fresh rebuild
 
 ## 2. Core: pages, resolution, sessions
@@ -20,10 +20,10 @@
 
 ## 4. App: editor
 
-- [ ] 4.1 Implement `MarkdownStyler` (headings, emphasis, inline/fenced code with cross-line state, lists with hanging indent, checklists, quotes, dimmed syntax, collapsed canonical link URLs drawn as chips with current titles) as a pure function over an attributed string; verify with unit tests on attribute runs for each construct and that the string content never changes
-- [ ] 4.2 Implement `MarkdownEditor` (`NSTextView` wrapper): live restyling of edited paragraphs, caret skipping collapsed ranges, ⌘-click on chips, checkbox toggling, debounced/focus-loss saving with a session id, no external overwrite while focused or dirty; verify manually: typing a heading, toggling a checklist item, ⌘-click on a chip, and that one edit session is one ⌘Z step after leaving the field
+- [ ] 4.1 Implement `MarkdownStyler` (headings, emphasis, inline/fenced code with cross-line state, lists with hanging indent, checklists, quotes, dimmed syntax, collapsed canonical link URLs drawn as chips with current titles, web links and bare URLs styled as links) as a pure function over an attributed string; verify with unit tests on attribute runs for each construct and that the string content never changes
+- [ ] 4.2 Implement `MarkdownEditor` (`NSTextView` wrapper): live restyling of edited paragraphs, caret skipping collapsed ranges, ⌘-click on chips and web links (opens the browser), checkbox toggling, debounced/focus-loss saving with a session id, no external overwrite while focused or dirty; verify manually: typing a heading, toggling a checklist item, ⌘-click on a chip, "Markdown web link", "Bare URL", and that one edit session is one ⌘Z step after leaving the field
 - [ ] 4.3 Implement the `[[` picker popover (live search across pages/tasks/tags + "Create page …") inserting canonical links; verify manually "Link to an existing page" and "Link to a tag"
-- [ ] 4.4 Implement `MarkdownReadView` (blocks + inline `AttributedString(markdown:)`, `workdash://` handling via `OpenURLAction`, missing-link styling, deleted-target styling); verify manually "Toggle", following a link with one click, a missing link creating a page, and a deleted target shown as "link target deleted"
+- [ ] 4.4 Implement `MarkdownReadView` (blocks + inline `AttributedString(markdown:)`, `workdash://` handling via `OpenURLAction`, missing-link styling, deleted-target styling, web links opening in the browser); verify manually "Toggle", following a link with one click, a web link opening in the browser, a missing link creating a page, and a deleted target shown as "link target deleted"
 
 ## 5. App: pages, tag pages, navigation, search
 

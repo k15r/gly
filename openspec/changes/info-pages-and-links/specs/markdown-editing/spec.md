@@ -17,6 +17,17 @@ The editor SHALL keep the markdown syntax visible and style it lightly as the us
 - **WHEN** the text contains a link to the page "Atlas architecture"
 - **THEN** the editor shows a chip "Atlas architecture" that opens the page when clicked with ⌘ held, while the cursor can still be placed in it
 
+### Requirement: Web links
+Markdown links to web addresses (`[text](https://…)`, also `http`, `mailto` and `message`) and bare `http(s)://` URLs SHALL be shown as links. In the editor ⌘-click opens them, in the read view a plain click does, using the system's default app. Web links SHALL NOT create backlinks.
+
+#### Scenario: Markdown web link
+- **WHEN** the text contains `[Design doc](https://example.com/doc)`
+- **THEN** the editor shows "Design doc" as a link that opens the address in the browser with ⌘-click
+
+#### Scenario: Bare URL
+- **WHEN** the user pastes `https://example.com/report` into a page
+- **THEN** it is shown as a link and opens with ⌘-click, and the stored text is unchanged
+
 ### Requirement: Checklists
 Lines starting with `- [ ]` or `- [x]` SHALL be shown as checkboxes that can be toggled by clicking, which changes the text to `- [x]` or `- [ ]`.
 

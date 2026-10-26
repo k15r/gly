@@ -124,6 +124,7 @@ This is acceptable for a single-user tool. Both versions stay in the change log.
 - **Markdown syntax stays visible but dimmed.** The one exception is canonical links: the `](workdash://…)` part is collapsed (zero-width font plus clear color), and the label is drawn as a chip with the target's **current** title, looked up through a resolver closure.
 - **Caret movement** skips collapsed ranges (`willChangeSelectionFromCharacterRange`).
 - **Clicks:** ⌘-click on a chip follows it, and a click on a checkbox toggles it.
+- **Web links:** `[text](https://…)` (also `http`, `mailto`, `message`) and bare `http(s)://` URLs, detected with `NSDataDetector`, are styled as links. Their syntax stays visible but dimmed; only `workdash:` URLs are collapsed into chips. ⌘-click opens them with `NSWorkspace`. The link parser ignores them for `link_index`, so they have no backlinks.
 - **The `[[` trigger** opens a popover at the caret with live `SearchQueries` results plus "Create page "…"". Choosing an entry replaces `[[query` with canonical link text.
 - **Read view:** a `MarkdownReadView` (SwiftUI).
   - It splits the text into blocks (heading, paragraph, list item, checklist item, quote, code fence) and renders inline parts with `AttributedString(markdown:)`.
