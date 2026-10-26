@@ -62,11 +62,11 @@ The system SHALL show appointments that the system calendar reports as cancelled
 - **THEN** WorkDash shows it struck through and labeled "Cancelled"
 
 ### Requirement: Calendar refresh indicator
-The system SHALL show, per calendar account, when WorkDash last received data or a change from it, so that delays in Exchange synchronization are visible.
+The system SHALL show, per calendar account, when WorkDash last received data or a change from it, so that delays in Exchange synchronization are visible. The information SHALL be available on demand (in the tooltip of the day view's refresh button) rather than taking space in the day view header.
 
 #### Scenario: Showing last refresh
-- **WHEN** the last change from the Exchange account arrived 25 minutes ago
-- **THEN** the day view shows an indicator like "SAP: 25 min ago" for that account
+- **WHEN** the last change from the Exchange account arrived 25 minutes ago and the user hovers over the refresh button
+- **THEN** the tooltip lists "Exchange: 25 min ago" for that account
 
 ### Requirement: Local time display
 The system SHALL display all appointment times in the Mac's current time zone and SHALL handle daylight saving time transitions correctly.

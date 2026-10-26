@@ -18,7 +18,7 @@ The system SHALL let the user create a task with a required, non-empty title. A 
 - **THEN** the task is not saved and the title field is marked as required
 
 ### Requirement: Task fields
-A task SHALL have: title; notes (markdown text with links, edited with the markdown editor); status (`open`, `snoozed`, `done`, `dropped`); priority (`none`, `low`, `normal`, `high`, `urgent`); optional due date with optional time; optional snooze-until date; tags. The system SHALL record when a task was created and last modified, and by whom.
+A task SHALL have: title; notes (markdown text with links, edited with the markdown editor); status (`open`, `snoozed`, `done`, `dropped`); priority (`none`, `low`, `normal`, `high`, `urgent`); optional due date with optional time; optional snooze-until date; optional effort (`XS`, `S`, `M`, `L`, `XL`); tags. The system SHALL record when a task was created and last modified, and by whom.
 
 #### Scenario: Due date without time
 - **WHEN** the user sets a due date of 30 October without a time
@@ -31,6 +31,10 @@ A task SHALL have: title; notes (markdown text with links, edited with the markd
 #### Scenario: Notes link to a page
 - **WHEN** the user links the page "Atlas architecture" in a task's notes
 - **THEN** the link opens the page, and the page lists the task under its backlinks
+
+#### Scenario: Effort
+- **WHEN** the user sets a task's effort to `M`
+- **THEN** the task shows an `M` chip in lists and on its task page
 
 ### Requirement: Edit a task
 The system SHALL let the user change every task field. Edits SHALL be saved without an explicit save step, inline in lists (such as priority or completion) and on the task page; each field change and each notes edit session SHALL be one undo step. Creating a new task SHALL use a form with an explicit confirm.
@@ -102,7 +106,7 @@ A change to a task SHALL be reflected in every open view (day view, task list, t
 - **THEN** it also disappears from the day view at the same time
 
 ### Requirement: Task page
-Opening a task (from a list, the day view, the tag tree, a link, a backlink or search) SHALL show it in the main area, laid out like a page: the title; a row with completion, priority, due date, status/snooze and tags; the notes with the read view and editing (⌘E); and its backlinks. It SHALL take part in back/forward navigation.
+Opening a task (from a list, the day view, the tag tree, a link, a backlink or search) SHALL show it in the main area, laid out like a page: the title; a row with completion, priority, effort, due date, status/snooze and tags; the notes with the read view and editing (⌘E); and its backlinks. It SHALL take part in back/forward navigation.
 
 #### Scenario: Open a task from a link
 - **WHEN** the user follows a link to a task from a page
@@ -111,3 +115,8 @@ Opening a task (from a list, the day view, the tag tree, a link, a backlink or s
 #### Scenario: Task backlinks
 - **WHEN** two pages link to a task
 - **THEN** the task page lists both under backlinks with excerpts
+
+#### Scenario: Set effort on the task page
+- **WHEN** the user picks `L` in the effort control of the task page
+- **THEN** the effort is saved at once as one undo step
+

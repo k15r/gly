@@ -32,13 +32,6 @@ The system SHALL let the user add any number of tags to a task and remove them. 
 - **WHEN** the user removes `person/alex` from a task
 - **THEN** the task no longer has that tag, and the tag still exists for other tasks
 
-### Requirement: Tag autocomplete
-While the user types a tag, the system SHALL suggest existing tags that start with the typed text, including completions of the next segment after a `/`.
-
-#### Scenario: Prefix completion
-- **WHEN** tags `person/alex` and `person/sam` exist and the user types `person/`
-- **THEN** both are suggested
-
 ### Requirement: Filter tasks by tag including descendants
 The system SHALL let the user filter the task list by a tag. The filter SHALL include tasks tagged with that tag or any tag below it in the hierarchy.
 
@@ -106,3 +99,18 @@ Every row of a tag group (the tag itself and the items listed under it) SHALL ac
 #### Scenario: Drop onto the tag text
 - **WHEN** the user drops an item onto the name of a tag in the tree
 - **THEN** the drop is accepted for that tag
+
+### Requirement: Tag picker
+Tags SHALL be added to a task or page through an "Add tag" menu that mirrors the tag hierarchy with submenus (for example project ▸ atlas). A group node that is also a tag SHALL be selectable itself. Each group SHALL offer "New tag in <group>/…" with the group prefilled, and the top level SHALL offer "New tag…". Tags already on the item SHALL not be offered again. New tag names SHALL follow the tag name rules.
+
+#### Scenario: Pick a nested tag
+- **WHEN** tags `project/atlas` and `project/beta` exist and the user opens "Add tag" on a task and chooses project ▸ atlas
+- **THEN** the task gets the tag `project/atlas`
+
+#### Scenario: New tag in a group
+- **WHEN** the user chooses project ▸ "New tag in project/…" and enters `gamma`
+- **THEN** the task gets the new tag `project/gamma`
+
+#### Scenario: Invalid new tag
+- **WHEN** the user enters `a//b` as a new tag
+- **THEN** the tag is not added and the field says that segments must not be empty

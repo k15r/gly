@@ -7,7 +7,7 @@ Lets AI agents (MCP clients such as Claude Code) read the day's schedule and tas
 ## Requirements
 
 ### Requirement: Read the schedule of a day
-The system SHALL provide an MCP tool `get_schedule` that returns, for a given date (default: today, local time), the appointments of all visible calendars and the tasks the day view shows for that date. Each appointment SHALL include title, start, end, all-day flag, cancelled flag, calendar name, location, organizer and attendees.
+The system SHALL provide an MCP tool `get_schedule` that returns, for a given date (default: today, local time), the appointments of all visible calendars and the tasks the day view shows for that date. Each appointment SHALL include title, start, end, all-day flag, cancelled flag, calendar name, location, organizer, attendees, and how it counts for free time (blocks, maybe, free) with the reason (automatic or override). The response SHALL include the day's free time and, for today, the Today list (with why each task is there, the work needed today and whether it can't fit) and the Coming up list (with each task's start-by day).
 
 #### Scenario: Today's schedule
 - **WHEN** an agent calls `get_schedule` without arguments
@@ -20,6 +20,10 @@ The system SHALL provide an MCP tool `get_schedule` that returns, for a given da
 #### Scenario: No calendar access
 - **WHEN** the agent process has no calendar access
 - **THEN** `get_schedule` still returns the tasks, and reports that appointments are unavailable because calendar access is missing
+
+#### Scenario: Planning data
+- **WHEN** an agent calls `get_schedule` for today
+- **THEN** it receives the free time left today, the Today tasks with reason, effort, work needed today and can't-fit flag, and the Coming up tasks with start-by day
 
 ### Requirement: List tasks
 The system SHALL provide an MCP tool `list_tasks` that returns tasks filtered by any combination of: status (`open`, `snoozed`, `done`, `dropped`, or `all`; default `open`, which includes snoozed tasks), tag (including descendants), due on or before / on or after a date, and text contained in the title (case-insensitive). Results SHALL be sorted like the task list and limited to a maximum count (default 50), and SHALL say when more results exist.
@@ -184,3 +188,10 @@ The system SHALL provide MCP tools `get_tag_page` (description and tagged items,
 #### Scenario: Describe a project
 - **WHEN** an agent calls `update_tag_page` for `project/atlas` with a markdown description
 - **THEN** the tag page of `project/atlas` shows that description
+
+### Requirement: Effort over MCP
+Task results SHALL include the effort (or null), and `create_task` and `update_task` SHALL accept an optional effort (`XS`, `S`, `M`, `L`, `XL`; null on update removes it).
+
+#### Scenario: Agent estimates a task
+- **WHEN** an agent creates a task with `effort: "M"`
+- **THEN** the task has effort `M` and is planned in the day view's Today or Coming up list if it is due within the horizon
