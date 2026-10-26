@@ -114,7 +114,8 @@ struct TaskPageView: View {
 
     /// Priority, due date, status/snooze, each saved on change.
     private func fields(_ task: TaskItem) -> some View {
-        HStack(alignment: .center, spacing: 16) {
+        // Wraps onto a second line when the window is narrow; every group keeps its natural width.
+        FlowLayout(spacing: 16) {
             Picker("Priority", selection: Binding(get: { task.priority }, set: { p in
                 send(.updateTask(id: task.id, TaskPatch(priority: p)))
             })) {
@@ -140,8 +141,8 @@ struct TaskPageView: View {
                 }), displayedComponents: [.date])
                 .fixedSize()
             }
-            Spacer()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// "Add due date", or `Due [date] [time / Add time] ✕`.
@@ -149,7 +150,7 @@ struct TaskPageView: View {
     private func dueControl(_ task: TaskItem) -> some View {
         if let due = task.due {
             HStack(spacing: 6) {
-                Text("Due").foregroundStyle(.secondary)
+                Text("Due").foregroundStyle(.secondary).fixedSize()
                 DatePicker("Due", selection: Binding(get: { due.date() ?? Date() }, set: { date in
                     send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: date, includeTime: due.time != nil)))))
                 }), displayedComponents: due.time == nil ? [.date] : [.date, .hourAndMinute])
@@ -159,12 +160,12 @@ struct TaskPageView: View {
                         let start = due.date() ?? Date()
                         send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: start.addingTimeInterval(9 * 3600), includeTime: true)))))
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.borderless).fixedSize()
                 } else {
                     Button("Remove time") {
                         send(.updateTask(id: task.id, TaskPatch(due: .some(Due(day: due.day)))))
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.borderless).fixedSize()
                 }
                 Button { send(.updateTask(id: task.id, TaskPatch(due: .some(nil)))) } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.borderless).foregroundStyle(.secondary).help("Remove due date")
@@ -173,7 +174,7 @@ struct TaskPageView: View {
             Button { send(.updateTask(id: task.id, TaskPatch(due: .some(Due(day: clock.today.description))))) } label: {
                 Label("Add due date", systemImage: "calendar.badge.plus")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.borderless).fixedSize()
         }
     }
 
