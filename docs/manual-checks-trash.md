@@ -6,10 +6,10 @@ Neutral test data only (no real names). Setup: two pages "Goals" tagged `person/
 ## A. Trash view (task 3.2)
 
 - [ ] A1 Delete the task "Call the venue" in the app → the sidebar shows "Trash" with a count; the Trash lists the task with its tag, excerpt and "deleted just now by you".
-- [ ] A2 Ask Claude Code to delete the page "Goals" tagged `person/bob` → it appears at the top of the Trash, "by Claude Code".
-- [ ] A3 Select an entry → the preview shows title, tags and text read-only; links in it can be followed.
-- [ ] A4 Restore the task with the Restore button → it leaves the Trash and is open again with its due date and tag; the Edit menu shows "Undo Restore “Call the venue”"; ⌘Z puts it back in the Trash (overlay "Restore …").
-- [ ] A5 Restore via the row's context menu works the same.
+- [x] A2 Ask Claude Code to delete the page "Goals" tagged `person/bob` → it appears at the top of the Trash, "by Claude Code".
+- [x] A3 Select an entry → the preview shows title, tags and text read-only; links in it can be followed.
+- [x] A4 Restore the task with the Restore button → it leaves the Trash and is open again with its due date and tag; the Edit menu shows "Undo Restore “Call the venue”"; ⌘Z puts it back in the Trash (overlay "Restore …").
+- [x] A5 Restore via the row's context menu works the same.
 
 ## B. Broken links (task 3.1)
 

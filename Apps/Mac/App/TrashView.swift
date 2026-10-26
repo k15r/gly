@@ -4,7 +4,7 @@ import WorkDashEditor
 
 /// Sidebar row with the number of items deleted in the last 30 days (trash-bin T4).
 struct TrashSidebarRow: View {
-    @Environment(WikiModel.self) private var wiki
+    @Environment(AppModel.self) private var app
     @State private var live = Live<Int>()
     var body: some View {
         HStack {
@@ -12,12 +12,17 @@ struct TrashSidebarRow: View {
             Spacer()
             if let n = live.value, n > 0 { Text("\(n)").foregroundStyle(.secondary).monospacedDigit() }
         }
-        .task {
+        // The row appears before the store is open: start (again) once it is.
+        .task(id: app.store.map(ObjectIdentifier.init)) {
             let cutoff = Date().addingTimeInterval(-Double(TrashQueries.defaultDays) * 86400)
-            live.observe(wiki.store) { try TrashQueries.list($0, since: cutoff).count }
+            live.observe(app.store) { db in
+                try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM items WHERE kind IN ('info', 'task') AND deleted_at >= ?", arguments: [cutoff]) ?? 0
+            }
         }
     }
 }
+
+private struct TrashTaskKey: Equatable { let store: ObjectIdentifier?; let showOlder: Bool }
 
 struct TrashData: Equatable {
     var entries: [TrashEntry]
@@ -39,11 +44,11 @@ struct TrashView: View {
             preview.frame(minWidth: 320, maxWidth: .infinity)
         }
         .navigationTitle("Trash")
-        .task(id: showOlder) {
+        .task(id: TrashTaskKey(store: app.store.map(ObjectIdentifier.init), showOlder: showOlder)) {
             if let id = nav.trashSelection { selection = id; nav.trashSelection = nil }
             let cutoff = Date().addingTimeInterval(-Double(TrashQueries.defaultDays) * 86400)
             let all = showOlder
-            live.observe(wiki.store) { db in
+            live.observe(app.store) { db in
                 TrashData(entries: try TrashQueries.list(db, since: all ? nil : cutoff), older: all ? 0 : try TrashQueries.count(db, before: cutoff))
             }
         }
