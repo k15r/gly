@@ -14,6 +14,7 @@ public struct SearchResults: Equatable {
     public var pages: [SearchHit] = []
     public var tasks: [SearchHit] = []
     public var tags: [SearchHit] = []
+    public init() {}
     public var isEmpty: Bool { pages.isEmpty && tasks.isEmpty && tags.isEmpty }
     public var all: [SearchHit] { pages + tasks + tags }
 }

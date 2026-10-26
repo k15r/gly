@@ -23,6 +23,8 @@ targets:
     sources: [Apps/Mac/App]
     dependencies:
       - package: WorkDashCore
+      - package: WorkDashCore
+        product: WorkDashEditor
       - target: WorkDashAgent
         embed: true
         copy: {destination: executables}

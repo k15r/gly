@@ -36,6 +36,16 @@ public struct TagNode: Equatable, Identifiable {
     /// Open tasks tagged with this path or anything below it.
     public let openCount: Int
     public let children: [TagNode]
+    /// Pages tagged with exactly this path (the tag tree doubles as the page tree).
+    public var pages: [PageLeaf] = []
+}
+
+/// A page listed in the tag tree; `otherTags` are the page's other tags ("also in …").
+public struct PageLeaf: Equatable, Identifiable {
+    public let id: String
+    public let title: String
+    public let otherTags: [String]
+    public init(id: String, title: String, otherTags: [String]) { self.id = id; self.title = title; self.otherTags = otherTags }
 }
 
 public enum TagQueries {
@@ -93,6 +103,7 @@ public enum TagQueries {
                 if displayByPath[key] == nil || depth == segments.count { displayByPath[key] = displayByPath[key] ?? path }
             }
         }
+        let leaves = try pageLeavesByTag(db)
         func children(of parent: String?) -> [TagNode] {
             let depth = parent.map { $0.split(separator: "/").count + 1 } ?? 1
             return itemsByPath.keys
@@ -102,9 +113,34 @@ public enum TagQueries {
                     let display = displayByPath[key]!
                     return TagNode(segment: String(display.split(separator: "/").last!), path: display,
                                    isTag: tagPaths.contains(key), openCount: itemsByPath[key]!.count,
-                                   children: children(of: key))
+                                   children: children(of: key), pages: leaves[key] ?? [])
                 }
         }
         return children(of: nil)
+    }
+
+    /// Live pages per exact tag key, each with its other tags.
+    static func pageLeavesByTag(_ db: Database) throws -> [String: [PageLeaf]] {
+        let rows = try Row.fetchAll(db, sql: """
+            SELECT i.id, i.title, t.name, t.name_key FROM live_items i
+            JOIN live_item_tags it ON it.item_id = i.id JOIN live_tags t ON t.id = it.tag_id
+            WHERE i.kind = 'info' ORDER BY i.title COLLATE NOCASE, t.name_key
+            """)
+        var tagsOfPage: [String: [String]] = [:]
+        for r in rows { tagsOfPage[r["id"], default: []].append(r["name"]) }
+        var result: [String: [PageLeaf]] = [:]
+        for r in rows {
+            let id: String = r["id"], name: String = r["name"]
+            result[r["name_key"], default: []].append(PageLeaf(id: id, title: r["title"], otherTags: (tagsOfPage[id] ?? []).filter { $0 != name }))
+        }
+        return result
+    }
+
+    /// Live pages without any tag (the "Untagged" node).
+    public static func untaggedPages(_ db: Database) throws -> [PageLeaf] {
+        try Row.fetchAll(db, sql: """
+            SELECT id, title FROM live_items WHERE kind = 'info'
+              AND id NOT IN (SELECT item_id FROM live_item_tags) ORDER BY title COLLATE NOCASE
+            """).map { PageLeaf(id: $0["id"], title: $0["title"], otherTags: []) }
     }
 }

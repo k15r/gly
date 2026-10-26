@@ -52,6 +52,7 @@ final class LinkParserTests: XCTestCase {
     func testPlainTextForSearch() {
         let text = "See [Atlas architecture](workdash://item/\(page)) and [[Retro notes]]"
         XCTAssertEqual(LinkParser.plainText(text), "See Atlas architecture and Retro notes")
+        XCTAssertEqual(LinkParser.plainText("[Design doc](https://example.com/doc) here"), "Design doc here")
     }
 
     func testCanonicalForm() {

@@ -66,11 +66,14 @@ public enum LinkParser {
         return ranges
     }
 
-    /// Text for the search index: links replaced by their labels, so URLs and ids aren't indexed.
+    static let webLink = try! NSRegularExpression(pattern: #"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\((?:https?|mailto|message):[^)\s]+\)"#)
+
+    /// Text for the search index and excerpts: WorkDash and web links replaced by their labels, so URLs and ids aren't indexed.
     public static func plainText(_ text: String) -> String {
         let ns = NSMutableString(string: text)
         for link in links(in: text).reversed() { ns.replaceCharacters(in: link.range, with: link.label) }
-        return ns as String
+        let once = ns as String
+        return webLink.stringByReplacingMatches(in: once, range: NSRange(location: 0, length: (once as NSString).length), withTemplate: "$1")
     }
 
     /// Canonical markdown for a link.

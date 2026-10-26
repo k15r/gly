@@ -127,6 +127,10 @@ This is acceptable for a single-user tool. Both versions stay in the change log.
 - **Clicks:** ⌘-click on a chip follows it, and a click on a checkbox toggles it.
 - **Web links:** `[text](https://…)` (also `http`, `mailto`, `message`) and bare `http(s)://` URLs, detected with `NSDataDetector`, are styled as links. Their syntax stays visible but dimmed; only `workdash:` URLs are collapsed into chips. ⌘-click opens them with `NSWorkspace`. The link parser ignores them for `link_index`, so they have no backlinks.
 - **The `[[` trigger** opens a popover at the caret with live `SearchQueries` results plus "Create page "…"". Choosing an entry replaces `[[query` with canonical link text.
+- **As built:**
+  - The editor restyles the whole text on each edit, not only the edited paragraphs. That's simpler, and fast enough for page-sized texts. It's the first optimization to make if long pages lag.
+  - Task notes in the task editor sheet use the editor in binding mode: they're saved with the form's Save, an explicit confirm as `specs/tasks` requires. So that save is one undo step without a session.
+  - Pages and tag pages autosave with sessions.
 - **Read view:** a `MarkdownReadView` (SwiftUI).
   - It splits the text into blocks (heading, paragraph, list item, checklist item, quote, code fence) and renders inline parts with `AttributedString(markdown:)`.
   - `[[X]]` is rewritten to `[X](workdash://missing/X)` first.

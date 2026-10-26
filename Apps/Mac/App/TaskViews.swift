@@ -148,10 +148,15 @@ struct TaskActions: View {
 }
 
 struct TagChip: View {
+    @Environment(Navigation.self) private var nav
     let name: String
+    /// Clicking opens the tag page (specs/tag-pages "From a chip"); off in editors.
+    var opensTagPage = true
     var body: some View {
         Text(name).font(.caption).padding(.horizontal, 5).padding(.vertical, 1)
             .background(.secondary.opacity(0.15)).clipShape(Capsule())
+            .onTapGesture { if opensTagPage { nav.go(.tag(name)) } }
+            .help(opensTagPage ? "Open tag page" : "")
     }
 }
 
@@ -247,7 +252,8 @@ struct TaskEditor: View {
                 }
                 TagField(tags: $tagNames, input: $pendingTag)
                 LabeledContent("Notes") {
-                    TextEditor(text: $notes).font(.body).frame(minHeight: 120)
+                    // Markdown with links; saved with the form (explicit confirm, specs/tasks "Edit a task").
+                    WDMarkdownEditor(text: notes, onChange: { notes = $0 }).frame(minHeight: 140)
                         .overlay(RoundedRectangle(cornerRadius: 4).stroke(.secondary.opacity(0.3)))
                 }
             }
@@ -336,7 +342,7 @@ struct TagField: View {
                     FlowLayout(spacing: 6) {
                         ForEach(tags, id: \.self) { tag in
                             HStack(spacing: 2) {
-                                TagChip(name: tag)
+                                TagChip(name: tag, opensTagPage: false)
                                 Button { tags.removeAll { $0 == tag } } label: { Image(systemName: "xmark").font(.caption2) }
                                     .buttonStyle(.plain).help("Remove tag")
                             }
