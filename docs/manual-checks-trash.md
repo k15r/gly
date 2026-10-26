@@ -5,7 +5,7 @@ Neutral test data only (no real names). Setup: two pages "Goals" tagged `person/
 
 ## A. Trash view (task 3.2)
 
-- [ ] A1 Delete the task "Call the venue" in the app → the sidebar shows "Trash" with a count; the Trash lists the task with its tag, excerpt and "deleted just now by you".
+- [x] A1 Delete the task "Call the venue" in the app → the sidebar shows "Trash" with a count; the Trash lists the task with its tag, excerpt and "deleted just now by you".
 - [x] A2 Ask Claude Code to delete the page "Goals" tagged `person/bob` → it appears at the top of the Trash, "by Claude Code".
 - [x] A3 Select an entry → the preview shows title, tags and text read-only; links in it can be followed.
 - [x] A4 Restore the task with the Restore button → it leaves the Trash and is open again with its due date and tag; the Edit menu shows "Undo Restore “Call the venue”"; ⌘Z puts it back in the Trash (overlay "Restore …").
@@ -22,5 +22,5 @@ Neutral test data only (no real names). Setup: two pages "Goals" tagged `person/
 
 ## C. Agents and history (task 4.1)
 
-- [ ] C1 Ask Claude Code to delete a page and then "undo that" → it uses `list_trash` and `restore`; the page is back with its tags.
-- [ ] C2 Items deleted before this change (if any) show up in the Trash with who deleted them.
+- [x] C1 Ask Claude Code to delete a page and then "undo that" → it uses `list_trash` and `restore`; the page is back with its tags.
+- [x] C2 Items deleted before this change (if any) show up in the Trash with who deleted them.

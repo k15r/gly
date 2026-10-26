@@ -11,12 +11,12 @@
 
 ## 3. Editor and app
 
-- [ ] 3.1 Generalize `MissingLinkMenu` into `LinkMenu` driven by a `linkMenu` closure (T5): replacements and actions; missing links keep today's entries; deleted links get Restore (with "deleted … by …"), same-titled relink entries and Show in Trash in the editor (⌘-click) and the read view (click); `MarkdownBlocks.pin` by target; verify with an editor test for the read-view rewrite and manually that missing-link menus are unchanged
-- [ ] 3.2 Add the Trash destination (T4): sidebar row with the 30-day count, list with icon, title, tags, excerpt and "deleted … by …", read-only preview, Restore button and row context menu, "Show older (n)"; `LinkOpener` handles `restore` and `trash` URLs; verify manually "Preview", "Restore from the Trash" and the undo overlay label
+- [x] 3.1 Generalize `MissingLinkMenu` into `LinkMenu` driven by a `linkMenu` closure (T5): replacements and actions; missing links keep today's entries; deleted links get Restore (with "deleted … by …"), same-titled relink entries and Show in Trash in the editor (⌘-click) and the read view (click); `MarkdownBlocks.pin` by target; verify with an editor test for the read-view rewrite and manually that missing-link menus are unchanged
+- [x] 3.2 Add the Trash destination (T4): sidebar row with the 30-day count, list with icon, title, tags, excerpt and "deleted … by …", read-only preview, Restore button and row context menu, "Show older (n)"; `LinkOpener` handles `restore` and `trash` URLs; verify manually "Preview", "Restore from the Trash" and the undo overlay label
 
 ## 4. End to end
 
-- [ ] 4.1 Manual checks in `docs/manual-checks-trash.md` (neutral test data): delete a page and a task in the app and via Claude Code, find both in the Trash with the right "by"; restore each; ⌘Z after a restore; "Restore from a broken link"; "Link to the surviving duplicate" with one ⌘Z; Show in Trash from a link; an agent restoring its own delete via `list_trash` + `restore`
+- [x] 4.1 Manual checks in `docs/manual-checks-trash.md` (neutral test data): delete a page and a task in the app and via Claude Code, find both in the Trash with the right "by"; restore each; ⌘Z after a restore; "Restore from a broken link"; "Link to the surviving duplicate" with one ⌘Z; Show in Trash from a link; an agent restoring its own delete via `list_trash` + `restore`
 
 ## Workflow follow-up
 
