@@ -40,4 +40,5 @@
 ## Workflow follow-up
 
 - Run `/opsx:verify planning-day-view`, then archive after the manual checks pass.
+- Next proposal: duplicate page titles. Today several pages can share a title: the `[[` picker can't tell them apart, and a typed `[[Title]]` stays unresolved. The options are A) unique page titles, case-insensitive (recommended), or B) allow duplicates and show tags and last change to tell them apart.
 - Next change: annotations proper (appointment notes as pages, prep view, series tag rules, appointment leaves in the tag tree).
