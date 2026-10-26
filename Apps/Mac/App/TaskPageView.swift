@@ -114,7 +114,7 @@ struct TaskPageView: View {
 
     /// Priority, due date, status/snooze, each saved on change.
     private func fields(_ task: TaskItem) -> some View {
-        HStack(spacing: 16) {
+        HStack(alignment: .center, spacing: 16) {
             Picker("Priority", selection: Binding(get: { task.priority }, set: { p in
                 send(.updateTask(id: task.id, TaskPatch(priority: p)))
             })) {
@@ -122,20 +122,7 @@ struct TaskPageView: View {
             }
             .fixedSize()
 
-            Toggle("Due", isOn: Binding(get: { task.due != nil }, set: { on in
-                let due: Due? = on ? Due(day: clock.today.description) : nil
-                send(.updateTask(id: task.id, TaskPatch(due: .some(due))))
-            }))
-            if let due = task.due {
-                DatePicker("", selection: Binding(get: { due.date() ?? Date() }, set: { date in
-                    send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: date, includeTime: due.time != nil)))))
-                }), displayedComponents: due.time == nil ? [.date] : [.date, .hourAndMinute])
-                .labelsHidden().fixedSize()
-                Toggle("Time", isOn: Binding(get: { due.time != nil }, set: { on in
-                    let date = due.date() ?? Date()
-                    send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: on ? date.addingTimeInterval(9 * 3600) : date, includeTime: on)))))
-                }))
-            }
+            dueControl(task)
 
             Picker("Status", selection: Binding(get: { task.status }, set: { status in
                 let snooze = status == .snoozed ? LocalDay(date: Date()).adding(days: 1).description : nil
@@ -154,6 +141,39 @@ struct TaskPageView: View {
                 .fixedSize()
             }
             Spacer()
+        }
+    }
+
+    /// "Add due date", or `Due [date] [time / Add time] ✕`.
+    @ViewBuilder
+    private func dueControl(_ task: TaskItem) -> some View {
+        if let due = task.due {
+            HStack(spacing: 6) {
+                Text("Due").foregroundStyle(.secondary)
+                DatePicker("Due", selection: Binding(get: { due.date() ?? Date() }, set: { date in
+                    send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: date, includeTime: due.time != nil)))))
+                }), displayedComponents: due.time == nil ? [.date] : [.date, .hourAndMinute])
+                .labelsHidden().fixedSize()
+                if due.time == nil {
+                    Button("Add time") {
+                        let start = due.date() ?? Date()
+                        send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: start.addingTimeInterval(9 * 3600), includeTime: true)))))
+                    }
+                    .buttonStyle(.borderless)
+                } else {
+                    Button("Remove time") {
+                        send(.updateTask(id: task.id, TaskPatch(due: .some(Due(day: due.day)))))
+                    }
+                    .buttonStyle(.borderless)
+                }
+                Button { send(.updateTask(id: task.id, TaskPatch(due: .some(nil)))) } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Remove due date")
+            }
+        } else {
+            Button { send(.updateTask(id: task.id, TaskPatch(due: .some(Due(day: clock.today.description))))) } label: {
+                Label("Add due date", systemImage: "calendar.badge.plus")
+            }
+            .buttonStyle(.borderless)
         }
     }
 
