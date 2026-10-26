@@ -26,6 +26,7 @@ Mark each item with ✅ / ❌ and a note. Use neutral test data only (no real na
 - [x] C6 Header shows per-account indicators ("Exchange: no changes since launch" → after a change: "… min ago").
 - [x] C7 A free day says "No appointments"; a day without tasks says "No tasks".
 - [x] C8 "New Task" in the day view (or ⌘N) while viewing tomorrow → the editor's due date is tomorrow.
+- [x] C9 Click an appointment → a popover at the cursor shows title, time, calendar, location, organizer and attendees (selectable, not editable). Esc or a click outside closes it; that click doesn't reopen another popover.
 
 ## D. Tasks and tags (task 7.4)
 
@@ -61,4 +62,5 @@ Mark each item with ✅ / ❌ and a note. Use neutral test data only (no real na
 | 2026-10-26 | owner | D ✅ | Tasks and tags; fixed: ⌘N new window, unconfirmed tag lost on Save, tag field squeezed the editor, ticking now shows the check for 1.5 s before the task leaves, snooze reworked: snoozed tasks stay in the task list with an "until …" marker, are hidden from the day view until their date, and can be snoozed further |
 | 2026-10-26 | owner | E ✅ | Undo/redo; added: overlay (rewind/forward arrow + step with task name) and named Edit menu items; fixed: one editor save was up to three undo steps |
 | 2026-10-26 | owner | F ✅ | End to end: a meeting moved in Outlook showed at the new time without refresh, Exchange indicator updated, tasks survived quit and reboot. EventKit doesn't need Calendar.app running |
+| 2026-10-26 | owner | C9 ✅ | Added after verify: read-only appointment popover, anchored at the cursor; a dismissing click doesn't reopen |
 | | | | |

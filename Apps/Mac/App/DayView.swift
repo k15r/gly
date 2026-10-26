@@ -106,6 +106,10 @@ struct DayView: View {
 struct AppointmentRow: View {
     let entry: DayAppointment
     let allDay: Bool
+    @State private var showingDetails = false
+    /// Click position within the row, so the popover points at the cursor.
+    @State private var clickPoint: UnitPoint = .center
+    @State private var size: CGSize = .zero
 
     var body: some View {
         let a = entry.appointment
@@ -129,7 +133,16 @@ struct AppointmentRow: View {
         .background(entry.state == .current ? Color.blue.opacity(0.08) : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .opacity(entry.state == .past ? 0.5 : 1)
-        .help(a.attendees.isEmpty ? a.title : "\(a.title)\n\(a.attendees.joined(separator: ", "))")
+        .contentShape(Rectangle())
+        .background(GeometryReader { g in Color.clear.onAppear { size = g.size }.onChange(of: g.size) { size = g.size } })
+        .onTapGesture(coordinateSpace: .local) { p in
+            // A click that just dismissed an open popover only closes it (the popover closes on mouse-down, the tap fires on mouse-up).
+            guard Date().timeIntervalSince(AppointmentPopover.lastClosed) > 0.5 else { return }
+            clickPoint = size.width > 0 && size.height > 0 ? UnitPoint(x: p.x / size.width, y: p.y / size.height) : .center
+            showingDetails = true
+        }
+        .popover(isPresented: $showingDetails, attachmentAnchor: .point(clickPoint), arrowEdge: .bottom) { AppointmentDetails(entry: entry) }
+        .onChange(of: showingDetails) { _, open in if !open { AppointmentPopover.lastClosed = Date() } }
     }
 
     private var timeRange: String {
@@ -137,6 +150,54 @@ struct AppointmentRow: View {
         let start = entry.startsBeforeDay ? "…" : f.string(from: entry.appointment.start)
         let end = entry.endsAfterDay ? "…" : f.string(from: entry.appointment.end)
         return "\(start)–\(end)"
+    }
+}
+
+/// When an appointment popover was last closed, shared by all rows.
+@MainActor
+enum AppointmentPopover {
+    static var lastClosed = Date.distantPast
+}
+
+/// Read-only appointment details (specs/calendar-sources "Appointment details are not editable").
+struct AppointmentDetails: View {
+    let entry: DayAppointment
+
+    var body: some View {
+        let a = entry.appointment
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Circle().fill(Color(hex: entry.calendar?.colorHex ?? "#888888")).frame(width: 10, height: 10)
+                Text(a.title).font(.headline).strikethrough(a.isCancelled)
+                if a.isCancelled { Text("Cancelled").font(.caption).padding(.horizontal, 4).background(.red.opacity(0.15)).clipShape(Capsule()) }
+            }
+            Grid(alignment: .topLeading, horizontalSpacing: 10, verticalSpacing: 6) {
+                row("When", Self.when(a))
+                if let c = entry.calendar { row("Calendar", "\(c.title) · \(c.sourceTitle)") }
+                if let l = a.location, !l.isEmpty { row("Location", l) }
+                if let o = a.organizer, !o.isEmpty { row("Organizer", o) }
+                if !a.attendees.isEmpty { row("Attendees", a.attendees.joined(separator: "\n")) }
+            }
+        }
+        .textSelection(.enabled)
+        .padding()
+        .frame(minWidth: 280, maxWidth: 420, alignment: .leading)
+    }
+
+    private func row(_ label: String, _ value: String) -> some View {
+        GridRow {
+            Text(label).foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+            Text(value).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    static func when(_ a: Appointment) -> String {
+        let f = DateIntervalFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = a.isAllDay ? .none : .short
+        // All-day events end at the next midnight; show the last day instead.
+        let end = a.isAllDay ? max(a.start, a.end.addingTimeInterval(-1)) : a.end
+        return f.string(from: a.start, to: end)
     }
 }
 

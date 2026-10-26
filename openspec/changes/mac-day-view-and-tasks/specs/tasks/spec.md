@@ -40,7 +40,7 @@ The system SHALL support completing (`done`), reopening (`open`), snoozing until
 
 #### Scenario: Snooze until Monday
 - **WHEN** the user snoozes a task until Monday
-- **THEN** the task is hidden from open-task views until Monday, and on Monday it is `open` again
+- **THEN** the task is hidden from the day view until Monday and marked "until Mon" in the task list, and on Monday it is `open` again
 
 #### Scenario: Reopen a completed task
 - **WHEN** the user reopens a `done` task

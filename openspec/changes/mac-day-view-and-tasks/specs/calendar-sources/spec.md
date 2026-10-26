@@ -14,8 +14,8 @@ The system SHALL read appointments from every event calendar configured in the m
 - **THEN** WorkDash lists both for that day, each labeled with its calendar
 
 #### Scenario: Appointment details are not editable
-- **WHEN** the user opens an appointment in WorkDash
-- **THEN** its title, time, location and attendees are shown but offer no editing control
+- **WHEN** the user clicks an appointment in the day view
+- **THEN** a popover shows its title, time, calendar, location, organizer and attendees, with no editing control
 
 ### Requirement: Calendar access permission
 The system SHALL request full calendar access on first use and SHALL show a clear state when access is denied or not yet granted, including a way to open the relevant System Settings pane. Without access, the rest of WorkDash (tasks) SHALL remain usable.

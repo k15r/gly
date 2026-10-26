@@ -116,7 +116,8 @@ Writes are **Codable commands** sent as JSON `Data` over one XPC method (`perfor
 
 - `EventSource` protocol in Core, with `EventKitSource` (real) and a fake for tests. Core sees plain value types (`CalendarInfo`, `Appointment`), never EventKit objects outside the adapter.
 - **Day loading:** `predicateForEvents(withStart: dayStart, end: nextDayStart, calendars: visible)`, where day bounds come from `Calendar.current.dateInterval(of: .day, for:)`, which is DST-safe. Events overlapping the day are included, so ones spanning midnight appear on both days. All-day events are split out by `isAllDay`.
-- **Cancelled** = `status == .canceled` or a title prefix `Canceled:` / `Abgesagt:` (case-insensitive). The prefix is shown stripped and the event struck through.
+- **Cancelled** = `status == .canceled` or a title prefix `Canceled:` / `Cancelled:` / `Abgesagt:` (case-insensitive). The prefix is shown stripped and the event struck through.
+- **Appointment details:** clicking an appointment row opens a read-only popover (title, time range, calendar, location, organizer, attendees; text selectable for copying). Annotations and links come with a later change.
 - **Live updates:** `EKEventStoreChanged` → reload the displayed day (debounced 300 ms). New calendars are visible by default.
 - **Visibility:** a set of hidden `calendarIdentifier`s in the app's `UserDefaults`. That's acceptable for a Mac-only UI preference; device-local identifiers are a later concern (foundation D4 open point).
 - **Refresh indicator:** EventKit exposes no per-account sync time. The app records, per source (account), the time of the last `EKEventStoreChanged` after which that source's events in a ±30-day window differed from the previous fingerprint (count + hash of keys and modification dates). Display: "SAP: 25 min ago", or "no changes since launch" until the first change. It also calls `refreshSourcesIfNecessary()` on launch and every 5 minutes. *Limitation:* this measures changes seen, not sync attempts. That's stated in the tooltip.
@@ -125,7 +126,7 @@ Writes are **Codable commands** sent as JSON `Data` over one XPC method (`perfor
 ### L8: Day view composition
 
 - Pure functions in Core build the view model: `DayModel(day, now, appointments, tasks)` → all-day list, timed list with `past/current/upcoming` state, task list (due that day, plus overdue if `day == today`, sorted per L3). They're unit-tested with fixed `now` values, including DST and midnight-spanning cases.
-- **Time-based state** (past/current) refreshes via SwiftUI `TimelineView(.everyMinute)`. Crossing midnight while "today" is shown advances the view to the new day.
+- **Time-based state** (past/current) comes from an observed `Clock` (app) that ticks every 30 s; it also detects the day change, which advances a displayed "today" to the new day and triggers `reconcileSnoozes`.
 - **Keyboard:** ⌘← previous day, ⌘→ next day, ⌘T today, ⌘N new task (due on the displayed day when invoked from the day view).
 - **Snoozed tasks:** queries treat `status = 'snoozed' AND snoozed_until <= today` as open, so the view is correct immediately. The app also sends `reconcileSnoozes(today)` on launch and at midnight to persist the transition (writer `system@<device id>`).
 - **Snooze = "not now"** *(decided after manual check D7)*: the day view leaves snoozed tasks out until their snooze date (also when viewing future days; a later "peek into the future" will cover that). The task list keeps them at their normal position with an "until <day>" marker. The due date is not touched. `reconcileSnoozes` sets `status = open` and clears `snoozed_until`.
