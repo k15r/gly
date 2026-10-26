@@ -75,7 +75,8 @@ public final class EventKitSource: EventSource {
                 organizer: e.organizer?.name, attendees: (e.attendees ?? []).compactMap(\.name),
                 lastModified: e.lastModifiedDate, identity: identity,
                 availability: Self.availability(e.availability), myStatus: Self.myStatus(e.attendees),
-                isOrganizer: e.organizer?.isCurrentUser ?? false)
+                isOrganizer: e.organizer?.isCurrentUser ?? false,
+                isRecurring: e.hasRecurrenceRules || e.isDetached)
         }
     }
 

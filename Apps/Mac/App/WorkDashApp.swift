@@ -10,17 +10,18 @@ struct WorkDashApp: App {
     @State private var clock = Clock()
     @State private var nav = Navigation()
     @State private var wiki = WikiModel()
+    @State private var planning = PlanningModel()
 
     var body: some Scene {
         WindowGroup("WorkDash") {
             let opener = LinkOpener(app: app, wiki: wiki, nav: nav)
             ContentView()
-                .environment(app).environment(calendars).environment(tasks).environment(clock).environment(nav).environment(wiki)
+                .environment(app).environment(calendars).environment(tasks).environment(clock).environment(nav).environment(wiki).environment(planning)
                 .environment(\.linkOpener, opener)
                 .environment(\.openURL, OpenURLAction { url in opener.open(url); return .handled })
                 .frame(minWidth: 880, minHeight: 580)
                 .task { await startUp() }
-                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store) }
+                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store) }
                 .onChange(of: nav.day) { syncDay() }
                 .onChange(of: clock.today) { syncDay() }
         }
@@ -59,8 +60,11 @@ struct WorkDashApp: App {
         }
 
         Settings {
-            AgentsSettingsView()
-                .environment(app).environment(tasks)
+            TabView {
+                AgentsSettingsView().tabItem { Label("Agents", systemImage: "cpu") }
+                PlanningSettingsView().tabItem { Label("Planning", systemImage: "calendar.badge.clock") }
+            }
+            .environment(app).environment(tasks).environment(planning)
         }
     }
 
@@ -73,6 +77,7 @@ struct WorkDashApp: App {
         await app.start()
         tasks.attach(app.store, writer: app.writer)
         wiki.attach(app.store)
+        planning.attach(app.store)
         if app.canWrite { await app.send(.reconcileSnoozes(today: clock.today.description), asSystem: true) }
         await calendars.start()
         syncDay()
@@ -80,6 +85,7 @@ struct WorkDashApp: App {
 
     private func syncDay() {
         tasks.set(day: nav.day, today: clock.today)
+        planning.set(today: clock.today)
         calendars.show(day: nav.day)
     }
 

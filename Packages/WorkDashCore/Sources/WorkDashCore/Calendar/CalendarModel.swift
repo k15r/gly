@@ -31,16 +31,18 @@ public struct Appointment: Identifiable, Hashable {
     /// My own response, from the attendee marked as current user; `.none` without attendees.
     public let myStatus: ParticipationStatus
     public let isOrganizer: Bool
+    /// Part of a series (offers series-wide overrides).
+    public let isRecurring: Bool
 
     public init(id: String, calendarID: String, title: String, start: Date, end: Date, isAllDay: Bool = false,
                 isCancelled: Bool = false, location: String? = nil, organizer: String? = nil, attendees: [String] = [],
                 lastModified: Date? = nil, identity: AppointmentIdentity? = nil, availability: Availability = .unknown,
-                myStatus: ParticipationStatus = .none, isOrganizer: Bool = false) {
+                myStatus: ParticipationStatus = .none, isOrganizer: Bool = false, isRecurring: Bool = false) {
         self.id = id; self.calendarID = calendarID; self.title = title; self.start = start; self.end = end
         self.isAllDay = isAllDay; self.isCancelled = isCancelled; self.location = location; self.organizer = organizer
         self.attendees = attendees; self.lastModified = lastModified
         self.identity = identity ?? AppointmentIdentity(calendarID: calendarID, baseID: id, originalStart: start)
-        self.availability = availability; self.myStatus = myStatus; self.isOrganizer = isOrganizer
+        self.availability = availability; self.myStatus = myStatus; self.isOrganizer = isOrganizer; self.isRecurring = isRecurring
     }
 
     public var interval: DateInterval { DateInterval(start: start, end: max(start, end)) }

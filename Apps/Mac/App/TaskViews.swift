@@ -37,6 +37,8 @@ struct TaskRow: View {
     let task: TaskItem
     var overdue = false
     var onEdit: () -> Void
+    /// Planning state shown as a badge (day view).
+    var state: WorkOnState? = nil
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
 
@@ -79,6 +81,8 @@ struct TaskRow: View {
                 HStack(spacing: 6) {
                     if overdue { Text("overdue").font(.caption.bold()).foregroundStyle(.red) }
                     if let due = task.due { Text(Self.dueText(due)).font(.caption).foregroundStyle(.secondary) }
+                    if let effort = task.effort { EffortChip(effort: effort) }
+                    if let state { StateBadge(state: state) }
                     if task.isSnoozed(today: LocalDay(date: Date())), let until = task.snoozedUntil.flatMap(LocalDay.init) {
                         Label("until \(DayView.title(for: until))", systemImage: "moon.zzz").font(.caption).foregroundStyle(.blue)
                     }
@@ -126,6 +130,14 @@ struct TaskActions: View {
         Button("Snooze until Next Monday") { snooze(Self.nextMonday(after: base)) }
         if let onEdit { Button("Snooze until…", action: onEdit) }
         Divider()
+        Menu("Effort") {
+            ForEach(Effort.allCases, id: \.self) { e in
+                Button(e.label) { send(.updateTask(id: task.id, TaskPatch(effort: .some(e)))) }
+            }
+            Divider()
+            Button("None") { send(.updateTask(id: task.id, TaskPatch(effort: .some(nil)))) }
+        }
+        Divider()
         if task.status != .open { Button("Reopen") { send(.setStatus(id: task.id, .open)) } }
         if task.status != .dropped { Button("Drop") { send(.setStatus(id: task.id, .dropped)) } }
         Button("Delete", role: .destructive) { send(.deleteTask(id: task.id)) }
@@ -144,6 +156,27 @@ struct TaskActions: View {
         let weekday = cal.component(.weekday, from: day.interval().start)   // 1 = Sunday, 2 = Monday
         let delta = (9 - weekday) % 7 == 0 ? 7 : (9 - weekday) % 7   // days until the next Monday, never 0
         return day.adding(days: delta)
+    }
+}
+
+/// Effort size chip (specs/tasks "Task fields").
+struct EffortChip: View {
+    let effort: Effort
+    var body: some View {
+        Text(effort.label).font(.caption2.bold()).monospaced().padding(.horizontal, 4).padding(.vertical, 1)
+            .overlay(RoundedRectangle(cornerRadius: 3).stroke(.secondary.opacity(0.5)))
+            .foregroundStyle(.secondary).help("Effort")
+    }
+}
+
+/// Planning state badge (specs/daily-planning "Work on states").
+struct StateBadge: View {
+    let state: WorkOnState
+    var color: Color {
+        switch state { case .late: .red; case .tight: .orange; case .startToday: .blue; case .ok: .green; case .noEstimate: .secondary }
+    }
+    var body: some View {
+        Text(state.label).font(.caption.bold()).foregroundStyle(color)
     }
 }
 

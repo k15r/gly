@@ -123,6 +123,15 @@ struct TaskPageView: View {
             }
             .fixedSize()
 
+            Picker("Effort", selection: Binding(get: { task.effort }, set: { e in
+                send(.updateTask(id: task.id, TaskPatch(effort: .some(e))))
+            })) {
+                Text("–").tag(Effort?.none)
+                ForEach(Effort.allCases, id: \.self) { Text($0.label).tag(Effort?.some($0)) }
+            }
+            .fixedSize()
+            .help("How much work this is (sizes in Settings → Planning)")
+
             dueControl(task)
 
             Picker("Status", selection: Binding(get: { task.status }, set: { status in

@@ -71,6 +71,17 @@ final class CalendarModel {
 
     func calendar(for id: String) -> CalendarInfo? { calendars.first { $0.id == id } }
 
+    /// Appointments of visible calendars in a range (planning horizon), cached until the calendar or visibility changes.
+    @ObservationIgnored private var rangeCache: (key: String, value: [Appointment])?
+    func appointments(in range: DateInterval) -> [Appointment] {
+        guard authorization.canRead else { return [] }
+        let key = "\(range.start.timeIntervalSince1970)-\(range.end.timeIntervalSince1970)-\(changeCounter)-\(hiddenIDs.sorted().joined())"
+        if let c = rangeCache, c.key == key { return c.value }
+        let value = source.appointments(overlapping: range, calendarIDs: visibleIDs)
+        rangeCache = (key, value)
+        return value
+    }
+
     func refreshSources() { source.refreshSources() }
 
     func openPrivacySettings() {

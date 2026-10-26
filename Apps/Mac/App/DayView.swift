@@ -8,6 +8,7 @@ struct DayView: View {
     @Environment(TasksModel.self) private var tasks
     @Environment(Clock.self) private var clock
     @Environment(Navigation.self) private var nav
+    @Environment(PlanningModel.self) private var planning
     @Binding var day: LocalDay
     @State private var editing: TaskEditorTarget?
 
@@ -22,8 +23,10 @@ struct DayView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    AmbiguityBanner(day: day)
                     appointmentsSection(model)
                     tasksSection(model)
+                    if model.isToday { workOnSection() }
                 }
                 .padding()
             }
@@ -40,6 +43,7 @@ struct DayView: View {
                 if model.isToday { Text("Today").font(.caption).foregroundStyle(.secondary) }
             }
             Spacer()
+            CapacityIndicator(day: day)
             SourceIndicators()
             Button { day = day.adding(days: -1) } label: { Image(systemName: "chevron.left") }
                 .help("Previous day (⌘←)")
@@ -92,9 +96,37 @@ struct DayView: View {
             if model.tasks.isEmpty {
                 Text("No tasks").foregroundStyle(.secondary)
             } else {
+                let states = model.isToday ? Dictionary(uniqueKeysWithValues: planning.evaluate(model.tasks.map(\.task), now: clock.now,
+                    appointments: calendars.appointments(in: planning.horizonRange(today: clock.today))).map { ($0.task.id, $0.state) }) : [:]
                 ForEach(model.tasks) { dayTask in
                     TaskRow(task: dayTask.task, overdue: dayTask.isOverdue,
-                            onEdit: { nav.go(.task(dayTask.task.id)) })
+                            onEdit: { nav.go(.task(dayTask.task.id)) }, state: states[dayTask.task.id])
+                }
+            }
+        }
+    }
+
+    /// Open tasks due within the horizon, sorted by urgency (specs/daily-planning "Work on list").
+    private func workOnSection() -> some View {
+        @Bindable var planning = planning
+        let items = planning.evaluate(planning.upcoming, now: clock.now,
+                                      appointments: calendars.appointments(in: planning.horizonRange(today: clock.today)))
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Work on").font(.headline)
+                Spacer()
+                Picker("", selection: $planning.horizon) {
+                    ForEach([3, 5, 7, 14], id: \.self) { Text("next \($0) days").tag($0) }
+                }
+                .fixedSize().help("How far ahead to look (also in Settings → Planning)")
+            }
+            if items.isEmpty {
+                Text("Nothing due in the next \(planning.horizon) days").foregroundStyle(.secondary)
+            } else {
+                ForEach(items) { item in
+                    TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, state: item.state)
+                        .help(item.effortMinutes.map { "Needs ~\(formatMinutes(Double($0))), free until due: \(formatMinutes(item.freeMinutes))" }
+                              ?? "No estimate – set an effort to see whether it fits")
                 }
             }
         }
@@ -103,8 +135,58 @@ struct DayView: View {
     func newTask() { editing = .new(due: Due(day: day.description)) }
 }
 
+/// Today's (or the displayed day's) free time against the working hours (specs/daily-planning "Capacity indicator").
+struct CapacityIndicator: View {
+    @Environment(PlanningModel.self) private var planning
+    @Environment(CalendarModel.self) private var calendars
+    @Environment(Clock.self) private var clock
+    let day: LocalDay
+
+    var body: some View {
+        let free = planning.freeMinutes(on: day, now: clock.now, appointments: calendars.appointments)
+        let total = Double(max(1, planning.hours.minutesPerDay))
+        HStack(spacing: 6) {
+            Text("free \(formatMinutes(free))").font(.caption.bold()).monospacedDigit()
+            ProgressView(value: min(1, free / total)).frame(width: 70)
+        }
+        .help(day == clock.today ? "Free working time left today" : "Free working time on this day")
+    }
+}
+
+/// Annotations whose appointment couldn't be identified uniquely after a calendar change (design Q4).
+struct AmbiguityBanner: View {
+    @Environment(PlanningModel.self) private var planning
+    @Environment(CalendarModel.self) private var calendars
+    @Environment(AppModel.self) private var app
+    let day: LocalDay
+
+    var body: some View {
+        let mine = planning.ambiguous.filter { LocalDay(date: $0.start) == day }
+        ForEach(mine) { a in
+            let candidates = calendars.appointments.filter {
+                $0.calendarID == a.calendarID && TagName.key(for: $0.title) == TagName.key(for: a.title)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Which appointment does “\(a.title)” (\(a.blocking?.rawValue ?? "override")) belong to?", systemImage: "questionmark.circle")
+                    .fontWeight(.medium)
+                HStack {
+                    ForEach(candidates) { c in
+                        Button(c.start.formatted(date: .omitted, time: .shortened) + "–" + c.end.formatted(date: .omitted, time: .shortened)) {
+                            Task { await app.send(.resolveAnnotation(id: a.id, to: AppointmentSnapshot(c))) }
+                        }
+                    }
+                }
+            }
+            .padding(8).frame(maxWidth: .infinity, alignment: .leading)
+            .background(.yellow.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
+        }
+    }
+}
+
 /// One appointment line: time, color, title, calendar; cancelled struck through; past dimmed; current highlighted.
 struct AppointmentRow: View {
+    @Environment(PlanningModel.self) private var planning
+    @Environment(AppModel.self) private var app
     let entry: DayAppointment
     let allDay: Bool
     @State private var showingDetails = false
@@ -129,6 +211,7 @@ struct AppointmentRow: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            blockingMenu
         }
         .padding(6)
         .background(entry.state == .current ? Color.blue.opacity(0.08) : .clear)
@@ -144,6 +227,33 @@ struct AppointmentRow: View {
         }
         .popover(isPresented: $showingDetails, attachmentAnchor: .point(clickPoint), arrowEdge: .bottom) { AppointmentDetails(entry: entry) }
         .onChange(of: showingDetails) { _, open in if !open { AppointmentPopover.lastClosed = Date() } }
+    }
+
+    /// How this appointment counts for free time, and the override menu (specs/appointment-annotations "Blocking override menu").
+    private var blockingMenu: some View {
+        let (weight, reason) = planning.classify(entry.appointment)
+        let symbol: String = switch weight { case .blocks: "circle.fill"; case .maybe: "circle.lefthalf.filled"; case .free: "circle" }
+        let reasonText: String = switch reason { case .automatic: "automatic"; case .occurrenceOverride: "set for this occurrence"; case .seriesOverride: "set for the series" }
+        return Menu {
+            Section("This occurrence") { options(.occurrence) }
+            if entry.appointment.isRecurring { Section("Whole series") { options(.series) } }
+        } label: {
+            Image(systemName: symbol).foregroundStyle(reason == .automatic ? Color.secondary : Color.accentColor)
+        }
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+        .help("Counts as \(weight == .maybe ? "half (maybe)" : weight.rawValue) for free time – \(reasonText)")
+    }
+
+    @ViewBuilder
+    private func options(_ scope: BlockingScope) -> some View {
+        Button("Automatic") { set(scope, nil) }
+        Button("Blocks") { set(scope, .blocks) }
+        Button("Optional (counts half)") { set(scope, .optional) }
+        Button("Ignore") { set(scope, .ignore) }
+    }
+
+    private func set(_ scope: BlockingScope, _ value: BlockingOverride?) {
+        Task { await app.send(.setBlocking(AppointmentSnapshot(entry.appointment), scope: scope, value: value)) }
     }
 
     private var timeRange: String {
