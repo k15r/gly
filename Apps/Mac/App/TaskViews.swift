@@ -322,6 +322,7 @@ struct TagField: View {
     @Binding var input: String
     @State private var newTagPrefix: String?
     @State private var problem: String?
+    @FocusState private var newTagFocused: Bool
 
     /// A node of the picker tree built from all existing tag names.
     struct Node: Identifiable {
@@ -366,6 +367,8 @@ struct TagField: View {
                     HStack {
                         Text(prefix.isEmpty ? "New tag" : "New tag in \(prefix)/").foregroundStyle(.secondary)
                         TextField("name", text: $input).frame(minWidth: 160).onSubmit { commit(prefix) }
+                            .focused($newTagFocused)
+                            .onExitCommand { newTagPrefix = nil; input = ""; problem = nil }
                         Button("Add") { commit(prefix) }.disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
                         Button("Cancel") { newTagPrefix = nil; input = ""; problem = nil }
                     }
@@ -373,6 +376,11 @@ struct TagField: View {
                 }
                 if let problem { Text(problem).font(.caption).foregroundStyle(.red) }
             }
+        }
+        // Focus the name field as soon as "New tag…" is chosen (after the menu has closed).
+        .onChange(of: newTagPrefix) { _, prefix in
+            guard prefix != nil else { return }
+            DispatchQueue.main.async { newTagFocused = true }
         }
     }
 
