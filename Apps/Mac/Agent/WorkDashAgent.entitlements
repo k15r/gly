@@ -8,6 +8,8 @@
 	<array>
 		<string>DB33H6YGK7.dev.k15r.workdash</string>
 	</array>
+	<key>com.apple.security.network.server</key>
+	<true/>
 	<key>com.apple.security.personal-information.calendars</key>
 	<true/>
 </dict>

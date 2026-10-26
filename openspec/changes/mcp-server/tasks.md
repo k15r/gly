@@ -27,10 +27,10 @@
 
 ## 5. Local HTTP route (agent)
 
-- [ ] 5.1 Implement the minimal HTTP/1.1 request parser and response writer (POST with Content-Length ≤ 1 MB, OPTIONS, 404/405/413/400, `Connection: close`) as a pure type in `WorkDashMCP`; verify with unit tests including malformed request lines, missing/oversized Content-Length and split reads
-- [ ] 5.2 Implement token check (path `/mcp/<token>` or `Authorization: Bearer`, constant-time compare → 401) and Origin policy (no Origin ok; Origin must be in the allow list → else 403; CORS headers and preflight only for allowed origins) per design M6; verify with unit tests for "Wrong token", allowed/blocked Origin and preflight
-- [ ] 5.3 Run an `NWListener` on `127.0.0.1:<port>` in the agent, started/stopped/rebound on `reloadSettings`, with the `network.server` entitlement, logging each request's method, path without token, Origin and User-Agent; verify: with HTTP off `lsof -iTCP:47615` shows nothing ("Endpoint off"); with it on, `curl` to the URL with token lists the tools ("Valid request"), without token gets 401, and a connection to the Mac's LAN address is refused ("Other machine")
-- [ ] 5.4 Derive the HTTP writer `agent:<user-agent token>@<device>` (fallback `http`); verify with a test that a `create_task` over HTTP with `User-Agent: joule/1.0` is recorded as `agent:joule@…`
+- [x] 5.1 Implement the minimal HTTP/1.1 request parser and response writer (POST with Content-Length ≤ 1 MB, OPTIONS, 404/405/413/400, `Connection: close`) as a pure type in `WorkDashMCP`; verify with unit tests including malformed request lines, missing/oversized Content-Length and split reads
+- [x] 5.2 Implement token check (path `/mcp/<token>` or `Authorization: Bearer`, constant-time compare → 401) and Origin policy (no Origin ok; Origin must be in the allow list → else 403; CORS headers and preflight only for allowed origins) per design M6; verify with unit tests for "Wrong token", allowed/blocked Origin and preflight
+- [x] 5.3 Run an `NWListener` on `127.0.0.1:<port>` in the agent, started/stopped/rebound on `reloadSettings`, with the `network.server` entitlement, logging each request's method, path without token, Origin and User-Agent; verify: with HTTP off `lsof -iTCP:47615` shows nothing ("Endpoint off"); with it on, `curl` to the URL with token lists the tools ("Valid request"), without token gets 401, and a connection to the Mac's LAN address is refused ("Other machine")
+- [x] 5.4 Derive the HTTP writer `agent:<user-agent token>@<device>` (fallback `http`); verify with a test that a `create_task` over HTTP with `User-Agent: joule/1.0` is recorded as `agent:joule@…`
 
 ## 6. App: Agents settings
 

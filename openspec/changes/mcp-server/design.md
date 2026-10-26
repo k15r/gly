@@ -127,6 +127,11 @@ The agent uses the existing `EventKitSource`. Changes:
 - **Alternatives considered:**
   - Hummingbird or Vapor: robust HTTP, but SwiftNIO in a small agent for a single POST endpoint isn't worth it.
   - Embedding the token only in a header: the Joule form has a URL field only.
+- **Verified (task 5.3):**
+  - With the setting off, nothing listens. With it on, `lsof` shows `127.0.0.1:47615 (LISTEN)`.
+  - `curl` with the token lists the tools, and without it gets 401.
+  - A request to the Mac's network address doesn't connect (it times out, presumably dropped by the firewall in stealth mode), so it never reaches the listener.
+  - Request lines are logged at notice level so they persist. Read them with `/usr/bin/log show --predicate 'process == "WorkDashAgent"'` (in zsh, plain `log` is a shell builtin).
 - **Joule experiment:** with the endpoint on, the user adds `http://127.0.0.1:47615/mcp/<token>` (or `localhost`) in Joule. The agent logs every rejected and accepted request: Origin, User-Agent, method, without the token. That shows what arrives:
   - If nothing arrives, Joule calls from the cloud, and local HTTP can't work. That's recorded in the findings; remote exposure would be a separate change.
   - If requests arrive from a browser origin, the user adds that origin to the allow list.

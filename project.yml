@@ -72,6 +72,7 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
         com.apple.security.personal-information.calendars: true
+        com.apple.security.network.server: true
   wd-mcp:
     type: tool
     platform: macOS

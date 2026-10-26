@@ -25,6 +25,43 @@ actor MCPHost {
     }
 }
 
+/// Runs the local HTTP endpoint according to the shared settings (design M6/M7); re-applied on `reloadSettings`.
+actor HTTPController {
+    let settings: SharedSettings
+    let mcp: MCPHost
+    private var server: LocalHTTPServer?
+    private var running: (port: Int, token: String, origins: [String])?
+
+    init(settings: SharedSettings, mcp: MCPHost) { self.settings = settings; self.mcp = mcp }
+
+    func apply() async {
+        settings.defaults.synchronize()
+        guard settings.httpEnabled else {
+            if server != nil { log.notice("HTTP endpoint off") }
+            server?.stop(); server = nil; running = nil
+            return
+        }
+        let wanted = (port: settings.httpPort, token: settings.httpToken, origins: settings.httpAllowedOrigins)
+        if let running, running.port == wanted.port, running.token == wanted.token, running.origins == wanted.origins { return }
+        server?.stop()
+        let mcp = self.mcp
+        let http = LocalHTTPServer(port: UInt16(wanted.port), gate: HTTPGate(token: wanted.token, allowedOrigins: wanted.origins),
+                                   log: { log.notice("http: \($0, privacy: .public)") },
+                                   handler: { await mcp.get().handle($0) })
+        do {
+            try await http.start()
+            server = http
+            running = wanted
+            log.notice("HTTP endpoint on 127.0.0.1:\(wanted.port, privacy: .public)")
+        } catch {
+            server = nil; running = nil
+            log.error("HTTP endpoint failed on port \(wanted.port, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    var state: String { running.map { "on (127.0.0.1:\($0.port))" } ?? "off" }
+}
+
 do {
     let url = try StoreFactory.defaultDatabaseURL()
     let pool = try StoreFactory.openReadWrite(at: url)
@@ -34,6 +71,8 @@ do {
     let tools = WorkDashTools(writer: pool, calendar: calendar,
                               hiddenCalendarIDs: { settings.hiddenCalendarIDs }, deviceID: settings.deviceID)
     let mcp = MCPHost()
+    let http = HTTPController(settings: settings, mcp: mcp)
+    Task { await http.apply() }
     Task {
         do { await mcp.set(try await WorkDashMCPServer(tools: tools)) }
         catch { log.fault("MCP server failed to start: \(String(describing: error), privacy: .public)") }
@@ -45,7 +84,7 @@ do {
             if calendar.authorization == .notDetermined { Task { _ = await calendar.requestAccess() } }
             return "calendar: \(calendar.authorization)"
         },
-        reloadSettings: { log.info("settings reloaded") },
+        reloadSettings: { Task { await http.apply() } },
         mcp: { message, client in await mcp.get().handleStdio(message, client: client) })
     let delegate = AgentListenerDelegate(service: service)
     let listener = NSXPCListener(machServiceName: WorkDashIDs.agentMachService)
