@@ -87,4 +87,13 @@ extension LinkDisambiguationTests {
         XCTAssertEqual(hit?.tags, ["person/alex"])
         XCTAssertNotNil(hit?.modifiedAt)
     }
+
+    func testNewPageForTypedLink() {
+        XCTAssertEqual(LinkResolver.newPage(for: "person/alex/Goals")?.title, "Goals")
+        XCTAssertEqual(LinkResolver.newPage(for: "person/alex/Goals")?.tags, ["person/alex"])
+        XCTAssertEqual(LinkResolver.newPage(for: "page: Goals")?.title, "Goals")
+        XCTAssertEqual(LinkResolver.newPage(for: "Goals")?.tags, [])
+        XCTAssertNil(LinkResolver.newPage(for: "task:Goals"))
+        XCTAssertEqual(LinkResolver.newPage(for: "a/")?.title, "a/", "no title after the slash: taken as typed")
+    }
 }

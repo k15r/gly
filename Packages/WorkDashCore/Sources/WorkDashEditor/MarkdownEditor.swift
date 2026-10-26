@@ -244,8 +244,10 @@ public struct MarkdownEditor: NSViewRepresentable {
             guard let tv = textView, let (range, query) = pickerQuery() else { picker.close(); return }
             var items = parent.suggestions(query)
             let trimmed = query.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty, !items.contains(where: { $0.title.caseInsensitiveCompare(trimmed) == .orderedSame }) {
-                items.append(LinkSuggestion(id: "new:" + trimmed, symbol: "plus.circle", title: "New page “\(trimmed)”",
+            if !trimmed.isEmpty, !items.contains(where: { $0.title.caseInsensitiveCompare(trimmed) == .orderedSame }),
+               let page = LinkResolver.newPage(for: trimmed) {
+                let title = "New page “\(page.title)”" + (page.tags.first.map { " in \($0)" } ?? "")
+                items.append(LinkSuggestion(id: "new:" + trimmed, symbol: "plus.circle", title: title,
                                             subtitle: "Creates the page when you open the link", insert: "[[\(trimmed)]]"))
             }
             picker.show(items, in: tv, at: range) { [weak self] chosen in

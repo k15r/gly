@@ -20,12 +20,25 @@ public struct UnresolvedLink: Codable, Equatable {
 
 public enum LinkResolver {
     /// Splits an optional `page:`, `task:` or `tag:` prefix off a typed link (link-disambiguation K1).
-    static func parse(_ typed: String) -> (kinds: Set<LinkRef.Kind>, body: String) {
+    public static func parse(_ typed: String) -> (kinds: Set<LinkRef.Kind>, body: String) {
         let t = typed.trimmingCharacters(in: .whitespaces)
         for (prefix, kind) in [("page:", LinkRef.Kind.page), ("task:", .task), ("tag:", .tag)] where t.lowercased().hasPrefix(prefix) {
             return ([kind], String(t.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces))
         }
         return ([.page, .task, .tag], t)
+    }
+
+    /// The page that "New page" creates for a typed link: `person/alex/Goals` → "Goals" tagged `person/alex`
+    /// (so the typed link resolves to it, K1); a `page:` prefix is dropped. nil for `task:`/`tag:` links.
+    public static func newPage(for typed: String) -> (title: String, tags: [String])? {
+        let (kinds, body) = parse(typed)
+        guard kinds.contains(.page) else { return nil }
+        if let slash = body.lastIndex(of: "/") {
+            let path = body[..<slash].trimmingCharacters(in: .whitespaces)
+            let title = body[body.index(after: slash)...].trimmingCharacters(in: .whitespaces)
+            if !path.isEmpty, !title.isEmpty, (try? TagName(path)) != nil { return (title, [path]) }
+        }
+        return body.isEmpty ? nil : (body, [])
     }
 
     /// Everything a typed `[[…]]` could mean: exact title/name matches of the allowed kinds, else (with `/`)

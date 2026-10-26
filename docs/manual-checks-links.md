@@ -13,9 +13,9 @@ Neutral test data only (no real names). Setup: tags `person/alex` and `person/sa
 
 ## B. Picker, lists and search (task 3.2)
 
-- [ ] B1 Type `[[Goals` → the picker shows both pages with qualifiers and a second line "Page · person/… · edited …"; choosing one links exactly that page.
-- [ ] B2 ⌘K "Goals" → both entries with qualifier and second line.
-- [ ] B3 Pages list and the tag page of `person` show "Goals · alex" and "Goals · sam"; backlinks of a page linked from both Goals pages show both with qualifiers.
+- [x] B1 Type `[[Goals` → the picker shows both pages with qualifiers and a second line "Page · person/… · edited …"; choosing one links exactly that page.
+- [x] B2 ⌘K "Goals" → both entries with qualifier and second line.
+- [x] B3 Pages list and the tag page of `person` show "Goals · alex" and "Goals · sam"; backlinks of a page linked from both Goals pages show both with qualifiers.
 
 ## C. Typed links and candidates (task 3.3)
 

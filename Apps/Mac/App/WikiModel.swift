@@ -84,13 +84,33 @@ final class WikiModel {
     /// Entries for the `[[` picker: icon, title with qualifier, second line (link-disambiguation K4).
     func suggestions(_ query: String) -> [LinkSuggestion] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty, let results = try? store?.read({ try SearchQueries.search($0, q, limit: 6) }) else { return [] }
-        let names = displayNames(results.all.map(\.ref.id))
-        return results.all.map { hit in
-            let insert = hit.ref.kind == .tag ? LinkParser.canonical(label: hit.ref.title, tag: hit.ref.id)
-                                              : LinkParser.canonical(label: hit.ref.title, item: hit.ref.id)
-            return LinkSuggestion(id: hit.ref.id, symbol: hit.ref.kind.linkSymbol, title: names[hit.ref.id]?.display ?? hit.ref.title,
-                                  subtitle: Self.secondLine(kind: hit.ref.kind, tags: hit.tags, modified: hit.modifiedAt), insert: insert)
+        guard !q.isEmpty, let store else { return [] }
+        // Prefixes (`page:`) and tag paths (`person/alex/Go…`) as in typed links (K1): exact candidates first,
+        // then title search on the last segment, limited to the allowed kinds and to items under the tag path.
+        let (kinds, body) = LinkResolver.parse(q)
+        let slash = body.lastIndex(of: "/")
+        let path = slash.map { TagName.key(for: String(body[..<$0])) }
+        let term = slash.map { String(body[body.index(after: $0)...]).trimmingCharacters(in: .whitespaces) } ?? body
+        let (exact, hits) = (try? store.read { db in
+            (try LinkResolver.candidates(db, typed: q),
+             term.isEmpty ? [] : try SearchQueries.search(db, term, limit: 12).all)
+        }) ?? ([], [])
+        func under(_ tags: [String]) -> Bool {
+            guard let path else { return true }
+            return tags.contains { let k = TagName.key(for: $0); return k == path || k.hasPrefix(path + "/") }
+        }
+        var refs: [(id: String, kind: LinkRef.Kind, title: String, tags: [String], modified: Date?)] =
+            exact.map { ($0.id, $0.kind, $0.title, $0.tags, nil) }
+        for hit in hits where kinds.contains(hit.ref.kind) && hit.ref.kind != .tag || (path == nil && kinds.contains(.tag) && hit.ref.kind == .tag) {
+            guard under(hit.tags), !refs.contains(where: { $0.id == hit.ref.id }) else { continue }
+            refs.append((hit.ref.id, hit.ref.kind, hit.ref.title, hit.tags, hit.modifiedAt))
+        }
+        refs = Array(refs.prefix(6))
+        let names = displayNames(refs.map(\.id))
+        return refs.map { r in
+            let insert = r.kind == .tag ? LinkParser.canonical(label: r.title, tag: r.id) : LinkParser.canonical(label: r.title, item: r.id)
+            return LinkSuggestion(id: r.id, symbol: r.kind.linkSymbol, title: names[r.id]?.display ?? r.title,
+                                  subtitle: Self.secondLine(kind: r.kind, tags: r.tags, modified: r.modified), insert: insert)
         }
     }
 
@@ -145,7 +165,9 @@ struct LinkOpener {
         case .page(let id): nav.go(.page(id))
         case .task(let id): nav.go(.task(id))
         case .tag(let name): nav.go(.tag(name))
-        case .missing(let title): Task { await createPage(title: title) }
+        case .missing(let typed):
+            guard let page = LinkResolver.newPage(for: typed) else { NSSound.beep(); return }
+            Task { await createPage(title: page.title, tags: page.tags) }
         case .web(let u): NSWorkspace.shared.open(u)
         case nil: NSSound.beep()
         }
