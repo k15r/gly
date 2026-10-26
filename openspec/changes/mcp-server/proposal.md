@@ -25,7 +25,7 @@ WorkDash should be maintained by agents as well as by hand: an agent that reads 
   - the HTTP switch, URL and token (regenerate)
   - a list of recent agent changes
 
-Not in this change: an inbox for underspecified tasks, info items, appointment annotations, public/remote exposure (tunnel, OAuth), MCP resources/prompts, and notifications to agents about changes.
+Not in this change: an inbox for underspecified tasks, info items, appointment annotations, public/remote exposure (tunnel, OAuth), a trash bin to see and restore deleted tasks (a later change; deletes stay recoverable in the store meanwhile), MCP resources/prompts, and notifications to agents about changes.
 
 ## Capabilities
 

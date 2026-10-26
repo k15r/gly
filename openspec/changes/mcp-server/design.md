@@ -132,7 +132,8 @@ The agent uses the existing `EventKitSource`. Changes:
   - `curl` with the token lists the tools, and without it gets 401.
   - A request to the Mac's network address doesn't connect (it times out, presumably dropped by the firewall in stealth mode), so it never reaches the listener.
   - Request lines are logged at notice level so they persist. Read them with `/usr/bin/log show --predicate 'process == "WorkDashAgent"'` (in zsh, plain `log` is a shell builtin).
-- **Joule experiment:** with the endpoint on, the user adds `http://127.0.0.1:47615/mcp/<token>` (or `localhost`) in Joule. The agent logs every rejected and accepted request: Origin, User-Agent, method, without the token. That shows what arrives:
+- **Joule result (task 7.2): local HTTP works.** Joule's connector is called by the native Joule Desktop app on this Mac (`User-Agent: Joule-Desktop/1.62.6`, no `Origin`), not from SAP's cloud. `http://127.0.0.1` is accepted, the token in the path works, and the stateless transport is enough: Joule's optional `GET` (SSE stream) gets 405, and it carries on. Its changes are recorded as `agent:joule-desktop@<device>`. No remote route is needed for Joule Desktop.
+- **Joule experiment (as planned):** with the endpoint on, the user adds `http://127.0.0.1:47615/mcp/<token>` (or `localhost`) in Joule. The agent logs every rejected and accepted request: Origin, User-Agent, method, without the token. That shows what arrives:
   - If nothing arrives, Joule calls from the cloud, and local HTTP can't work. That's recorded in the findings; remote exposure would be a separate change.
   - If requests arrive from a browser origin, the user adds that origin to the allow list.
 
@@ -167,7 +168,7 @@ A `Settings` scene (⌘,) with an "Agents" pane:
 - **[Joule calls from SAP's cloud, so the local endpoint is unreachable]** → Expected as a likely outcome. The experiment costs little (M6 logging), and the result is recorded. A remote route (tunnel + OAuth) needs its own change and a policy check.
 - **[Joule requires `https://`]** → Try `http://localhost` first. If the form rejects it, record that. A locally trusted certificate is a follow-up, not part of this change.
 - **[Token leak gives full task access to local processes]** → Loopback only, off by default, regenerate in one click, Origin check against browsers. Every agent change is attributed and visible in "Recent agent changes".
-- **[An agent makes many unwanted changes]** → All changes are soft and logged with the agent writer. A "revert agent batch" UI isn't in scope, but the change log has what it needs.
+- **[An agent makes many unwanted changes]** → All changes are soft and logged with the agent writer. There is no restore UI in this change: a proper trash bin (list deleted tasks, restore with tags) is a later change, decided during manual check C4. Restoring is deliberately not a button in Settings → Agents.
 - **[MCP SDK API churn (0.9 → 0.11)]** → The tool layer depends only on message and tool types. The dispatcher fallback (M2) keeps the transport-facing part small.
 - **[`wd-mcp` path changes when the app moves]** → The settings pane always shows the current path. A broken registration shows as "failed" in `claude mcp list`.
 - **[Hand-written HTTP parser bugs]** → Narrow surface (POST, Content-Length, close after each response), size limit, unit tests with malformed requests.

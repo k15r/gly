@@ -40,9 +40,10 @@
 ## 7. End to end
 
 - [ ] 7.1 Manual checks, documented in `docs/manual-checks-mcp.md`: Claude Code reads today's schedule (SAP + iCloud, hidden calendars excluded), lists overdue tasks, creates, updates (snooze, tags) and deletes a task; each change shows in the app at once and in "Recent agent changes"; ⌘Z in the app doesn't revert the agent's change; agent stopped → tool calls fail fast with the "unavailable" message
-- [ ] 7.2 Joule experiment: switch HTTP on, add the URL as a Joule connector, try `http://127.0.0.1…` and `http://localhost…`; record in `docs/manual-checks-mcp.md` what the form accepts and what the agent log shows (no request / browser Origin / tool calls) and the conclusion for a follow-up change
+- [x] 7.2 Joule experiment: switch HTTP on, add the URL as a Joule connector, try `http://127.0.0.1…` and `http://localhost…`; record in `docs/manual-checks-mcp.md` what the form accepts and what the agent log shows (no request / browser Origin / tool calls) and the conclusion for a follow-up change
 
 ## Workflow follow-up
 
 - Run `/opsx:verify mcp-server`, then archive the change once the manual checks pass.
+- Propose a trash-bin change: list deleted tasks (by anyone, including agents) and restore them with their tags.
 - Depending on the Joule result: propose a change for remote access (tunnel + OAuth, after a policy check) or drop the HTTP route.
