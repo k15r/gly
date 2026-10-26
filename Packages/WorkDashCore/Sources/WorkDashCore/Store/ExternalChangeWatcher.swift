@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import os
 
 /// Makes `ValueObservation` notice writes from other processes (foundation-spikes D3/S4).
 ///
@@ -18,18 +19,25 @@ public final class ExternalChangeWatcher {
         let fd = open(wal, O_EVTONLY)
         guard fd >= 0 else { throw StoreError.databaseMissing(wal) }
         let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write, .extend], queue: queue)
-        source.setEventHandler {
-            // Coarse but cheap at personal scale: every external write re-evaluates all observations.
-            // Requires a connection GRDB considers writable: notifyChanges is a no-op on
-            // `Configuration.readonly` pools (see StoreFactory.openReadOnly).
-            try? pool.write { db in try db.notifyChanges(in: .fullDatabase) }
-        }
+        source.setEventHandler { Self.notify(pool) }
         source.setCancelHandler { close(fd) }
         source.resume()
         self.source = source
     }
 
     deinit { source?.cancel() }
+
+    /// Tells GRDB the whole database changed. Coarse but cheap at personal scale: every external write re-evaluates
+    /// all observations. Requires a connection GRDB considers writable: notifyChanges is a no-op on
+    /// `Configuration.readonly` pools. `write` takes the write lock, and the event usually arrives while the agent is
+    /// still committing, so the pool waits for the lock (`ReadOnlyStore.configuration`) instead of failing; a failure
+    /// is logged, never swallowed, because it means the app shows stale data.
+    static func notify(_ pool: DatabasePool) {
+        do { try pool.write { db in try db.notifyChanges(in: .fullDatabase) } }
+        catch { log.error("change notification failed: \(String(describing: error), privacy: .public)") }
+    }
+
+    private static let log = Logger(subsystem: "dev.k15r.workdash", category: "store")
 }
 
 /// The app's view of the database (design L2): reading and observing only.
@@ -47,8 +55,15 @@ public final class ReadOnlyStore {
     public init(url: URL) throws {
         guard FileManager.default.fileExists(atPath: url.path) else { throw StoreError.databaseMissing(url.path) }
         self.url = url
-        pool = try DatabasePool(path: url.path)
+        pool = try DatabasePool(path: url.path, configuration: Self.configuration)
         watcher = try ExternalChangeWatcher(pool: pool, path: url.path)
+    }
+
+    /// Waits for the agent's write lock (see `ExternalChangeWatcher.notify`) instead of failing immediately.
+    static var configuration: Configuration {
+        var config = Configuration()
+        config.busyMode = .timeout(5)
+        return config
     }
 
     public func read<T>(_ body: (Database) throws -> T) throws -> T {
