@@ -2,7 +2,7 @@
 
 ## 1. Unknowns first
 
-- [ ] 1.1 Probe on the SAP Mac which attendance data EventKit delivers for Exchange and iCloud (availability, current-user participant status, organizer flag, external id with RID) for accepted, tentative, declined, unanswered, out-of-office and "free" appointments; record the findings and the fallbacks used in `design.md` Q1
+- [x] 1.1 Probe on the SAP Mac which attendance data EventKit delivers for Exchange and iCloud (availability, current-user participant status, organizer flag, external id with RID) for accepted, tentative, declined, unanswered, out-of-office and "free" appointments; record the findings and the fallbacks used in `design.md` Q1
 
 ## 2. Core: calendar data and planning logic
 

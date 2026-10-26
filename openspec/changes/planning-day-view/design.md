@@ -37,6 +37,20 @@ Motivation and scope are in `proposal.md`, behavior in the specs of this change.
 
 Everything stays inside `EventKitSource`. `FakeEventSource` gets the same fields for tests.
 
+**Findings (task 1.1, counts only, ±14 days on the SAP Mac):**
+- **Exchange (66 events):**
+  - availability: 45 busy, 18 tentative, 3 not supported
+  - my response: 11 accepted, 11 tentative, **17 unknown**, 8 not in the attendee list
+  - 24 occurrences with `/RID=`, 3 cancelled
+- **iCloud (61 events):** availability 57 busy and 4 free; mostly no attendees.
+- **Birthdays and subscribed calendars:** availability not supported, no attendees.
+
+**Consequences:**
+- Availability is reliable on Exchange and carries "tentative".
+- `participantStatus == .unknown` is so frequent that it can't mean "unanswered", so it maps to `none` (no information), and availability decides: busy blocks, tentative counts half. Only `.pending` counts as unanswered.
+- A missing current user in the attendees (8 cases) also maps to `none`.
+- Not-supported availability (birthdays, subscribed, 3 Exchange events) counts as unknown, which blocks for timed events and is free for all-day ones.
+
 **Risk:** Exchange accounts may report availability as not supported, or leave the current user out of the attendees. Task 1.1 probes this on the SAP Mac. Fallbacks: treat unknown availability as busy, and no status as accepted, so the appointment blocks. That's the safe side: free time is underestimated, never overestimated.
 
 ### Q2: Keys

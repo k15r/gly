@@ -98,8 +98,10 @@ public final class EventKitSource: EventSource {
         case .accepted, .completed, .inProcess: return .accepted
         case .declined: return .declined
         case .tentative, .delegated: return .tentative
-        case .pending, .unknown: return .pending
-        @unknown default: return .pending
+        case .pending: return .pending
+        // Exchange reports .unknown for many meetings (probe, design Q1): no information, availability decides.
+        case .unknown: return .none
+        @unknown default: return .none
         }
     }
 

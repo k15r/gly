@@ -11,7 +11,7 @@ Neutral test data only (no real names).
 
 - [x] B1 Settings (⌘,) → Planning: working hours 09:00–17:00, sizes XS 30m, S 2h, M 4h, L 8h, XL 24h, look-ahead 5 days.
 - [x] B2 Change working hours to 08:00–16:00 → the day view's "free …" changes at once; L and XL follow the shorter day; "Default" resets a size.
-- [ ] B3 Right-click a task → Effort → M → an `M` chip appears on the row; ⌘Z removes it ("Effort of …").
+- [x] B3 Right-click a task → Effort → M → an `M` chip appears on the row; ⌘Z removes it ("Effort of …").
 - [ ] B4 On a task page, the Effort picker sets and clears the effort; one ⌘Z per change.
 
 ## C. Day view (task 5.3)
