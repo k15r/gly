@@ -73,7 +73,7 @@ struct BacklinksView: View {
     private func open(_ ref: LinkRef) {
         switch ref.kind {
         case .page: nav.go(.page(ref.id))
-        case .task: nav.editingTask = .edit(ref.id)
+        case .task: nav.go(.task(ref.id))
         case .tag: nav.go(.tag(ref.title))
         }
     }
@@ -301,7 +301,7 @@ struct TagPageView: View {
 
                 section("Open tasks", count: data.openTasks.count) {
                     ForEach(data.openTasks) { task in
-                        TaskRow(task: task, onEdit: { nav.editingTask = .edit(task.id) })
+                        TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })
                     }
                 }
                 section("Pages", count: data.pages.count) {
@@ -315,7 +315,7 @@ struct TagPageView: View {
                 }
                 DisclosureGroup("Finished tasks (\(data.finishedTasks.count))", isExpanded: $showFinished) {
                     ForEach(data.finishedTasks) { task in
-                        TaskRow(task: task, onEdit: { nav.editingTask = .edit(task.id) })
+                        TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })
                     }
                 }
                 Divider()
@@ -414,7 +414,7 @@ struct QuickOpenView: View {
         case .hit(let hit):
             switch hit.ref.kind {
             case .page: nav.go(.page(hit.ref.id))
-            case .task: nav.editingTask = .edit(hit.ref.id)
+            case .task: nav.go(.task(hit.ref.id))
             case .tag: nav.go(.tag(hit.ref.title))
             }
         case .create(let title):

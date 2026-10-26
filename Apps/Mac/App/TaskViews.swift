@@ -115,16 +115,17 @@ struct TaskRow: View {
 struct TaskActions: View {
     @Environment(AppModel.self) private var app
     let task: TaskItem
-    var onEdit: () -> Void
+    /// Opens the task page; nil on the task page itself.
+    var onEdit: (() -> Void)?
 
     var body: some View {
-        Button("Edit…", action: onEdit)
+        if let onEdit { Button("Open", action: onEdit) }
         Divider()
         // Count from the later of today and the current snooze date, so an already snoozed task can be pushed further.
         let base = Self.snoozeBase(for: task)
         Button(task.status == .snoozed ? "Snooze 1 More Day" : "Snooze until Tomorrow") { snooze(base.adding(days: 1)) }
         Button("Snooze until Next Monday") { snooze(Self.nextMonday(after: base)) }
-        Button("Snooze until…", action: onEdit)
+        if let onEdit { Button("Snooze until…", action: onEdit) }
         Divider()
         if task.status != .open { Button("Reopen") { send(.setStatus(id: task.id, .open)) } }
         if task.status != .dropped { Button("Drop") { send(.setStatus(id: task.id, .dropped)) } }
@@ -162,6 +163,7 @@ struct TagChip: View {
 
 /// Task list (specs/tasks "Task list"): Open / Done / Dropped, filtered by the selected tag.
 struct TaskListView: View {
+    @Environment(Navigation.self) private var nav
     @Environment(AppModel.self) private var app
     @Environment(TasksModel.self) private var tasks
     @State private var editing: TaskEditorTarget?
@@ -193,7 +195,7 @@ struct TaskListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(tasks.list) { task in
-                    TaskRow(task: task, onEdit: { editing = .edit(task.id) })
+                    TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })
                 }
             }
         }

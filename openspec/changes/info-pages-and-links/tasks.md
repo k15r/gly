@@ -32,6 +32,7 @@
 - [x] 5.3 Add `TagPageView` (description editor, three groups, "Show in Tasks", backlinks) and route sidebar tags and tag chips to it; verify manually "Project tag page", "Group tag", "From a chip", "Select a tag"
 - [x] 5.4 Extend the sidebar tag tree with item leaves (exact-tag open tasks, snoozed marked, then pages, after child tags; "also in …" hint; "Untagged" node) and drag & drop for tasks and pages (plain = move, ⌥ = alias, onto Untagged = remove tag; one update each); verify with a query test for "Items as leaves of the tree", "Item with two tags", "Untagged items", and manually "Move a page", "Alias a page" and "Move a task" including one ⌘Z each
 - [x] 5.5 Add quick open (⌘K: grouped live results, keyboard navigation, Return opens, "Create page …"); verify manually "Open a page" and "Create from quick open"
+- [ ] 5.7 Add the task page (`.task(id)` destination; title, field row with completion/priority/due/status-snooze/tags saving each change at once, notes read/edit with session autosave, backlinks, delete) and route every way of opening a task to it (lists, day view, tree, links, backlinks, quick open); the sheet stays for creation; verify manually "Open a task from a link", "Task backlinks", "Edit on the task page" (two undo steps)
 - [x] 5.6 Switch the task editor's notes to `MarkdownEditor` with session saving; verify manually "Task notes" and "Notes link to a page"
 
 ## 6. End to end

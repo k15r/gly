@@ -121,7 +121,7 @@ struct LinkOpener {
     func open(_ url: URL) {
         switch wiki.destination(for: url) {
         case .page(let id): nav.go(.page(id))
-        case .task(let id): nav.editingTask = .edit(id)
+        case .task(let id): nav.go(.task(id))
         case .tag(let name): nav.go(.tag(name))
         case .missing(let title): Task { await createPage(title: title) }
         case .web(let u): NSWorkspace.shared.open(u)

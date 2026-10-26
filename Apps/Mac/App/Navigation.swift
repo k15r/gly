@@ -8,6 +8,7 @@ final class Navigation {
     enum Destination: Hashable {
         case day, tasks, pages, calendars
         case page(String)       // page id
+        case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
     }
 
@@ -17,7 +18,6 @@ final class Navigation {
     var day = LocalDay(date: Date())
 
     /// Sheets shown above everything.
-    var editingTask: TaskEditorTarget?
     var showQuickOpen = false
     var showNewPage = false
 

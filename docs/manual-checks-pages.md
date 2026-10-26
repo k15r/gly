@@ -34,6 +34,13 @@ Use neutral test data only (no real names).
 - [x] C2 ⌘K with a new title → "Create page …" creates and opens it.
 - [x] C3 Open a task (double-click) → notes use the markdown editor with `[[` links; Save; the linked page lists the task under backlinks.
 
+## E. Task page (task 5.7)
+
+- [ ] E1 Click a task (task list, day view, tag tree, tag page) → it opens in the main area like a page: title, field row, notes (Read/Edit ⌘E), backlinks; ⌘[ goes back.
+- [ ] E2 Follow a link to a task from a page → task page opens; its backlinks list the page with an excerpt.
+- [ ] E3 Change the due date, then edit the notes, then leave → both saved without a button; ⌘Z twice reverts them one by one.
+- [ ] E4 Tick the done checkbox, change priority, snooze until a date, change tags → each is saved at once; ⌘N still opens the new-task form.
+
 ## D. End to end with an agent (task 6.1)
 
 - [ ] D1 Build a small wiki: tag page for `project/atlas` with a description, two linked pages, one task linking a page.

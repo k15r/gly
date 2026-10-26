@@ -143,7 +143,7 @@ This is acceptable for a single-user tool. Both versions stay in the change log.
 ### P9: Navigation and views
 
 - **`Navigation`** becomes a destination stack with back and forward. Destinations: `.day`, `.tasks`, `.pages`, `.calendars`, `.page(id)`, `.tag(name)`. ⌘[ and ⌘] move through it, and sidebar selection pushes onto it.
-- **Task links** open the existing `TaskEditor` sheet rather than a destination, so they don't enter the history.
+- **Tasks open as a task page** (`.task(id)` destination, decided after manual check D1: tasks had no backlinks, and should feel like pages). `TaskView` mirrors `PageView`: title; a field row (done checkbox, priority, due date with optional time, status/snooze, tags); notes in the read view or editor (⌘E) with session autosave; backlinks. Every field change is sent at once as one `updateTask`, so it's one undo step. The `TaskEditor` sheet remains only for creating tasks (⌘N, "New Task").
 - **Sidebar:** Day, Tasks, Pages, Calendars, then Tags. Tag rows open `.tag(name)`.
 - **The tag tree is the page tree** (decided while planning; no separate page hierarchy).
   - Each tag node lists, after its child tags, the **open tasks** (open and snoozed, in task-list order, snoozed ones marked) and then the live **pages** tagged with **exactly** that tag. Items with several tags appear under each of them, with an "also in …" hint. Finished tasks stay off the tree; the tag page lists them. (Tasks were added after manual check B8: the user asked for one consistent tree of everything tagged.)

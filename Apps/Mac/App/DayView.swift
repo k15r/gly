@@ -7,6 +7,7 @@ struct DayView: View {
     @Environment(CalendarModel.self) private var calendars
     @Environment(TasksModel.self) private var tasks
     @Environment(Clock.self) private var clock
+    @Environment(Navigation.self) private var nav
     @Binding var day: LocalDay
     @State private var editing: TaskEditorTarget?
 
@@ -93,7 +94,7 @@ struct DayView: View {
             } else {
                 ForEach(model.tasks) { dayTask in
                     TaskRow(task: dayTask.task, overdue: dayTask.isOverdue,
-                            onEdit: { editing = .edit(dayTask.task.id) })
+                            onEdit: { nav.go(.task(dayTask.task.id)) })
                 }
             }
         }

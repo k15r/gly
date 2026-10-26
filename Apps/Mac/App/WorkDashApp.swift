@@ -145,11 +145,11 @@ struct ContentView: View {
                 case .pages: PagesListView()
                 case .calendars: CalendarListView()
                 case .page(let id): PageView(id: id)
+                case .task(let id): TaskPageView(id: id)
                 case .tag(let name): TagPageView(name: name)
                 }
             }
         }
-        .sheet(item: $nav.editingTask) { TaskEditor(target: $0) }
         .sheet(isPresented: $nav.showQuickOpen) { QuickOpenView() }
         .sheet(isPresented: $nav.showNewPage) { NewPageSheet() }
         .overlay {
@@ -280,7 +280,7 @@ struct TreeLeafRow: View {
         HStack(spacing: 4) {
             Image(systemName: symbol).foregroundStyle(leaf.snoozed ? Color.blue : .secondary).imageScale(.small)
             Text(leaf.title).lineLimit(1)
-                .fontWeight(nav.current == .page(leaf.itemID) ? .bold : .regular)
+                .fontWeight(nav.current == .page(leaf.itemID) || nav.current == .task(leaf.itemID) ? .bold : .regular)
                 .foregroundStyle(leaf.snoozed ? .secondary : .primary)
             Spacer()
             if !leaf.otherTags.isEmpty {
@@ -292,7 +292,7 @@ struct TreeLeafRow: View {
         .onTapGesture {
             switch leaf.kind {
             case .page: nav.go(.page(leaf.itemID))
-            case .task: nav.editingTask = .edit(leaf.itemID)
+            case .task: nav.go(.task(leaf.itemID))
             case .tag: break
             }
         }

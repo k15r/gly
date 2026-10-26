@@ -50,5 +50,5 @@ The user SHALL be able to switch between editing and a rendered read view of the
 The page text, task notes and tag page descriptions SHALL use the same editor and read view, including `[[` link insertion.
 
 #### Scenario: Task notes
-- **WHEN** the user opens a task in the task editor
-- **THEN** its notes use the markdown editor with styling and `[[` links
+- **WHEN** the user opens a task
+- **THEN** its notes use the markdown editor with styling and `[[` links, and the read view like a page

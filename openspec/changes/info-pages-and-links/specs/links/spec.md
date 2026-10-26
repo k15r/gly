@@ -61,7 +61,7 @@ Every page, task and tag page SHALL show its backlinks: the pages, tasks and tag
 - **THEN** the task disappears from the target's backlinks without refresh
 
 ### Requirement: Follow links and navigate back
-Clicking a link SHALL open its target: a page or tag page in the main area, a task in the task editor. The system SHALL let the user go back and forward through the opened pages, tasks and tag pages with ⌘[ and ⌘].
+Clicking a link SHALL open its target in the main area: a page, a task (on its task page) or a tag page. The system SHALL let the user go back and forward through the opened pages, tasks and tag pages with ⌘[ and ⌘].
 
 #### Scenario: Follow and go back
 - **WHEN** the user clicks a link from page A to page B and then presses ⌘[

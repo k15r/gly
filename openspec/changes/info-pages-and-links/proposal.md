@@ -24,6 +24,7 @@ WorkDash should hold the information around my work, not only the tasks: project
 - **Navigation:** clicking a link opens the target in the main area: a page, the task editor or a tag page. Back and forward work with ⌘[ and ⌘].
 - **Search and quick open (⌘K):** full-text search across pages, tasks and tag pages, as you type, with results grouped by kind. It is used to open things and from the `[[` picker.
 - **Task notes become markdown** with links, using the same editor.
+- **Tasks open as a task page** in the main area, laid out like a page: title, a row with completion, priority, due date, status/snooze and tags, the notes with read and edit views, and backlinks. Changes save immediately. The form stays only for creating new tasks.
 - **MCP:**
   - New tools: `create_page`, `get_page`, `update_page`, `delete_page`, `search`, `get_context` (everything linked to and from an item), `get_tag_page`, `update_tag_page`.
   - Agents write links as `[[Title]]`, which WorkDash resolves, or in the canonical form returned by the tools.
@@ -43,7 +44,7 @@ Not in this change: link types (`prep-for`, …), properties and templates, appo
 
 ### Modified Capabilities
 
-- `tasks`: task notes are markdown with links (no longer "plain text in this version").
+- `tasks`: task notes are markdown with links (no longer "plain text in this version"), tasks open as a task page with backlinks, and editing saves immediately (an explicit confirm only for creating).
 - `tags`: the tag list includes tags used only on pages and lists pages as leaves (the page tree), pages can be moved by drag and drop, and selecting a tag opens its tag page instead of filtering the task list directly.
 - `agent-access`: the tool list grows (pages, search, context, tag pages), and `get_task` returns links.
 
