@@ -116,13 +116,11 @@ struct PagesListView: View {
                             .frame(width: 30, height: 30)
                             .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
                         VStack(alignment: .leading, spacing: 3) {
-                            // Title stands out. A qualifier that is one of the tags isn't repeated: its chip is emphasized
-                            // instead; only a date qualifier ("created …", identical tags) is shown next to the title.
+                            // The title stands alone: a qualifier tag is emphasized among the chips instead,
+                            // and a date qualifier ("created …", identical tags) is the created date on the right.
                             let qualifier = names[page.id]?.qualifier
                             let qualifierIsTag = qualifier.map { page.tags.contains($0) } ?? false
-                            (Text(page.title).font(.headline)
-                             + Text(qualifierIsTag ? "" : qualifier.map { "  · \($0)" } ?? "").font(.subheadline).foregroundColor(.secondary))
-                                .lineLimit(1)
+                            Text(page.title).font(.headline).lineLimit(1)
                             let excerpt = TreeLeaf.excerpt(of: page.body)
                             if !excerpt.isEmpty { Text(excerpt).font(.callout).foregroundStyle(.secondary).lineLimit(1) }
                             if !page.tags.isEmpty {
@@ -132,7 +130,11 @@ struct PagesListView: View {
                             }
                         }
                         Spacer()
-                        Text(page.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.tertiary)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("edited ") + Text(page.modifiedAt, format: .relative(presentation: .named))
+                            Text("created ") + Text(page.createdAt, format: .dateTime.day().month(.abbreviated).year())
+                        }
+                        .font(.caption).foregroundStyle(.tertiary)
                     }
                     .padding(.vertical, 4)
                     .contentShape(Rectangle())
