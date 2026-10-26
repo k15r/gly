@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Move items in the tree
-The user SHALL be able to drag a task or page in the tag list onto another tag node. A plain drop SHALL replace the tag the item was dragged from with the target tag (move); a drop with ⌥ held SHALL add the target tag and keep the others (alias). A drop onto "Untagged" SHALL remove the tag the item was dragged from. A drop onto an item listed under a tag SHALL count as a drop onto that tag. While dragging, the tag group under the pointer (the tag and its items) SHALL be highlighted. Each drop SHALL be one undo step.
+The user SHALL be able to drag a task or page in the tag list onto another tag node. A plain drop SHALL replace the tag the item was dragged from with the target tag (move); a drop with ⌥ held SHALL add the target tag and keep the others (alias). A drop onto "Untagged" SHALL remove the tag the item was dragged from. Each drop SHALL be one undo step.
 
 #### Scenario: Move a page
 - **WHEN** the user drags a page from `project/atlas` onto `project/beta`
@@ -13,13 +13,20 @@ The user SHALL be able to drag a task or page in the tag list onto another tag n
 - **WHEN** the user drags a page from `project/atlas` onto `project/beta` with ⌥ held
 - **THEN** the page has both tags and appears under both nodes
 
+#### Scenario: Move a task
+- **WHEN** the user drags an open task from `person/alex` onto `person/sam`
+- **THEN** the task is tagged `person/sam` instead of `person/alex`
+
+### Requirement: Drop targets in the tree
+Every row of a tag group (the tag itself and the items listed under it) SHALL accept drops for that tag, over its whole width including the text. While dragging, the tag group under the pointer SHALL be highlighted.
+
 #### Scenario: Drop onto an item of a group
 - **WHEN** the user drags a page over a task listed under `project/beta` and drops it there
 - **THEN** `project/beta` and its items are highlighted while hovering, and the page moves to `project/beta`
 
-#### Scenario: Move a task
-- **WHEN** the user drags an open task from `person/alex` onto `person/sam`
-- **THEN** the task is tagged `person/sam` instead of `person/alex`
+#### Scenario: Drop onto the tag text
+- **WHEN** the user drops an item onto the name of a tag in the tree
+- **THEN** the drop is accepted for that tag
 
 ## MODIFIED Requirements
 
