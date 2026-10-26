@@ -23,7 +23,7 @@
 
 - [x] 4.1 Add the XPC method `mcp(message, client, reply)` to the agent protocol, served by the message handler from 3.6 with the agent's pool and calendar source; verify with an anonymous-listener XPC test (like `AgentXPCTests`) that `tools/call create_task` creates a task attributed to `agent:test@…`
 - [x] 4.2 Add the `wd-mcp` command-line target to `project.yml` (unsandboxed, hardened runtime, team signed, embedded at `Contents/MacOS/wd-mcp`): reads JSON-RPC lines from stdin, remembers `clientInfo.name`, forwards over XPC with the team code requirement, writes replies to stdout, returns a JSON-RPC error "WorkDash agent unavailable" within 5 s when XPC fails; verify `scripts/build.sh` includes and signs it, and a piped `initialize` + `tools/list` from the shell returns the seven tools
-- [ ] 4.3 Register in Claude Code with `claude mcp add --scope user workdash -- <bundle>/Contents/MacOS/wd-mcp` (remove `workdash-spike` if present); verify `claude mcp list` shows `workdash` connected, and in a new Claude Code session `get_schedule` returns today's appointments and tasks and `create_task` makes a task that appears in the app without refresh
+- [x] 4.3 Register in Claude Code with `claude mcp add --scope user workdash -- <bundle>/Contents/MacOS/wd-mcp` (remove `workdash-spike` if present); verify `claude mcp list` shows `workdash` connected, and in a new Claude Code session `get_schedule` returns today's appointments and tasks and `create_task` makes a task that appears in the app without refresh
 
 ## 5. Local HTTP route (agent)
 
@@ -34,12 +34,12 @@
 
 ## 6. App: Agents settings
 
-- [ ] 6.1 Add the Settings scene (⌘,) with the "Agents" pane: agent reachability and calendar state (`agentStatus`), the `claude mcp add` command with the current bundle path and a Copy button, HTTP switch, port, URL with token and Copy, Regenerate token, allowed origins; changes write `SharedSettings` and send `reloadSettings`; verify manually that toggling HTTP starts/stops the listener (5.3 check) and regenerating the token makes the old URL return 401
-- [ ] 6.2 Add "Recent agent changes" (last 20 agent batches from `change_log`, labeled via `label(ofBatch:)`, with time and writer, live-updating); verify with a query test and manually that a task created from Claude Code appears in the list within a second
+- [x] 6.1 Add the Settings scene (⌘,) with the "Agents" pane: agent reachability and calendar state (`agentStatus`), the `claude mcp add` command with the current bundle path and a Copy button, HTTP switch, port, URL with token and Copy, Regenerate token, allowed origins; changes write `SharedSettings` and send `reloadSettings`; verify manually that toggling HTTP starts/stops the listener (5.3 check) and regenerating the token makes the old URL return 401
+- [x] 6.2 Add "Recent agent changes" (last 20 agent batches from `change_log`, labeled via `label(ofBatch:)`, with time and writer, live-updating); verify with a query test and manually that a task created from Claude Code appears in the list within a second
 
 ## 7. End to end
 
-- [ ] 7.1 Manual checks, documented in `docs/manual-checks-mcp.md`: Claude Code reads today's schedule (SAP + iCloud, hidden calendars excluded), lists overdue tasks, creates, updates (snooze, tags) and deletes a task; each change shows in the app at once and in "Recent agent changes"; ⌘Z in the app doesn't revert the agent's change; agent stopped → tool calls fail fast with the "unavailable" message
+- [x] 7.1 Manual checks, documented in `docs/manual-checks-mcp.md`: Claude Code reads today's schedule (SAP + iCloud, hidden calendars excluded), lists overdue tasks, creates, updates (snooze, tags) and deletes a task; each change shows in the app at once and in "Recent agent changes"; ⌘Z in the app doesn't revert the agent's change; agent stopped → tool calls fail fast with the "unavailable" message
 - [x] 7.2 Joule experiment: switch HTTP on, add the URL as a Joule connector, try `http://127.0.0.1…` and `http://localhost…`; record in `docs/manual-checks-mcp.md` what the form accepts and what the agent log shows (no request / browser Origin / tool calls) and the conclusion for a follow-up change
 
 ## Workflow follow-up
