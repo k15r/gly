@@ -87,29 +87,41 @@ extension Database {
     /// Describes a normal change batch by its entries: create / delete / status change / edit of an item.
     public func label(ofBatch batchID: String) throws -> String {
         let entries = try Row.fetchAll(self, sql: "SELECT * FROM change_log WHERE batch = ? ORDER BY seq", arguments: [batchID])
-        let itemEntries = entries.filter { ($0["table_name"] as String) == "items" }
-        var itemIDs = itemEntries.map { $0["row_id"] as String }
-        if itemIDs.isEmpty {
-            // Tag-only change: find the item through the assignment rows.
-            let assignments = entries.filter { ($0["table_name"] as String) == "item_tags" }.map { $0["row_id"] as String }
-            itemIDs = try assignments.compactMap { try String.fetchOne(self, sql: "SELECT item_id FROM item_tags WHERE id = ?", arguments: [$0]) }
+        // The primary row is the first one written; later rows are follow-ups (tag assignments, link label refreshes).
+        // Items first, then tag assignments (→ their item), then tags (a tag page edit).
+        guard var primary = entries.first(where: { ($0["table_name"] as String) == "items" })
+                ?? entries.first(where: { ($0["table_name"] as String) == "item_tags" })
+                ?? entries.first(where: { ($0["table_name"] as String) == "tags" }) else { return "change" }
+        if (primary["table_name"] as String) == "item_tags",
+           let itemID = try String.fetchOne(self, sql: "SELECT item_id FROM item_tags WHERE id = ?", arguments: [primary["row_id"] as String]) {
+            primary = Row(["table_name": "items", "row_id": itemID])
         }
-        let distinct = Array(NSOrderedSet(array: itemIDs)) as? [String] ?? []
-        guard let itemID = distinct.first else { return "change" }
-        if distinct.count > 1 { return "change to \(distinct.count) tasks" }
-        let title = try String.fetchOne(self, sql: "SELECT title FROM items WHERE id = ?", arguments: [itemID]) ?? "task"
-        let quoted = "“\(title)”"
-        let fields = itemEntries.compactMap { $0["field"] as String? }
-        if itemEntries.contains(where: { ($0["op"] as String) == "insert" }) { return "Create \(quoted)" }
+        let table: String = primary["table_name"], rowID: String = primary["row_id"]
+        let own = entries.filter { ($0["table_name"] as String) == table && ($0["row_id"] as String) == rowID }
+        let fields = own.compactMap { $0["field"] as String? }
+        let tagsChanged = entries.contains { ($0["table_name"] as String) == "item_tags" }
+
+        if table == "tags" {
+            let name = try String.fetchOne(self, sql: "SELECT name FROM tags WHERE id = ?", arguments: [rowID]) ?? "tag"
+            return "Edit tag page “\(name)”"
+        }
+        guard table == "items",
+              let item = try Row.fetchOne(self, sql: "SELECT kind, title FROM items WHERE id = ?", arguments: [rowID]) else { return "change" }
+        let isPage = (item["kind"] as String) == "info"
+        let quoted = (isPage ? "page " : "") + "“\(item["title"] as String)”"
+        if own.contains(where: { ($0["op"] as String) == "insert" }) { return "Create \(quoted)" }
         if fields.contains("deleted_at") { return "Delete \(quoted)" }
-        if fields.contains("status"), let entry = itemEntries.first(where: { ($0["field"] as String?) == "status" }),
+        if fields.contains("status"), let entry = own.first(where: { ($0["field"] as String?) == "status" }),
            let status = String.fromDatabaseValue(ChangeValue.decode(entry["new_value"])) {
             let verb = ["done": "Complete", "snoozed": "Snooze", "dropped": "Drop", "open": "Reopen"][status] ?? "Status of"
             return "\(verb) \(quoted)"
         }
         var changed: [String] = []
-        for f in Database.fieldLabels where fields.contains(f.column) && !changed.contains(f.label) { changed.append(f.label) }
-        if entries.contains(where: { ($0["table_name"] as String) == "item_tags" }) { changed.append("tags") }
+        for f in Database.fieldLabels where fields.contains(f.column) {
+            let label = isPage && f.column == "body" ? "text" : f.label
+            if !changed.contains(label) { changed.append(label) }
+        }
+        if tagsChanged { changed.append("tags") }
         return changed.isEmpty ? "Edit \(quoted)" : "Edit \(quoted) (\(changed.joined(separator: ", ")))"
     }
 

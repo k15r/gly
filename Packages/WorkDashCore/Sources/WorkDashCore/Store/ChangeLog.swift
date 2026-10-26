@@ -30,12 +30,14 @@ public struct Batch {
 
     func log(op: String, table: String, rowID: String, field: String?, old: DatabaseValue, new: DatabaseValue) throws {
         try db.execute(sql: """
-            INSERT INTO change_log (at, writer, batch, op, table_name, row_id, field, old_value, new_value, redo_of)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, arguments: [at, writer, id, op, table, rowID, field, ChangeValue.encode(old), ChangeValue.encode(new), redoOf])
+            INSERT INTO change_log (at, writer, batch, op, table_name, row_id, field, old_value, new_value, redo_of, session)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, arguments: [at, writer, id, op, table, rowID, field, ChangeValue.encode(old), ChangeValue.encode(new), redoOf, session])
     }
 
     var redoOf: String?
+    /// Edit session (design P6); entries of one session may share a batch.
+    var session: String?
 
     /// Inserts a row, filling in id (if absent) and the sync columns. Logs every non-null field.
     @discardableResult

@@ -13,6 +13,25 @@ public struct TaskDraft: Codable, Equatable {
     }
 }
 
+/// New info page (createPage).
+public struct PageDraft: Codable, Equatable {
+    public var title: String
+    public var body: String
+    public var tags: [String]
+    public init(title: String, body: String = "", tags: [String] = []) { self.title = title; self.body = body; self.tags = tags }
+}
+
+/// Partial page update (updatePage). `nil` = unchanged. `session` coalesces saves of one edit session (design P6).
+public struct PagePatch: Codable, Equatable {
+    public var title: String?
+    public var body: String?
+    public var tags: [String]?
+    public var session: String?
+    public init(title: String? = nil, body: String? = nil, tags: [String]? = nil, session: String? = nil) {
+        self.title = title; self.body = body; self.tags = tags; self.session = session
+    }
+}
+
 /// Partial update (updateTask). `nil` = unchanged. Due is replaced as a whole: `.some(nil)` clears it.
 /// Tags and status may be changed in the same patch, so one editor save is one undo step.
 public struct TaskPatch: Codable, Equatable {
@@ -25,14 +44,16 @@ public struct TaskPatch: Codable, Equatable {
     public var status: TaskStatus?
     /// Required with `status: .snoozed`.
     public var snoozedUntil: String?
+    /// Edit session of the notes field (design P6).
+    public var session: String?
     public init(title: String? = nil, body: String? = nil, priority: Priority? = nil, due: Due?? = nil,
-                tags: [String]? = nil, status: TaskStatus? = nil, snoozedUntil: String? = nil) {
+                tags: [String]? = nil, status: TaskStatus? = nil, snoozedUntil: String? = nil, session: String? = nil) {
         self.title = title; self.body = body; self.priority = priority; self.due = due
-        self.tags = tags; self.status = status; self.snoozedUntil = snoozedUntil
+        self.tags = tags; self.status = status; self.snoozedUntil = snoozedUntil; self.session = session
     }
 
     // `Due??` needs explicit coding: JSON can't tell "unchanged" from "clear" otherwise.
-    private enum CodingKeys: String, CodingKey { case title, body, priority, due, clearDue, tags, status, snoozedUntil }
+    private enum CodingKeys: String, CodingKey { case title, body, priority, due, clearDue, tags, status, snoozedUntil, session }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -42,6 +63,7 @@ public struct TaskPatch: Codable, Equatable {
         tags = try c.decodeIfPresent([String].self, forKey: .tags)
         status = try c.decodeIfPresent(TaskStatus.self, forKey: .status)
         snoozedUntil = try c.decodeIfPresent(String.self, forKey: .snoozedUntil)
+        session = try c.decodeIfPresent(String.self, forKey: .session)
         if try c.decodeIfPresent(Bool.self, forKey: .clearDue) == true {
             due = .some(nil)
         } else if let d = try c.decodeIfPresent(Due.self, forKey: .due) {
@@ -59,6 +81,7 @@ public struct TaskPatch: Codable, Equatable {
         try c.encodeIfPresent(tags, forKey: .tags)
         try c.encodeIfPresent(status, forKey: .status)
         try c.encodeIfPresent(snoozedUntil, forKey: .snoozedUntil)
+        try c.encodeIfPresent(session, forKey: .session)
         switch due {
         case .none: break
         case .some(.none): try c.encode(true, forKey: .clearDue)
@@ -82,6 +105,11 @@ public enum Command: Codable, Equatable {
     case agentStatus
     /// Tells the agent that the shared settings changed (HTTP endpoint, design M7). No store change.
     case reloadSettings
+    case createPage(PageDraft)
+    case updatePage(id: String, PagePatch)
+    case deletePage(id: String)
+    /// Replaces a tag's page description; creates the tag if it doesn't exist (e.g. a group node like `person`).
+    case updateTagPage(name: String, body: String, session: String? = nil)
 }
 
 public enum CommandResult: Codable, Equatable {
@@ -97,7 +125,11 @@ public struct CommandOK: Codable, Equatable {
     /// For undo/redo: whether there was anything to do.
     public var changed: Bool
     public var message: String?
-    public init(id: String? = nil, changed: Bool = true, message: String? = nil) { self.id = id; self.changed = changed; self.message = message }
+    /// `[[Title]]` links that stayed unresolved in the written text.
+    public var unresolved: [String]?
+    public init(id: String? = nil, changed: Bool = true, message: String? = nil, unresolved: [String]? = nil) {
+        self.id = id; self.changed = changed; self.message = message; self.unresolved = unresolved
+    }
 }
 
 public struct CommandFailure: Codable, Equatable, Error, CustomStringConvertible {
@@ -131,7 +163,8 @@ public struct CommandHandler {
     // MARK: - Commands
 
     func apply(_ command: Command, db: Database, writer: String, now: Date) throws -> CommandOK {
-        let batch = Batch(db: db, writer: writer, at: now)
+        var batch = Batch(db: db, writer: writer, id: try coalescedBatch(command, db: db, writer: writer) ?? UUID().uuidString, at: now)
+        batch.session = Self.session(of: command)
         switch command {
         case .ping:
             return CommandOK(changed: false, message: "pong")
@@ -140,18 +173,20 @@ public struct CommandHandler {
             let title = try Validate.title(draft.title)
             if let due = draft.due { try Validate.due(due) }
             let names = try draft.tags.map(TagName.init)
+            let (body, unresolved) = try LinkResolver.resolve(draft.body, db: db)
             let id = try batch.insert("items", [
-                "kind": "task", "title": title, "body": draft.body, "status": TaskStatus.open.rawValue,
+                "kind": "task", "title": title, "body": body, "status": TaskStatus.open.rawValue,
                 "priority": draft.priority.rawValue, "due_day": draft.due?.day, "due_time": draft.due?.time,
             ])
             try replaceTags(of: id, with: names, batch: batch)
-            return CommandOK(id: id)
+            return CommandOK(id: id, unresolved: unresolved)
 
         case .updateTask(let id, let patch):
             try requireTask(id, db)
             var fields: Fields = [:]
+            var unresolved: [String]?
             if let t = patch.title { fields["title"] = try Validate.title(t) }
-            if let b = patch.body { fields["body"] = b }
+            if let b = patch.body { let r = try LinkResolver.resolve(b, db: db); fields["body"] = r.text; unresolved = r.unresolved }
             if let p = patch.priority { fields["priority"] = p.rawValue }
             if let due = patch.due {
                 if let due { try Validate.due(due) }
@@ -162,9 +197,55 @@ public struct CommandHandler {
                 try statusFields(status, snoozedUntil: patch.snoozedUntil, now: now).forEach { fields.updateValue($0.value, forKey: $0.key) }
             }
             let tagNames = try patch.tags.map { try $0.map(TagName.init) }
-            var changed = try !batch.update("items", id: id, fields).isEmpty
+            let written = try batch.update("items", id: id, fields)
+            var changed = !written.isEmpty
             if let tagNames { changed = try replaceTags(of: id, with: tagNames, batch: batch) || changed }
-            return CommandOK(id: id, changed: changed)
+            if written.contains("title"), let title = patch.title?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                try LinkResolver.refreshLabels(item: id, batch: batch)
+                try LinkResolver.resolveMissing(title: title, batch: batch)
+            }
+            return CommandOK(id: id, changed: changed, unresolved: unresolved)
+
+        case .createPage(let draft):
+            let title = try Validate.title(draft.title)
+            let names = try draft.tags.map(TagName.init)
+            let (body, unresolved) = try LinkResolver.resolve(draft.body, db: db)
+            let id = try batch.insert("items", ["kind": "info", "title": title, "body": body])
+            try replaceTags(of: id, with: names, batch: batch)
+            // Every `[[title]]` elsewhere now points to the new page, in the same undo step (design P3).
+            try LinkResolver.resolveMissing(title: title, batch: batch)
+            return CommandOK(id: id, unresolved: unresolved)
+
+        case .updatePage(let id, let patch):
+            try requirePage(id, db)
+            var fields: Fields = [:]
+            var unresolved: [String]?
+            if let t = patch.title { fields["title"] = try Validate.title(t) }
+            if let b = patch.body { let r = try LinkResolver.resolve(b, db: db); fields["body"] = r.text; unresolved = r.unresolved }
+            let tagNames = try patch.tags.map { try $0.map(TagName.init) }
+            let written = try batch.update("items", id: id, fields)
+            var changed = !written.isEmpty
+            if let tagNames { changed = try replaceTags(of: id, with: tagNames, batch: batch) || changed }
+            if written.contains("title"), let title = patch.title?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                try LinkResolver.refreshLabels(item: id, batch: batch)
+                try LinkResolver.resolveMissing(title: title, batch: batch)
+            }
+            return CommandOK(id: id, changed: changed, unresolved: unresolved)
+
+        case .deletePage(let id):
+            try requirePage(id, db)
+            try batch.softDelete("items", id: id)
+            return CommandOK(id: id)
+
+        case .updateTagPage(let name, let body, _):
+            let tag = try TagName(name)
+            let (text, unresolved) = try LinkResolver.resolve(body, db: db)
+            if let tagID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [tag.key]) {
+                let changed = try batch.update("tags", id: tagID, ["page_body": text])
+                return CommandOK(id: tagID, changed: !changed.isEmpty, unresolved: unresolved)
+            }
+            let tagID = try batch.insert("tags", ["name": tag.display, "name_key": tag.key, "page_body": text])
+            return CommandOK(id: tagID, unresolved: unresolved)
 
         case .setStatus(let id, let status, let snoozedUntil):
             try requireTask(id, db)
@@ -229,6 +310,40 @@ public struct CommandHandler {
             fields.updateValue(nil, forKey: "snoozed_until")
         }
         return fields
+    }
+
+    private func requirePage(_ id: String, _ db: Database) throws {
+        guard try Bool.fetchOne(db, sql: "SELECT 1 FROM live_items WHERE id = ? AND kind = 'info'", arguments: [id]) == true else {
+            throw CommandFailure(.notFound, "Page \(id) not found.")
+        }
+    }
+
+    static func session(of command: Command) -> String? {
+        switch command {
+        case .updateTask(_, let p): return p.session
+        case .updatePage(_, let p): return p.session
+        case .updateTagPage(_, _, let s): return s
+        default: return nil
+        }
+    }
+
+    /// The batch to append to when this save continues the writer's latest change in the same edit session (design P6).
+    func coalescedBatch(_ command: Command, db: Database, writer: String) throws -> String? {
+        guard let session = Self.session(of: command) else { return nil }
+        let rowID: String?
+        switch command {
+        case .updateTask(let id, _), .updatePage(let id, _): rowID = id
+        case .updateTagPage(let name, _, _): rowID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [TagName.key(for: name)])
+        default: rowID = nil
+        }
+        guard let rowID,
+              let latest = try Row.fetchOne(db, sql: """
+                SELECT batch, session, undone FROM change_log WHERE writer = ? ORDER BY seq DESC LIMIT 1
+                """, arguments: [writer]),
+              latest["session"] as String? == session, latest["undone"] as Bool == false else { return nil }
+        let batchID: String = latest["batch"]
+        let touchesRow = try Bool.fetchOne(db, sql: "SELECT 1 FROM change_log WHERE batch = ? AND row_id = ? LIMIT 1", arguments: [batchID, rowID]) ?? false
+        return touchesRow ? batchID : nil
     }
 
     private func requireTask(_ id: String, _ db: Database) throws {
