@@ -55,6 +55,7 @@ Task 1.1 decides between the two in under an hour.
 **Result (task 1.1): the SDK path, with SDK 0.12.1.** `StatelessHTTPServerTransport.handleRequest(HTTPRequest) -> HTTPResponse` is framework-agnostic, and `initialize`, `tools/list` and notifications work without a session (`SDKProbeTests`). The MCP library doesn't link SwiftNIO; only the SDK's conformance executables do.
 - **One shared server.** The agent runs one `Server` + stateless transport. HTTP requests are passed through as they are. A stdio message from `wd-mcp` is wrapped as a `POST` `HTTPRequest`, with header `X-WorkDash-Client: <clientInfo.name>`, and marked as coming over XPC, so the Origin and token checks (M6) don't apply to it.
 - **Writer from the request.** Tool handlers read `Server.currentHandlerContext?.httpContext` to find the writer: the `X-WorkDash-Client` header for stdio, otherwise `User-Agent` (M4).
+- **`initialize` on every call.** The SDK's default `initialize` handler answers only once per server ("already initialized"), which breaks a shared stateless server after the first client. The agent replaces it, after `start()`, with a handler that has no state and answers every `initialize`. Found while registering with Claude Code.
 - **Unique request ids.** The transport matches responses to waiting requests by JSON-RPC `id`. Two clients using the same id at the same time would collide. So the agent replaces each incoming request id with a unique one and restores the original in the response.
 
 ### M3: The tool layer lives in a new `WorkDashMCP` library target

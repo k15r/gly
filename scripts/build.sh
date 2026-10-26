@@ -20,6 +20,7 @@ xcodebuild \
 APP="build/Build/Products/$CONFIG/WorkDash.app"
 test -d "$APP" || { echo "build failed: $APP missing" >&2; exit 1; }
 test -x "$APP/Contents/MacOS/WorkDashAgent" || { echo "agent missing in bundle" >&2; exit 1; }
+test -x "$APP/Contents/MacOS/wd-mcp" || { echo "wd-mcp missing in bundle" >&2; exit 1; }
 test -f "$APP/Contents/Library/LaunchAgents/dev.k15r.workdash.store-agent.plist" || { echo "launch agent plist missing" >&2; exit 1; }
 codesign --verify --deep --strict "$APP"
 echo "OK: $APP"

@@ -260,6 +260,9 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(initialize?["id"] as? Int, 1, "original id restored")
         XCTAssertNotNil((initialize?["result"] as? [String: Any])?["serverInfo"])
 
+        let second = await reply(server, #"{"jsonrpc":"2.0","id":9,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"other","version":"1"}}}"#)
+        XCTAssertNotNil((second?["result"] as? [String: Any])?["serverInfo"], "a second client can initialize too")
+
         let note = await reply(server, #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#)
         XCTAssertNil(note)
 

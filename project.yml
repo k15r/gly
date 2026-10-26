@@ -26,6 +26,9 @@ targets:
       - target: WorkDashAgent
         embed: true
         copy: {destination: executables}
+      - target: wd-mcp
+        embed: true
+        copy: {destination: executables}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash
@@ -54,6 +57,8 @@ targets:
     sources: [Apps/Mac/Agent]
     dependencies:
       - package: WorkDashCore
+      - package: WorkDashCore
+        product: WorkDashMCP
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.agent
@@ -67,3 +72,16 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
         com.apple.security.personal-information.calendars: true
+  wd-mcp:
+    type: tool
+    platform: macOS
+    sources: [Apps/Mac/MCP]
+    dependencies:
+      - package: WorkDashCore
+    settings:
+      base:
+        PRODUCT_NAME: wd-mcp
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.mcp
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES

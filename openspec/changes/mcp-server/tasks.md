@@ -21,8 +21,8 @@
 
 ## 4. stdio route (agent + wd-mcp)
 
-- [ ] 4.1 Add the XPC method `mcp(message, client, reply)` to the agent protocol, served by the message handler from 3.6 with the agent's pool and calendar source; verify with an anonymous-listener XPC test (like `AgentXPCTests`) that `tools/call create_task` creates a task attributed to `agent:test@…`
-- [ ] 4.2 Add the `wd-mcp` command-line target to `project.yml` (unsandboxed, hardened runtime, team signed, embedded at `Contents/MacOS/wd-mcp`): reads JSON-RPC lines from stdin, remembers `clientInfo.name`, forwards over XPC with the team code requirement, writes replies to stdout, returns a JSON-RPC error "WorkDash agent unavailable" within 5 s when XPC fails; verify `scripts/build.sh` includes and signs it, and a piped `initialize` + `tools/list` from the shell returns the seven tools
+- [x] 4.1 Add the XPC method `mcp(message, client, reply)` to the agent protocol, served by the message handler from 3.6 with the agent's pool and calendar source; verify with an anonymous-listener XPC test (like `AgentXPCTests`) that `tools/call create_task` creates a task attributed to `agent:test@…`
+- [x] 4.2 Add the `wd-mcp` command-line target to `project.yml` (unsandboxed, hardened runtime, team signed, embedded at `Contents/MacOS/wd-mcp`): reads JSON-RPC lines from stdin, remembers `clientInfo.name`, forwards over XPC with the team code requirement, writes replies to stdout, returns a JSON-RPC error "WorkDash agent unavailable" within 5 s when XPC fails; verify `scripts/build.sh` includes and signs it, and a piped `initialize` + `tools/list` from the shell returns the seven tools
 - [ ] 4.3 Register in Claude Code with `claude mcp add --scope user workdash -- <bundle>/Contents/MacOS/wd-mcp` (remove `workdash-spike` if present); verify `claude mcp list` shows `workdash` connected, and in a new Claude Code session `get_schedule` returns today's appointments and tasks and `create_task` makes a task that appears in the app without refresh
 
 ## 5. Local HTTP route (agent)

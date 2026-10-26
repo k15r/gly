@@ -7,6 +7,8 @@ public final class WorkDashMCPServer: @unchecked Sendable {
     /// Header carrying the MCP client name for messages that arrive via `wd-mcp` (design M4).
     public static let clientHeader = "x-workdash-client"
 
+    static let instructions = "WorkDash is the user's single source for their day: calendar appointments (read-only) and tasks. Read the schedule with get_schedule, find tasks with list_tasks, and keep tasks up to date with create_task, update_task and delete_task. Reuse existing tags (list_tags)."
+
     let tools: WorkDashTools
     let server: Server
     let transport: StatelessHTTPServerTransport
@@ -19,7 +21,7 @@ public final class WorkDashMCPServer: @unchecked Sendable {
     public init(tools: WorkDashTools, version: String = "1.0") async throws {
         self.tools = tools
         server = Server(name: "workdash", version: version,
-                        instructions: "WorkDash is the user's single source for their day: calendar appointments (read-only) and tasks. Read the schedule with get_schedule, find tasks with list_tasks, and keep tasks up to date with create_task, update_task and delete_task. Reuse existing tags (list_tags).",
+                        instructions: Self.instructions,
                         capabilities: .init(tools: .init(listChanged: false)))
         transport = StatelessHTTPServerTransport(validationPipeline: AcceptAll())
         await server.withMethodHandler(ListTools.self) { _ in .init(tools: ToolDefinitions.all) }
@@ -27,6 +29,14 @@ public final class WorkDashMCPServer: @unchecked Sendable {
             await tools.call(params.name, arguments: params.arguments, client: Self.client(from: Server.currentHandlerContext?.httpContext))
         }
         try await server.start(transport: transport)
+        // Stateless: every client (stdio session or HTTP request) may initialize; the SDK default allows it once per server.
+        // Registered after start(), which installs the default handler.
+        let capabilities = await server.capabilities
+        await server.withMethodHandler(Initialize.self) { params in
+            Initialize.Result(
+                protocolVersion: Version.supported.contains(params.protocolVersion) ? params.protocolVersion : Version.latest,
+                capabilities: capabilities, serverInfo: .init(name: "workdash", version: version), instructions: Self.instructions)
+        }
     }
 
     /// Client name for attribution: the `wd-mcp` header, else the first User-Agent product token, else "http".

@@ -5,6 +5,8 @@ import GRDB
 /// so new commands never change the XPC interface.
 @objc public protocol WorkDashAgentXPC {
     func perform(_ command: Data, writer: String, reply: @escaping (Data) -> Void)
+    /// One MCP JSON-RPC message from `wd-mcp` (design M1); the reply is nil for notifications.
+    func mcp(_ message: Data, client: String?, reply: @escaping (Data?) -> Void)
 }
 
 /// Agent side: decodes commands and runs them through the `CommandHandler`.
@@ -14,11 +16,21 @@ public final class AgentService: NSObject, WorkDashAgentXPC {
     private let status: (() -> String)?
     /// Called on `reloadSettings`.
     private let reloadSettings: (() -> Void)?
+    /// Handles MCP messages (the agent's MCP server); nil = MCP not offered.
+    private let mcpHandler: (@Sendable (Data, String?) async -> Data?)?
 
-    public init(writer: DatabaseWriter, status: (() -> String)? = nil, reloadSettings: (() -> Void)? = nil) {
+    public init(writer: DatabaseWriter, status: (() -> String)? = nil, reloadSettings: (() -> Void)? = nil,
+                mcp: (@Sendable (Data, String?) async -> Data?)? = nil) {
         handler = CommandHandler(writer: writer)
         self.status = status
         self.reloadSettings = reloadSettings
+        self.mcpHandler = mcp
+    }
+
+    public func mcp(_ message: Data, client: String?, reply: @escaping (Data?) -> Void) {
+        guard let mcpHandler else { return reply(nil) }
+        let reply = UncheckedSendable(reply)
+        Task { reply.value(await mcpHandler(message, client)) }
     }
 
     public func perform(_ command: Data, writer: String, reply: @escaping (Data) -> Void) {
@@ -89,14 +101,35 @@ public final class AgentClient {
         do { payload = try JSONEncoder().encode(command) } catch {
             return .failure(CommandFailure(.internal, "Could not encode command: \(error)"))
         }
-        let timeout = self.timeout
+        let result: Result<CommandResult, CommandFailure> = await call(timeout: timeout) { proxy, finish in
+            proxy.perform(payload, writer: writer) { data in
+                if let r = try? JSONDecoder().decode(CommandResult.self, from: data) { finish(.success(r)) }
+                else { finish(.failure(CommandFailure(.internal, "Unreadable reply from the agent"))) }
+            }
+        }
+        switch result {
+        case .success(let r): return r
+        case .failure(let f): return .failure(f)
+        }
+    }
+
+    /// Sends one MCP message (used by `wd-mcp`). Success with nil = notification without reply.
+    public func mcp(_ message: Data, client: String?, timeout: TimeInterval = 30) async -> Result<Data?, CommandFailure> {
+        await call(timeout: timeout) { proxy, finish in
+            proxy.mcp(message, client: client) { finish(.success($0)) }
+        }
+    }
+
+    /// One XPC round trip with a timeout; connection errors become `.unavailable`.
+    private func call<T>(timeout: TimeInterval,
+                         _ body: @escaping (WorkDashAgentXPC, @escaping (Result<T, CommandFailure>) -> Void) -> Void) async -> Result<T, CommandFailure> {
         let connection = makeConnection()
         connection.remoteObjectInterface = NSXPCInterface(with: WorkDashAgentXPC.self)
         connection.resume()
         defer { connection.invalidate() }
-        return await withCheckedContinuation { (continuation: CheckedContinuation<CommandResult, Never>) in
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Result<T, CommandFailure>, Never>) in
             let once = Once()
-            func finish(_ r: CommandResult) { if once.claim() { continuation.resume(returning: r) } }
+            let finish: (Result<T, CommandFailure>) -> Void = { r in if once.claim() { continuation.resume(returning: r) } }
             let proxy = connection.remoteObjectProxyWithErrorHandler { error in
                 finish(.failure(CommandFailure(.unavailable, "WorkDash agent not reachable: \(error.localizedDescription)")))
             } as? WorkDashAgentXPC
@@ -104,15 +137,18 @@ public final class AgentClient {
                 finish(.failure(CommandFailure(.unavailable, "WorkDash agent proxy unavailable")))
                 return
             }
-            proxy.perform(payload, writer: writer) { data in
-                if let r = try? JSONDecoder().decode(CommandResult.self, from: data) { finish(r) }
-                else { finish(.failure(CommandFailure(.internal, "Unreadable reply from the agent"))) }
-            }
+            body(proxy, finish)
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 finish(.failure(CommandFailure(.unavailable, "WorkDash agent did not answer within \(Int(timeout)) s")))
             }
         }
     }
+}
+
+/// Wraps a non-Sendable value (XPC reply blocks are safe to call from any thread).
+struct UncheckedSendable<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
 }
 
 /// Thread-safe one-shot flag.
