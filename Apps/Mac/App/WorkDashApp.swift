@@ -144,7 +144,7 @@ struct ContentView: View {
                     SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
                     Section("Tags") { TagTreeView() }
                 }
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
             } detail: {
                 Group {
                     switch nav.current {
@@ -157,7 +157,8 @@ struct ContentView: View {
                     case .tag(let name): TagPageView(name: name)
                     }
                 }
-                .frame(minWidth: 600)        // the main pane never gets squeezed below this; the window grows instead
+                // The main pane never gets narrower than this; the split view passes it on to the window's minimum size.
+                .navigationSplitViewColumnWidth(min: 600, ideal: 820)
             }
         }
         .sheet(isPresented: $nav.showQuickOpen) { QuickOpenView() }
