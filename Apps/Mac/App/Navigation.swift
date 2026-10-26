@@ -28,12 +28,15 @@ final class Navigation {
     private var mouseMonitor: Any?
 
     init() {
-        // Mouse side buttons: 3 = back, 4 = forward (like browsers and Finder).
-        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] event in
+        // Mouse side buttons: 3 = back, 4 = forward (like browsers and Finder). Drivers such as
+        // Logi Options+ send a horizontal swipe instead; a swipe right means back, as in Safari.
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.otherMouseDown, .swipe]) { [weak self] event in
             guard let self else { return event }
-            switch event.buttonNumber {
-            case 3: self.back(); return nil
-            case 4: self.forward(); return nil
+            switch event.type {
+            case .otherMouseDown where event.buttonNumber == 3: self.back(); return nil
+            case .otherMouseDown where event.buttonNumber == 4: self.forward(); return nil
+            case .swipe where event.deltaX > 0: self.back(); return nil
+            case .swipe where event.deltaX < 0: self.forward(); return nil
             default: return event
             }
         }
