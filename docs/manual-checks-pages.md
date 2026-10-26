@@ -43,10 +43,10 @@ Use neutral test data only (no real names).
 
 ## F. Drag and drop follow-up (after B9)
 
-- [ ] F1 Drag a page over the text of a tag row → the tag and its items are highlighted; dropping moves the page there.
-- [ ] F2 Drag a page onto a task or page listed under another tag → that tag group is highlighted; dropping moves the page into that tag.
-- [ ] F4 Hold a dragged item over a collapsed tag for about half a second → it expands; drop onto one of its items or child tags.
-- [ ] F3 Drag with ⌥ held → the item ends up in both tags; dropping onto Untagged (or an untagged item) removes the source tag; each drop is one ⌘Z.
+- [x] F1 Drag a page over the text of a tag row → the tag and its items are highlighted; dropping moves the page there.
+- [x] F2 Drag a page onto a task or page listed under another tag → that tag group is highlighted; dropping moves the page into that tag.
+- [x] F4 Hold a dragged item over a collapsed tag for about half a second → it expands; drop onto one of its items or child tags.
+- [x] F3 Drag with ⌥ held → the item ends up in both tags; dropping onto Untagged (or an untagged item) removes the source tag; each drop is one ⌘Z.
 
 ## D. End to end with an agent (task 6.1)
 
@@ -62,4 +62,5 @@ Use neutral test data only (no real names).
 | 2026-10-26 | owner | C ✅ | Quick open (grouped results, keyboard, create page), markdown task notes with links and backlinks |
 | 2026-10-26 | owner | E ✅ | Task page (added after D1: tasks had no backlinks; tasks now open like pages, changes save at once); fixed: unlabeled due toggles, squeezed field row |
 | 2026-10-26 | owner | D ✅ | End to end: small wiki (tag page, linked pages, task linking a page), meeting notes by Claude Code with resolved links and get_context |
+| 2026-10-26 | owner | F ✅ | Drag & drop follow-up: whole rows incl. text, drop onto items of a group, group highlight, collapsed tags expand while dragging (a transparent overlay was tried first and received no events) |
 | | | | |
