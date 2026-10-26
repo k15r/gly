@@ -258,6 +258,15 @@ extension View {
     }
 }
 
+extension View {
+    /// Lets a task or page row from a list be dragged onto the tag tree; dropping adds that tag (no source tag to replace).
+    func draggableItem(_ kind: LinkRef.Kind, id: String, title: String) -> some View {
+        draggable(kind.rawValue + "\n" + id + "\n") {
+            Label(title, systemImage: kind == .task ? "circle" : "doc.text").padding(6)
+        }
+    }
+}
+
 private struct OptionalDrag: ViewModifier {
     let payload: String?
     func body(content: Content) -> some View {
@@ -375,6 +384,7 @@ struct TreeLeafRow: View {
 }
 
 /// Drag & drop in the tag tree: plain = move (replace the source tag), ⌥ = alias (add), onto Untagged = remove.
+/// Rows dragged from the task or page list have no source tag, so dropping them onto a tag adds it.
 @MainActor
 enum ItemMove {
     static func perform(_ items: [String], to target: String?, app: AppModel, wiki: WikiModel, tasks: TasksModel) {

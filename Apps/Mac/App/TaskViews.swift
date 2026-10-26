@@ -217,6 +217,7 @@ struct TaskListView: View {
             } else {
                 List(tasks.list) { task in
                     TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })
+                        .draggableItem(.task, id: task.id, title: task.title)
                 }
             }
         }

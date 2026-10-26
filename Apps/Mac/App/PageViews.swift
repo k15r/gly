@@ -124,6 +124,7 @@ struct PagesListView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .draggableItem(.page, id: page.id, title: page.title)
                 }
             }
         }
