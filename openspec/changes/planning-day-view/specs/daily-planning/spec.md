@@ -25,7 +25,7 @@ The system SHALL use one configurable daily working-hours window, the same for e
 - **THEN** free time for every day is counted between 08:00 and 16:00
 
 ### Requirement: How appointments block time
-Each appointment SHALL count as blocking (fully), maybe (half) or free (not at all). Without an override, the system SHALL classify it from the calendar: cancelled or declined appointments and appointments marked "free" are free; all-day appointments are free unless they are marked out of office or busy, which block the whole day; appointments I marked tentative, appointments awaiting my response and appointments the calendar marks tentative are maybe (without response information, availability decides); all others block. A blocking override from the user SHALL take precedence.
+Each appointment SHALL count as blocking (fully), maybe (half) or free. Without an override, it SHALL be classified from the calendar: cancelled, declined and "free" appointments are free; all-day appointments are free unless marked out of office or busy, which block the whole day; tentative appointments (my response tentative or pending, or marked tentative by the calendar) are maybe; all others block. A blocking override from the user SHALL take precedence.
 
 #### Scenario: Declined meeting
 - **WHEN** the user declined a 10:00–11:00 meeting
@@ -34,6 +34,10 @@ Each appointment SHALL count as blocking (fully), maybe (half) or free (not at a
 #### Scenario: Tentative meeting
 - **WHEN** an unanswered meeting runs 13:00–14:00
 - **THEN** it reduces the free time by 30 minutes
+
+#### Scenario: No response information
+- **WHEN** the calendar gives no information about my response to a meeting and marks it busy
+- **THEN** it blocks its time
 
 #### Scenario: Out of office
 - **WHEN** an all-day appointment on Friday is marked out of office
