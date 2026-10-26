@@ -88,6 +88,10 @@ extension Database {
     public func label(ofBatch batchID: String) throws -> String {
         let entries = try Row.fetchAll(self, sql: "SELECT * FROM change_log WHERE batch = ? ORDER BY seq", arguments: [batchID])
         // The primary row is the first one written; later rows are follow-ups (tag assignments, link label refreshes).
+        if let rule = entries.first(where: { ($0["table_name"] as String) == "series_rules" }) {
+            let r = try Row.fetchOne(self, sql: "SELECT title, blocking FROM series_rules WHERE id = ?", arguments: [rule["row_id"] as String])
+            return "\(Self.blockingVerb(r?["blocking"])) “\(r?["title"] as String? ?? "series")” (series)"
+        }
         // Items first, then tag assignments (→ their item), then tags (a tag page edit).
         guard var primary = entries.first(where: { ($0["table_name"] as String) == "items" })
                 ?? entries.first(where: { ($0["table_name"] as String) == "item_tags" })
@@ -107,6 +111,10 @@ extension Database {
         }
         guard table == "items",
               let item = try Row.fetchOne(self, sql: "SELECT kind, title FROM items WHERE id = ?", arguments: [rowID]) else { return "change" }
+        if (item["kind"] as String) == "event_note", fields.contains("blocking") || own.contains(where: { ($0["op"] as String) == "insert" }) {
+            let b = try String.fetchOne(self, sql: "SELECT blocking FROM items WHERE id = ?", arguments: [rowID])
+            return "\(Self.blockingVerb(b)) “\(item["title"] as String)” (this occurrence)"
+        }
         let isPage = (item["kind"] as String) == "info"
         let quoted = (isPage ? "page " : "") + "“\(item["title"] as String)”"
         if own.contains(where: { ($0["op"] as String) == "insert" }) { return "Create \(quoted)" }
@@ -124,6 +132,10 @@ extension Database {
         }
         if tagsChanged { changed.append("tags") }
         return changed.isEmpty ? "Edit \(quoted)" : "Edit \(quoted) (\(changed.joined(separator: ", ")))"
+    }
+
+    static func blockingVerb(_ value: String?) -> String {
+        switch value { case "blocks": "Blocks"; case "optional": "Optional"; case "ignore": "Ignore"; default: "Automatic" }
     }
 
     /// Applies the inverse of every entry of `batchID`, newest first, logging into `batch`.

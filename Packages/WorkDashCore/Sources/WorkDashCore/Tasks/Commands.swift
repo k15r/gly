@@ -122,6 +122,12 @@ public enum Command: Codable, Equatable {
     case deletePage(id: String)
     /// Replaces a tag's page description; creates the tag if it doesn't exist (e.g. a group node like `person`).
     case updateTagPage(name: String, body: String, session: String? = nil)
+    /// Blocking override for one occurrence or a whole series; nil = automatic (specs/appointment-annotations).
+    case setBlocking(AppointmentSnapshot, scope: BlockingScope, value: BlockingOverride?)
+    /// Re-attaches annotations in `[from, to)` to the calendar's current appointments (agent, design Q4).
+    case reconcileAnnotations(from: Date, to: Date, appointments: [ObservedAppointment])
+    /// The user picked the appointment an ambiguous annotation belongs to.
+    case resolveAnnotation(id: String, to: AppointmentSnapshot)
 }
 
 public enum CommandResult: Codable, Equatable {
@@ -291,6 +297,61 @@ public struct CommandHandler {
         case .reloadSettings:
             return CommandOK(changed: false)
 
+        case .setBlocking(let snap, let scope, let value):
+            switch scope {
+            case .occurrence:
+                if let id = try String.fetchOne(db, sql: "SELECT id FROM live_items WHERE kind = 'event_note' AND event_key = ?", arguments: [snap.key]) {
+                    let changed = try batch.update("items", id: id, Self.blockingFields(value))
+                    return CommandOK(id: id, changed: !changed.isEmpty)
+                }
+                guard let value else { return CommandOK(changed: false) }
+                let id = try batch.insert("items", [
+                    "kind": "event_note", "title": snap.title.isEmpty ? "Appointment" : snap.title, "body": "",
+                    "event_key": snap.key, "event_series": snap.seriesKey, "event_calendar": snap.calendarID,
+                    "event_start": snap.start, "event_end": snap.end, "event_organizer": snap.organizer,
+                    "event_state": "active", "blocking": value.rawValue,
+                ])
+                return CommandOK(id: id)
+            case .series:
+                let rules = try AnnotationQueries.seriesRules(db).filter { $0.calendarID == snap.calendarID && $0.baseIDs.contains(snap.baseID) }
+                if let rule = rules.first {
+                    let changed = try batch.update("series_rules", id: rule.id, Self.blockingFields(value))
+                    return CommandOK(id: rule.id, changed: !changed.isEmpty)
+                }
+                guard let value else { return CommandOK(changed: false) }
+                let id = try batch.insert("series_rules", [
+                    "calendar_id": snap.calendarID, "title": snap.title, "organizer": snap.organizer,
+                    "base_ids": AnnotationQueries.encodeIDs([snap.baseID]), "blocking": value.rawValue,
+                ])
+                return CommandOK(id: id)
+            }
+
+        case .reconcileAnnotations(let from, let to, let appointments):
+            let annotations = try AnnotationQueries.annotations(db, from: from, to: to)
+            let changes = AnnotationMatcher.reconcile(annotations: annotations, appointments: appointments,
+                                                      rules: try AnnotationQueries.seriesRules(db))
+            for change in changes {
+                switch change {
+                case .update(let id, let o):
+                    try batch.update("items", id: id, Self.snapshotFields(o.snapshot, state: o.isCancelled ? "cancelled" : "active"))
+                case .ambiguous(let id):
+                    try batch.update("items", id: id, ["event_state": "ambiguous"])
+                case .gone(let id):
+                    try batch.update("items", id: id, ["event_state": "gone"])
+                case .adoptBaseID(let ruleID, let baseID):
+                    let rule = try AnnotationQueries.seriesRules(db).first { $0.id == ruleID }
+                    try batch.update("series_rules", id: ruleID, ["base_ids": AnnotationQueries.encodeIDs((rule?.baseIDs ?? []) + [baseID])])
+                }
+            }
+            return CommandOK(changed: !changes.isEmpty, message: "\(changes.count) annotation change(s)")
+
+        case .resolveAnnotation(let id, let snap):
+            guard try String.fetchOne(db, sql: "SELECT id FROM live_items WHERE id = ? AND kind = 'event_note'", arguments: [id]) != nil else {
+                throw CommandFailure(.notFound, "Annotation \(id) not found.")
+            }
+            try batch.update("items", id: id, Self.snapshotFields(snap, state: "active"))
+            return CommandOK(id: id)
+
         case .reconcileSnoozes(let today):
             try Validate.day(today)
             let due = try String.fetchAll(db, sql: """
@@ -306,6 +367,20 @@ public struct CommandHandler {
     }
 
     // MARK: - Helpers
+
+    static func snapshotFields(_ s: AppointmentSnapshot, state: String) -> Fields {
+        var f: Fields = ["event_key": s.key, "event_series": s.seriesKey, "event_calendar": s.calendarID,
+                         "event_start": s.start, "event_end": s.end, "event_state": state,
+                         "title": s.title.isEmpty ? "Appointment" : s.title]
+        f.updateValue(s.organizer, forKey: "event_organizer")
+        return f
+    }
+
+    static func blockingFields(_ value: BlockingOverride?) -> Fields {
+        var f: Fields = [:]
+        f.updateValue(value?.rawValue, forKey: "blocking")
+        return f
+    }
 
     /// Item fields for a status change (status, snoozed_until, completed_at).
     private func statusFields(_ status: TaskStatus, snoozedUntil: String?, now: Date) throws -> Fields {

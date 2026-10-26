@@ -14,9 +14,9 @@
 ## 3. Core: store and commands
 
 - [x] 3.1 Add the `v4` migration (items: effort, event_* columns, blocking; `series_rules` synced table + live view) and effort in `TaskDraft`/`TaskPatch`/`TaskItem`; verify with schema tests (migration from v3, CHECK constraints, `series_rules` in `syncedTables`) and command tests for "Effort" and invalid sizes
-- [ ] 3.2 Add `setBlocking` (occurrence → create/update event_note annotation with snapshot; series → create/update rule; nil → automatic) with undo labels, and queries for annotations and rules by key/series; verify with tests for "Skip one meeting", "Optional series", "Back to automatic", one undo step each
-- [ ] 3.3 Implement `AnnotationMatcher.reconcile` (exact key, fuzzy candidates, migrate/ambiguous/gone, snapshot update, series-rule base-id adoption) and the `reconcileAnnotations` / `resolveAnnotation` commands; verify with tests for "Meeting moved", "Ambiguous match", "Series split", "Annotated meeting deleted", and that annotations outside the window are untouched
-- [ ] 3.4 Add the planning settings to `SharedSettings` (working hours, effort minutes with defaults derived from the working day, horizon); verify with tests for defaults, "Default sizes" and "Configured size"
+- [x] 3.2 Add `setBlocking` (occurrence → create/update event_note annotation with snapshot; series → create/update rule; nil → automatic) with undo labels, and queries for annotations and rules by key/series; verify with tests for "Skip one meeting", "Optional series", "Back to automatic", one undo step each
+- [x] 3.3 Implement `AnnotationMatcher.reconcile` (exact key, fuzzy candidates, migrate/ambiguous/gone, snapshot update, series-rule base-id adoption) and the `reconcileAnnotations` / `resolveAnnotation` commands; verify with tests for "Meeting moved", "Ambiguous match", "Series split", "Annotated meeting deleted", and that annotations outside the window are untouched
+- [x] 3.4 Add the planning settings to `SharedSettings` (working hours, effort minutes with defaults derived from the working day, horizon); verify with tests for defaults, "Default sizes" and "Configured size"
 
 ## 4. Agent and MCP
 

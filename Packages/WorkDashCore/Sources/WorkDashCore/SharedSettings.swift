@@ -12,6 +12,44 @@ public struct SharedSettings {
         static let httpPort = "httpPort"
         static let httpToken = "httpToken"
         static let httpAllowedOrigins = "httpAllowedOrigins"
+        static let workingStart = "workingStartMinute"
+        static let workingEnd = "workingEndMinute"
+        static let effortMinutes = "effortMinutes"
+        static let horizonDays = "horizonDays"
+    }
+
+    // MARK: Planning (planning-day-view design Q8)
+
+    public var workingHours: WorkingHours {
+        get {
+            let s = defaults.object(forKey: Key.workingStart) as? Int ?? 9 * 60
+            let e = defaults.object(forKey: Key.workingEnd) as? Int ?? 17 * 60
+            return e > s && s >= 0 && e <= 24 * 60 ? WorkingHours(startMinute: s, endMinute: e) : WorkingHours()
+        }
+        nonmutating set {
+            defaults.set(newValue.startMinute, forKey: Key.workingStart)
+            defaults.set(newValue.endMinute, forKey: Key.workingEnd)
+        }
+    }
+
+    /// Configured minutes per size; unset sizes use the defaults (L and XL follow the working-day length).
+    public var effortSizes: EffortSizes {
+        var sizes = EffortSizes.defaults(for: workingHours)
+        let stored = defaults.dictionary(forKey: Key.effortMinutes) as? [String: Int] ?? [:]
+        for (k, v) in stored { if let e = Effort(rawValue: k), v > 0 { sizes.minutes[e] = v } }
+        return sizes
+    }
+
+    /// Sets (or with nil resets to the default) the minutes of one size.
+    public func setEffortMinutes(_ minutes: Int?, for effort: Effort) {
+        var stored = defaults.dictionary(forKey: Key.effortMinutes) as? [String: Int] ?? [:]
+        stored[effort.rawValue] = minutes
+        defaults.set(stored, forKey: Key.effortMinutes)
+    }
+
+    public var horizonDays: Int {
+        get { let d = defaults.integer(forKey: Key.horizonDays); return (1...60).contains(d) ? d : 5 }
+        nonmutating set { defaults.set(newValue, forKey: Key.horizonDays) }
     }
 
     public static let defaultHTTPPort = 47615

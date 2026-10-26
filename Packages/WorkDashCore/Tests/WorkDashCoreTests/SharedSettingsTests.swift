@@ -46,3 +46,27 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertNotEqual(s.regenerateHTTPToken(), t)
     }
 }
+
+extension SharedSettingsTests {
+    func testPlanningDefaults() {
+        let s = SharedSettings(defaults: suite())
+        XCTAssertEqual(s.workingHours, WorkingHours(startMinute: 540, endMinute: 1020))
+        XCTAssertEqual(s.horizonDays, 5)
+        XCTAssertEqual(s.effortSizes[.l], 480, "default sizes: L = one working day")
+        XCTAssertEqual(s.effortSizes[.xl], 1440)
+    }
+
+    func testConfiguredSizeAndDerivedDefaults() {
+        let s = SharedSettings(defaults: suite())
+        s.setEffortMinutes(180, for: .m)
+        XCTAssertEqual(s.effortSizes[.m], 180, "configured size")
+        s.workingHours = WorkingHours(startMinute: 480, endMinute: 960)
+        XCTAssertEqual(s.effortSizes[.l], 480)
+        s.workingHours = WorkingHours(startMinute: 480, endMinute: 840)
+        XCTAssertEqual(s.effortSizes[.l], 360, "L follows the working day while unset")
+        s.setEffortMinutes(nil, for: .m)
+        XCTAssertEqual(s.effortSizes[.m], 240, "reset to default")
+        s.horizonDays = 14
+        XCTAssertEqual(s.horizonDays, 14)
+    }
+}
