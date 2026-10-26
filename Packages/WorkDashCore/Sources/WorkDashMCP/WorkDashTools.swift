@@ -182,7 +182,7 @@ public final class WorkDashTools: @unchecked Sendable {
                               tags: try args.strings("tags") ?? [],
                               effort: try args.effort("effort") ?? nil)
         let ok = try performOK(.createTask(draft), writer: writer)
-        return withUnresolved(encode(try task(ok.id ?? "")), ok.unresolved)
+        return withUnresolved(encode(try task(ok.id ?? "")), ok)
     }
 
     func updateTask(_ args: Arguments, writer: String) throws -> Value {
@@ -203,7 +203,7 @@ public final class WorkDashTools: @unchecked Sendable {
         }
         _ = try task(id)    // not found → clear error before anything else
         let ok = try performOK(.updateTask(id: id, patch), writer: writer)
-        return withUnresolved(encode(try task(id)), ok.unresolved)
+        return withUnresolved(encode(try task(id)), ok)
     }
 
     func deleteTask(_ args: Arguments, writer: String) throws -> Value {
@@ -225,9 +225,17 @@ public final class WorkDashTools: @unchecked Sendable {
         }
     }
 
-    func withUnresolved(_ value: Value, _ unresolved: [String]?) -> Value {
+    func withUnresolved(_ value: Value, _ ok: CommandOK) -> Value {
         guard case .object(var o) = value else { return value }
-        o["unresolved"] = .array((unresolved ?? []).map { .string($0) })
+        o["unresolved"] = .array((ok.unresolved ?? []).map { .string($0) })
+        let links = ok.unresolvedLinks ?? []
+        let names = (try? reader.read { try DisplayNames.display($0, ids: links.flatMap { $0.candidates.map(\.id) }) }) ?? [:]
+        o["unresolved_links"] = .array(links.map { link in
+            .object(["text": .string(link.text), "candidates": .array(link.candidates.map { c in
+                .object(["id": .string(c.id), "kind": .string(c.kind.rawValue), "title": .string(c.title),
+                         "display": .string(names[c.id]?.display ?? c.title), "tags": .array(c.tags.map { .string($0) })])
+            })])
+        })
         return .object(o)
     }
 
@@ -261,9 +269,21 @@ public final class WorkDashTools: @unchecked Sendable {
         let (outgoing, backlinks) = try reader.read { db in
             (try LinkQueries.outgoing(db, sourceTable: table, sourceID: id), try LinkQueries.backlinks(db, to: id, isTag: isTag))
         }
-        o["links"] = .array(outgoing.map(encode))
+        let ids = outgoing.compactMap { l -> String? in
+            switch l.target { case .live(let r), .deleted(let r): r.id; case .missing: nil }
+        } + backlinks.map(\.source.id)
+        let names = try reader.read { try DisplayNames.display($0, ids: ids) }
+        o["links"] = .array(outgoing.map { link in
+            guard case .object(var e) = encode(link) else { return .null }
+            if case .string(let id)? = e["id"], let n = names[id] {
+                e["display"] = .string(n.display); e["tags"] = .array(n.tags.map { .string($0) })
+            } else if case .string(let t)? = e["title"] { e["display"] = .string(t); e["tags"] = .array([]) }
+            return .object(e)
+        })
         o["backlinks"] = .array(backlinks.map { b in
-            .object(["id": .string(b.source.id), "kind": .string(b.source.kind.rawValue), "title": .string(b.source.title), "excerpt": .string(b.excerpt)])
+            .object(["id": .string(b.source.id), "kind": .string(b.source.kind.rawValue), "title": .string(b.source.title),
+                     "display": .string(names[b.source.id]?.display ?? b.source.title),
+                     "tags": .array((names[b.source.id]?.tags ?? []).map { .string($0) }), "excerpt": .string(b.excerpt)])
         })
     }
 
@@ -282,7 +302,19 @@ public final class WorkDashTools: @unchecked Sendable {
     func createPage(_ args: Arguments, writer: String) throws -> Value {
         let draft = PageDraft(title: try args.requiredString("title"), body: try args.string("text") ?? "", tags: try args.strings("tags") ?? [])
         let ok = try performOK(.createPage(draft), writer: writer)
-        return withUnresolved(try pageValue(ok.id ?? ""), ok.unresolved)
+        var value = withUnresolved(try pageValue(ok.id ?? ""), ok)
+        // Other pages with the same title (allowed; told apart by their tags).
+        let id = ok.id ?? ""
+        let same = try reader.read { db -> [(String, DisplayName)] in
+            let ids = try PageQueries.list(db).filter { $0.id != id && TagName.key(for: $0.title) == TagName.key(for: draft.title) }.map(\.id)
+            let names = try DisplayNames.display(db, ids: ids + [id])
+            return ids.compactMap { i in names[i].map { (i, $0) } }
+        }
+        if !same.isEmpty, case .object(var o) = value {
+            o["same_title"] = .array(same.map { .object(["id": .string($0.0), "display": .string($0.1.display), "tags": .array($0.1.tags.map { .string($0) })]) })
+            value = .object(o)
+        }
+        return value
     }
 
     func updatePage(_ args: Arguments, writer: String) throws -> Value {
@@ -290,7 +322,7 @@ public final class WorkDashTools: @unchecked Sendable {
         _ = try page(id)
         let patch = PagePatch(title: try args.string("title"), body: try args.string("text"), tags: try args.strings("tags"))
         let ok = try performOK(.updatePage(id: id, patch), writer: writer)
-        return withUnresolved(try pageValue(id), ok.unresolved)
+        return withUnresolved(try pageValue(id), ok)
     }
 
     func deletePage(_ args: Arguments, writer: String) throws -> Value {
@@ -351,7 +383,7 @@ public final class WorkDashTools: @unchecked Sendable {
         let name = try args.requiredString("name")
         guard let text = try args.string("text") else { throw ToolError("text is required.") }
         let ok = try performOK(.updateTagPage(name: name, body: text), writer: writer)
-        return withUnresolved(try tagPage(Arguments(["name": .string(name)])), ok.unresolved)
+        return withUnresolved(try tagPage(Arguments(["name": .string(name)])), ok)
     }
 
     // MARK: - Encoding

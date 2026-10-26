@@ -8,7 +8,7 @@
 
 ## 2. MCP
 
-- [ ] 2.1 Add `unresolved_links` with candidates, `display` + `tags` on links/backlinks, `same_title` on `create_page`, and document prefixes and tag paths in tool descriptions; verify with MCP tests for "Ambiguous link with candidates", "Two Goals pages", and a duplicate `create_page`
+- [x] 2.1 Add `unresolved_links` with candidates, `display` + `tags` on links/backlinks, `same_title` on `create_page`, and document prefixes and tag paths in tool descriptions; verify with MCP tests for "Ambiguous link with candidates", "Two Goals pages", and a duplicate `create_page`
 
 ## 3. Editor and app
 

@@ -59,7 +59,8 @@ final class PageToolTests: XCTestCase {
         let task = str(await call("create_task", ["title": "T", "notes": "[[Target]]"]).value, "id")!
         _ = await call("create_page", ["title": "Linker", "text": "about [[T]]"])
         let r = await call("get_task", ["id": .string(task)])
-        XCTAssertEqual(list(r.value, "links"), [.object(["id": .string(target), "kind": "page", "title": "Target", "state": "live"])])
+        XCTAssertEqual(list(r.value, "links"), [.object(["id": .string(target), "kind": "page", "title": "Target", "state": "live",
+                                                            "display": "Target", "tags": .array([])])])
         XCTAssertEqual(list(r.value, "backlinks").compactMap { str($0, "title") }, ["Linker"])
     }
 
@@ -105,5 +106,41 @@ final class PageToolTests: XCTestCase {
         XCTAssertEqual(r.value, .object(["deleted": .string(id)]))
         let again = await call("get_page", ["id": .string(id)])
         XCTAssertTrue(again.isError)
+    }
+}
+
+extension PageToolTests {
+    func testAmbiguousLinkWithCandidatesAndRetry() async throws {
+        let alex = str(await call("create_page", ["title": "Goals", "tags": ["person/alex"]]).value, "id")!
+        _ = await call("create_page", ["title": "Goals", "tags": ["person/sam"]])
+        let r = await call("create_task", ["title": "T", "notes": "see [[Goals]]"])
+        XCTAssertEqual(list(r.value, "unresolved"), ["Goals"])
+        let candidates = list(list(r.value, "unresolved_links").first, "candidates")
+        XCTAssertEqual(Set(candidates.compactMap { str($0, "display") }), ["Goals · person/alex", "Goals · person/sam"])
+        let retry = await call("create_task", ["title": "T2", "notes": "see [[person/alex/Goals]]"])
+        XCTAssertEqual(str(retry.value, "notes"), "see [Goals](workdash://item/\(alex))")
+        XCTAssertEqual(list(retry.value, "unresolved_links"), [])
+    }
+
+    func testTwoGoalsPagesDisplayNamesOnLinks() async throws {
+        let alex = str(await call("create_page", ["title": "Goals", "tags": ["person/alex"]]).value, "id")!
+        _ = await call("create_page", ["title": "Goals", "tags": ["person/sam"]])
+        let hub = str(await call("create_page", ["title": "Hub", "text": "[[person/alex/Goals]]"]).value, "id")!
+        let r = await call("get_page", ["id": .string(hub)])
+        let link = list(r.value, "links").first
+        XCTAssertEqual(str(link, "id"), alex)
+        XCTAssertEqual(str(link, "display"), "Goals · person/alex")
+        XCTAssertEqual(list(link, "tags"), ["person/alex"])
+        let back = await call("get_page", ["id": .string(alex)])
+        XCTAssertEqual(str(list(back.value, "backlinks").first, "display"), "Hub")
+    }
+
+    func testDuplicateCreatePageNamesTheOthers() async throws {
+        let alex = str(await call("create_page", ["title": "Profile", "tags": ["person/alex"]]).value, "id")!
+        let r = await call("create_page", ["title": "profile", "tags": ["person/sam"]])
+        XCTAssertFalse(r.isError, r.text)
+        let same = list(r.value, "same_title")
+        XCTAssertEqual(same.compactMap { str($0, "id") }, [alex])
+        XCTAssertEqual(str(same.first, "display"), "Profile · person/alex")
     }
 }
