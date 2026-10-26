@@ -5,7 +5,7 @@ Neutral test data only (no real names).
 
 ## A. Probe (task 1.1)
 
-- [x] A1 Developer → Probe Attendance Data → a message with the file path appears (the file holds only counts per account type).
+- [x] A1 Developer → Probe Attendance Data → counts per account type (findings in design Q1; the probe was removed afterwards).
 
 ## B. Settings and effort (tasks 5.1, 5.2)
 
