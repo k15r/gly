@@ -1,5 +1,8 @@
 import Foundation
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 import WorkDashCore
 
 /// A block of markdown for the read view.
@@ -165,7 +168,6 @@ public struct MarkdownReadView: View {
     /// Targets an ambiguous typed link could mean (link-disambiguation K5).
     let candidates: (String) -> [LinkSuggestion]
     @Environment(\.openURL) private var openURL
-    @State private var choosing: (typed: String, options: [LinkSuggestion], url: URL)?
 
     public init(text: String, appearance: @escaping (ParsedLink.Target) -> LinkAppearance, onChange: ((String) -> Void)? = nil,
                 candidates: @escaping (String) -> [LinkSuggestion] = { _ in [] }) {
@@ -180,30 +182,23 @@ public struct MarkdownReadView: View {
         }
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // A missing link with candidates asks which one is meant before anything is created.
+        // A missing link: the same native menu as the editor's ⌘-click, at the pointer (candidates, new page, new task).
         .environment(\.openURL, OpenURLAction { url in
             if let typed = LinkParser.missingText(url) {
-                choosing = (typed, onChange == nil ? [] : candidates(typed), url)   // candidates need a writable text
+                let options = onChange == nil ? [] : candidates(typed)   // pinning a candidate needs a writable text
+                let text = text, onChange = onChange, openURL = openURL
+                #if canImport(AppKit)
+                DispatchQueue.main.async {
+                    MissingLinkMenu.show(typed: typed, options: options,
+                                         pick: { onChange?(MarkdownBlocks.pin(text, typed: typed, with: $0.insert)) },
+                                         create: { openURL($0) }, at: NSEvent.mouseLocation, in: nil)
+                }
                 return .handled
+                #endif
             }
             openURL(url)
             return .handled
         })
-        .confirmationDialog(choosing?.options.isEmpty == false ? "Which “\(choosing?.typed ?? "")” do you mean?" : "Create “\(choosing?.typed ?? "")”",
-                            isPresented: Binding(get: { choosing != nil }, set: { if !$0 { choosing = nil } })) {
-            if let c = choosing {
-                ForEach(c.options) { o in
-                    Button(o.subtitle.isEmpty ? o.title : "\(o.title) – \(o.subtitle)") {
-                        onChange?(MarkdownBlocks.pin(text, typed: c.typed, with: o.insert))
-                    }
-                }
-                ForEach([LinkRef.Kind.page, .task], id: \.self) { kind in
-                    if let label = MarkdownBlocks.createLabel(c.typed, kind: kind), let url = URL(string: LinkParser.missingURL(c.typed, create: kind)) {
-                        Button(label) { openURL(url) }
-                    }
-                }
-            }
-        }
     }
 
     @ViewBuilder

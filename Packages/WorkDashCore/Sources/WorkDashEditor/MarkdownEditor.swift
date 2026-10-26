@@ -197,32 +197,14 @@ public struct MarkdownEditor: NSViewRepresentable {
             return false
         }
 
-        private var candidateActions: [CandidateAction] = []
-
-        /// A menu at the link with each candidate and "Create page …".
+        /// The missing-link menu at the link: candidates, then new page / new task.
         private func showMissingMenu(_ options: [LinkSuggestion], typed: String, linkRange: NSRange, at index: Int) {
             guard let tv = textView else { return }
-            let menu = NSMenu()
-            candidateActions = options.map { o in CandidateAction { [weak self] in self?.replace(linkRange, with: o.insert) } }
-            for (o, action) in zip(options, candidateActions) {
-                let item = NSMenuItem(title: o.title, action: #selector(CandidateAction.run), keyEquivalent: "")
-                item.target = action
-                item.image = NSImage(systemSymbolName: o.symbol, accessibilityDescription: nil)
-                if !o.subtitle.isEmpty { item.toolTip = o.subtitle }
-                menu.addItem(item)
-            }
-            if !options.isEmpty { menu.addItem(.separator()) }
-            for kind in [LinkRef.Kind.page, .task] {
-                guard let label = MarkdownBlocks.createLabel(typed, kind: kind), let url = URL(string: LinkParser.missingURL(typed, create: kind)) else { continue }
-                let create = CandidateAction { [weak self] in self?.commitNow(); self?.parent.onOpenLink(url) }
-                candidateActions.append(create)
-                let item = NSMenuItem(title: label, action: #selector(CandidateAction.run), keyEquivalent: "")
-                item.target = create
-                item.image = NSImage(systemSymbolName: kind.linkSymbol, accessibilityDescription: nil)
-                menu.addItem(item)
-            }
             let rect = tv.segmentRects(for: NSRange(location: index, length: 1)).first ?? .zero
-            menu.popUp(positioning: nil, at: NSPoint(x: rect.minX, y: rect.maxY + 2), in: tv)
+            MissingLinkMenu.show(typed: typed, options: options,
+                                 pick: { [weak self] in self?.replace(linkRange, with: $0.insert) },
+                                 create: { [weak self] in self?.commitNow(); self?.parent.onOpenLink($0) },
+                                 at: NSPoint(x: rect.minX, y: rect.maxY + 2), in: tv)
         }
 
         // MARK: `[[` picker
@@ -272,6 +254,38 @@ public struct MarkdownEditor: NSViewRepresentable {
 }
 
 /// Target-action wrapper for menu items built from closures.
+/// The menu for a typed link without target (editor ⌘-click, read-view click): candidates of an ambiguous link
+/// (link-disambiguation K5), then "New page …" and "New task …". A native menu: Esc or a click outside dismisses it.
+enum MissingLinkMenu {
+    /// Menu items hold their targets weakly; keep the actions until the next menu replaces them.
+    private static var retained: [CandidateAction] = []
+
+    /// - Parameter view: the view `point` is in; nil = screen coordinates.
+    static func show(typed: String, options: [LinkSuggestion], pick: @escaping (LinkSuggestion) -> Void,
+                     create: @escaping (URL) -> Void, at point: NSPoint, in view: NSView?) {
+        let menu = NSMenu()
+        var actions: [CandidateAction] = []
+        func add(_ title: String, symbol: String, tip: String?, _ run: @escaping () -> Void) {
+            let action = CandidateAction(run)
+            actions.append(action)
+            let item = NSMenuItem(title: title, action: #selector(CandidateAction.run), keyEquivalent: "")
+            item.target = action
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            item.toolTip = tip
+            menu.addItem(item)
+        }
+        for o in options { add(o.title, symbol: o.symbol, tip: o.subtitle.isEmpty ? nil : o.subtitle) { pick(o) } }
+        if !options.isEmpty { menu.addItem(.separator()) }
+        for kind in [LinkRef.Kind.page, .task] {
+            guard let label = MarkdownBlocks.createLabel(typed, kind: kind),
+                  let url = URL(string: LinkParser.missingURL(typed, create: kind)) else { continue }
+            add(label, symbol: kind.linkSymbol, tip: nil) { create(url) }
+        }
+        retained = actions
+        menu.popUp(positioning: nil, at: point, in: view)
+    }
+}
+
 final class CandidateAction: NSObject {
     let action: () -> Void
     init(_ action: @escaping () -> Void) { self.action = action }
