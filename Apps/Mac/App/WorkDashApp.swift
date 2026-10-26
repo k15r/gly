@@ -144,22 +144,19 @@ struct ContentView: View {
                     SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
                     Section("Tags") { TagTreeView() }
                 }
-                // max sidebar + min main pane = the window's minimum width (880), so the sidebar never has to slide away.
+                // The main pane's minimum (600) follows from the window minimum (880) minus the widest sidebar (280).
+                // Setting it on the detail column instead made the split view slide the sidebar out of the window.
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 280)
             } detail: {
-                Group {
-                    switch nav.current {
-                    case .day: DayContainer()
-                    case .tasks: TaskListContainer()
-                    case .pages: PagesListView()
-                    case .trash: TrashView()
-                    case .page(let id): PageView(id: id)
-                    case .task(let id): TaskPageView(id: id)
-                    case .tag(let name): TagPageView(name: name)
-                    }
+                switch nav.current {
+                case .day: DayContainer()
+                case .tasks: TaskListContainer()
+                case .pages: PagesListView()
+                case .trash: TrashView()
+                case .page(let id): PageView(id: id)
+                case .task(let id): TaskPageView(id: id)
+                case .tag(let name): TagPageView(name: name)
                 }
-                // The main pane never gets narrower than this; the split view passes it on to the window's minimum size.
-                .navigationSplitViewColumnWidth(min: 600, ideal: 820)
             }
         }
         .sheet(isPresented: $nav.showQuickOpen) { QuickOpenView() }
