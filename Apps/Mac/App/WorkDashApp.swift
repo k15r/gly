@@ -292,7 +292,8 @@ struct TagTreeView: View {
         ForEach(tasks.tagTree) { node in TagTreeNode(node: node, drop: drop) }
         if !wiki.untagged.isEmpty {
             DisclosureGroup(isExpanded: $untaggedExpanded) {
-                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil, drop: drop) }
+                let dupes = TreeLeaf.duplicateTitles(wiki.untagged)
+                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil, drop: drop, sharesTitle: dupes.contains(leaf.title.lowercased())) }
             } label: {
                 Label("Untagged (\(wiki.untagged.count))", systemImage: "tray").foregroundStyle(.secondary)
                     .treeRow(group: .untagged, state: drop, onTap: { untaggedExpanded.toggle() }) { items in
@@ -351,7 +352,8 @@ struct TagTreeNode: View {
         } else {
             DisclosureGroup(isExpanded: $expanded) {
                 ForEach(node.children) { TagTreeNode(node: $0, drop: drop) }
-                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path, drop: drop) }
+                let dupes = TreeLeaf.duplicateTitles(node.items)
+                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path, drop: drop, sharesTitle: dupes.contains($0.title.lowercased())) }
             } label: { row }
             .springLoaded(.tag(node.path), state: drop, expanded: $expanded)
         }
@@ -380,6 +382,8 @@ struct TreeLeafRow: View {
     let leaf: TreeLeaf
     let fromTag: String?
     let drop: TreeDropState
+    /// Another leaf in this group has the same title: show the excerpt below the title to tell them apart.
+    var sharesTitle = false
 
     private var symbol: String {
         switch leaf.kind {
@@ -392,16 +396,22 @@ struct TreeLeafRow: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: symbol).foregroundStyle(leaf.snoozed ? Color.blue : .secondary).imageScale(.small)
-            Text(leaf.title).lineLimit(1)
-                .fontWeight(nav.current == .page(leaf.itemID) || nav.current == .task(leaf.itemID) ? .bold : .regular)
-                .foregroundStyle(leaf.snoozed ? .secondary : .primary)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(leaf.title).lineLimit(1)
+                    .fontWeight(nav.current == .page(leaf.itemID) || nav.current == .task(leaf.itemID) ? .bold : .regular)
+                    .foregroundStyle(leaf.snoozed ? .secondary : .primary)
+                if sharesTitle {
+                    Text(leaf.excerpt.isEmpty ? "(empty)" : leaf.excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
             Spacer()
             if !leaf.otherTags.isEmpty {
                 Image(systemName: "link").font(.caption2).foregroundStyle(.tertiary)
             }
         }
-        .help(([leaf.snoozed ? "Snoozed" : nil] + [leaf.otherTags.isEmpty ? nil : "Also in " + leaf.otherTags.joined(separator: ", ")])
-            .compactMap { $0 }.joined(separator: " · "))
+        .help(([leaf.excerpt.isEmpty ? nil : leaf.excerpt, leaf.snoozed ? "Snoozed" : nil,
+                leaf.otherTags.isEmpty ? nil : "Also in " + leaf.otherTags.joined(separator: ", ")])
+            .compactMap { $0 }.joined(separator: "\n"))
         .treeRow(group: fromTag.map { .tag($0) } ?? .untagged, state: drop,
                  drag: leaf.kind.rawValue + "\n" + leaf.itemID + "\n" + (fromTag ?? ""),
                  onTap: {
@@ -413,6 +423,13 @@ struct TreeLeafRow: View {
                  }) { items in
             ItemMove.perform(items, to: fromTag, app: app, wiki: wiki, tasks: tasks)
         }
+    }
+}
+
+extension TreeLeaf {
+    /// Lowercased titles that occur more than once among `leaves`.
+    static func duplicateTitles(_ leaves: [TreeLeaf]) -> Set<String> {
+        Dictionary(grouping: leaves, by: { $0.title.lowercased() }).filter { $0.value.count > 1 }.keys.reduce(into: []) { $0.insert($1) }
     }
 }
 

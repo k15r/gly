@@ -50,8 +50,23 @@ public struct TreeLeaf: Equatable, Identifiable {
     public let otherTags: [String]
     /// Tasks only: snoozed (shown marked).
     public let snoozed: Bool
-    public init(kind: LinkRef.Kind, id: String, title: String, otherTags: [String], snoozed: Bool = false) {
-        self.kind = kind; self.itemID = id; self.title = title; self.otherTags = otherTags; self.snoozed = snoozed
+    /// The start of the text as one plain line (tells same-titled items apart in the tree).
+    public let excerpt: String
+    public init(kind: LinkRef.Kind, id: String, title: String, otherTags: [String], snoozed: Bool = false, excerpt: String = "") {
+        self.kind = kind; self.itemID = id; self.title = title; self.otherTags = otherTags; self.snoozed = snoozed; self.excerpt = excerpt
+    }
+
+    /// Plain text (links as labels, markdown markers dropped), whitespace collapsed, shortened to `maxLength`.
+    public static func excerpt(of body: String, maxLength: Int = 120) -> String {
+        let lines = LinkParser.plainText(body).components(separatedBy: .newlines).map { line in
+            line.replacingOccurrences(of: #"^\s*(#{1,6}\s+|[-*+]\s+(\[[ xX]\]\s+)?|\d+[.)]\s+|>\s*)"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"(\*\*|__|~~|`)"#, with: "", options: .regularExpression)
+        }
+        let text = lines.joined(separator: " ").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard text.count > maxLength else { return text }
+        let cut = text.prefix(maxLength - 1)
+        let atWord = cut.lastIndex(of: " ").map { cut[..<$0] } ?? cut          // don't end mid-word
+        return atWord.trimmingCharacters(in: .whitespaces) + "…"
     }
 }
 
@@ -105,7 +120,7 @@ public enum TagQueries {
     /// Open tasks (task-list order) then live pages (by title), per exact tag key, each with its other tags.
     static func leavesByTag(_ db: Database) throws -> [String: [TreeLeaf]] {
         let rows = try Row.fetchAll(db, sql: """
-            SELECT i.id, i.kind, i.title, i.status, t.name, t.name_key FROM live_items i
+            SELECT i.id, i.kind, i.title, i.status, i.body, t.name, t.name_key FROM live_items i
             JOIN live_item_tags it ON it.item_id = i.id JOIN live_tags t ON t.id = it.tag_id
             WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info'
             ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL), t.name_key
@@ -117,7 +132,8 @@ public enum TagQueries {
             let id: String = r["id"], name: String = r["name"]
             result[r["name_key"], default: []].append(TreeLeaf(
                 kind: (r["kind"] as String) == "info" ? .page : .task, id: id, title: r["title"],
-                otherTags: (tagsOfItem[id] ?? []).filter { $0 != name }, snoozed: (r["status"] as String?) == "snoozed"))
+                otherTags: (tagsOfItem[id] ?? []).filter { $0 != name }, snoozed: (r["status"] as String?) == "snoozed",
+                excerpt: TreeLeaf.excerpt(of: r["body"] ?? "")))
         }
         return result
     }
@@ -125,13 +141,13 @@ public enum TagQueries {
     /// Open tasks and live pages without any tag (the "Untagged" node): tasks first.
     public static func untaggedItems(_ db: Database) throws -> [TreeLeaf] {
         try Row.fetchAll(db, sql: """
-            SELECT i.id, i.kind, i.title, i.status FROM live_items i
+            SELECT i.id, i.kind, i.title, i.status, i.body FROM live_items i
             WHERE ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info')
               AND i.id NOT IN (SELECT item_id FROM live_item_tags)
             ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL)
             """).map { r in
                 TreeLeaf(kind: (r["kind"] as String) == "info" ? .page : .task, id: r["id"], title: r["title"],
-                         otherTags: [], snoozed: (r["status"] as String?) == "snoozed")
+                         otherTags: [], snoozed: (r["status"] as String?) == "snoozed", excerpt: TreeLeaf.excerpt(of: r["body"] ?? ""))
             }
     }
 }
