@@ -146,11 +146,12 @@ This is acceptable for a single-user tool. Both versions stay in the change log.
 - **Task links** open the existing `TaskEditor` sheet rather than a destination, so they don't enter the history.
 - **Sidebar:** Day, Tasks, Pages, Calendars, then Tags. Tag rows open `.tag(name)`.
 - **The tag tree is the page tree** (decided while planning; no separate page hierarchy).
-  - Each tag node lists, after its child tags, the live pages tagged with **exactly** that tag. Pages with several tags appear under each of them, with an "also in …" hint.
-  - Pages without tags appear under "Untagged" at the end.
+  - Each tag node lists, after its child tags, the **open tasks** (open and snoozed, in task-list order, snoozed ones marked) and then the live **pages** tagged with **exactly** that tag. Items with several tags appear under each of them, with an "also in …" hint. Finished tasks stay off the tree; the tag page lists them. (Tasks were added after manual check B8: the user asked for one consistent tree of everything tagged.)
+  - Open tasks and pages without tags appear under "Untagged" at the end.
+  - Annotated appointments will join as a third kind of leaf once they exist, so the leaf type has a kind.
   - The tag page of a node still lists everything below it.
   - Data comes from one query over `item_tags` for pages (`TagQueries.tagTree` returns pages per node), so no new storage is needed.
-  - **Drag and drop:** dropping a page onto a tag node sends one `updatePage(tags:)`, so it's one undo step. Plain = replace the source tag (move), ⌥ = add (alias), "Untagged" = remove the source tag.
+  - **Drag and drop:** dropping a task or page onto a tag node sends one `updateTask(tags:)` or `updatePage(tags:)`, so it's one undo step. Plain = replace the source tag (move), ⌥ = add (alias), "Untagged" = remove the source tag.
   - **Alternative considered and rejected:** a parent/child page tree. It would be a second hierarchy next to tags, and it contradicts the "no folders" principle of the requirements.
 - **`PageView`:**
   - title field

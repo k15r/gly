@@ -26,7 +26,7 @@ final class Live<Value> {
 @Observable
 final class WikiModel {
     private(set) var pages: [PageItem] = []
-    private(set) var untagged: [PageLeaf] = []
+    private(set) var untagged: [TreeLeaf] = []
     var pageTagFilter: TagName? { didSet { observePages() } }
 
     @ObservationIgnored private(set) var store: ReadOnlyStore?
@@ -37,7 +37,7 @@ final class WikiModel {
         guard let store, self.store !== store else { return }
         self.store = store
         observePages()
-        untaggedObservation = store.observe(ValueObservation.tracking { try TagQueries.untaggedPages($0) },
+        untaggedObservation = store.observe(ValueObservation.tracking { try TagQueries.untaggedItems($0) },
                                             onError: { print("untagged observation: \($0)") },
                                             onChange: { [weak self] in self?.untagged = $0 })
     }

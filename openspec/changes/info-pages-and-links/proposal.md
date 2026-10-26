@@ -20,7 +20,7 @@ WorkDash should hold the information around my work, not only the tasks: project
   - A toggle switches to a rendered read view.
   - Used for page text, task notes and tag pages.
 - **Tag pages:** every tag gets a page with its own markdown description and a list of everything tagged with it or below it. Open tasks come first, then pages, then finished tasks. Clicking a tag in the sidebar opens its tag page. The tag page offers "show in task list" for the existing filter.
-- **The tag tree is the page tree:** in the sidebar, each tag node lists its pages as leaves, a page with several tags appears under each, and untagged pages collect under "Untagged". Dragging a page onto another tag moves it, and dragging with ⌥ held adds the tag as an alias. There is no separate page hierarchy.
+- **The tag tree shows everything tagged:** in the sidebar, each tag node lists its open tasks and pages as leaves, an item with several tags appears under each, and untagged items collect under "Untagged". Dragging an item onto another tag moves it, and dragging with ⌥ held adds the tag as an alias. There is no separate page hierarchy. Annotated appointments will join later.
 - **Navigation:** clicking a link opens the target in the main area: a page, the task editor or a tag page. Back and forward work with ⌘[ and ⌘].
 - **Search and quick open (⌘K):** full-text search across pages, tasks and tag pages, as you type, with results grouped by kind. It is used to open things and from the `[[` picker.
 - **Task notes become markdown** with links, using the same editor.

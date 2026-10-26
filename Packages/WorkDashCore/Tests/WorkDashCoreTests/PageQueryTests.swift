@@ -95,33 +95,45 @@ final class PageQueryTests: XCTestCase {
 }
 
 extension PageQueryTests {
-    func testPagesAsLeavesOfTheTree() throws {
+    func testItemsAsLeavesOfTheTree() throws {
         make(.createTask(TaskDraft(title: "child task", tags: ["project/atlas/logs"])))
         make(.createPage(PageDraft(title: "B page", tags: ["project/atlas"])))
         make(.createPage(PageDraft(title: "A page", tags: ["project/atlas"])))
+        make(.createTask(TaskDraft(title: "Normal task", priority: .normal, tags: ["project/atlas"])))
+        make(.createTask(TaskDraft(title: "Urgent task", priority: .urgent, tags: ["project/atlas"])))
+        let snoozed = make(.createTask(TaskDraft(title: "Snoozed task", tags: ["project/atlas"])))
+        _ = h.perform(.setStatus(id: snoozed, .snoozed, snoozedUntil: "2026-11-30"), writer: "u")
+        let done = make(.createTask(TaskDraft(title: "Done task", tags: ["project/atlas"])))
+        _ = h.perform(.setStatus(id: done, .done), writer: "u")
         let tree = try db.read { try TagQueries.tagTree($0, today: "2026-10-26") }
         let atlas = tree.first { $0.path == "project" }?.children.first { $0.path == "project/atlas" }
-        XCTAssertEqual(atlas?.pages.map(\.title), ["A page", "B page"])
+        XCTAssertEqual(atlas?.items.map(\.title), ["Urgent task", "Normal task", "Snoozed task", "A page", "B page"],
+                       "open tasks in task-list order, then pages; no done task")
+        XCTAssertEqual(atlas?.items.map(\.kind), [.task, .task, .task, .page, .page])
+        XCTAssertEqual(atlas?.items.first { $0.title == "Snoozed task" }?.snoozed, true)
         XCTAssertEqual(atlas?.children.map(\.path), ["project/atlas/logs"], "child tags stay children")
-        XCTAssertEqual(tree.first { $0.path == "project" }?.pages, [], "not repeated on the parent")
+        XCTAssertEqual(tree.first { $0.path == "project" }?.items, [], "not repeated on the parent")
     }
 
-    func testPageWithTwoTags() throws {
-        make(.createPage(PageDraft(title: "Shared", tags: ["project/atlas", "project/beta"])))
+    func testItemWithTwoTags() throws {
+        let id = make(.createPage(PageDraft(title: "Shared", tags: ["project/atlas", "project/beta"])))
         let project = try db.read { try TagQueries.tagTree($0, today: "2026-10-26") }.first { $0.path == "project" }
         let atlas = project?.children.first { $0.path == "project/atlas" }
         let beta = project?.children.first { $0.path == "project/beta" }
-        XCTAssertEqual(atlas?.pages, [PageLeaf(id: atlas!.pages[0].id, title: "Shared", otherTags: ["project/beta"])])
-        XCTAssertEqual(beta?.pages.first?.otherTags, ["project/atlas"])
-        XCTAssertEqual(project?.pages, [])
+        XCTAssertEqual(atlas?.items, [TreeLeaf(kind: .page, id: id, title: "Shared", otherTags: ["project/beta"])])
+        XCTAssertEqual(beta?.items.first?.otherTags, ["project/atlas"])
+        XCTAssertEqual(project?.items, [])
     }
 
-    func testUntaggedPages() throws {
-        make(.createPage(PageDraft(title: "Loose")))
+    func testUntaggedItems() throws {
+        make(.createPage(PageDraft(title: "Loose page")))
+        make(.createTask(TaskDraft(title: "Loose task")))
         make(.createPage(PageDraft(title: "Tagged", tags: ["a"])))
         let deleted = make(.createPage(PageDraft(title: "Gone")))
         make(.deletePage(id: deleted))
-        XCTAssertEqual(try db.read { try TagQueries.untaggedPages($0) }.map(\.title), ["Loose"])
+        let done = make(.createTask(TaskDraft(title: "Done loose")))
+        _ = h.perform(.setStatus(id: done, .done), writer: "u")
+        XCTAssertEqual(try db.read { try TagQueries.untaggedItems($0) }.map(\.title), ["Loose task", "Loose page"])
     }
 }
 

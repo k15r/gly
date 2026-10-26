@@ -36,16 +36,23 @@ public struct TagNode: Equatable, Identifiable {
     /// Open tasks tagged with this path or anything below it.
     public let openCount: Int
     public let children: [TagNode]
-    /// Pages tagged with exactly this path (the tag tree doubles as the page tree).
-    public var pages: [PageLeaf] = []
+    /// Open tasks, then pages, tagged with exactly this path (the tag tree shows everything tagged).
+    public var items: [TreeLeaf] = []
 }
 
-/// A page listed in the tag tree; `otherTags` are the page's other tags ("also in …").
-public struct PageLeaf: Equatable, Identifiable {
-    public let id: String
+/// An item listed in the tag tree; `otherTags` are its other tags ("also in …").
+/// Annotated appointments will be a further kind later.
+public struct TreeLeaf: Equatable, Identifiable {
+    public var id: String { itemID }
+    public let kind: LinkRef.Kind
+    public let itemID: String
     public let title: String
     public let otherTags: [String]
-    public init(id: String, title: String, otherTags: [String]) { self.id = id; self.title = title; self.otherTags = otherTags }
+    /// Tasks only: snoozed (shown marked).
+    public let snoozed: Bool
+    public init(kind: LinkRef.Kind, id: String, title: String, otherTags: [String], snoozed: Bool = false) {
+        self.kind = kind; self.itemID = id; self.title = title; self.otherTags = otherTags; self.snoozed = snoozed
+    }
 }
 
 public enum TagQueries {
@@ -103,7 +110,7 @@ public enum TagQueries {
                 if displayByPath[key] == nil || depth == segments.count { displayByPath[key] = displayByPath[key] ?? path }
             }
         }
-        let leaves = try pageLeavesByTag(db)
+        let leaves = try leavesByTag(db)
         func children(of parent: String?) -> [TagNode] {
             let depth = parent.map { $0.split(separator: "/").count + 1 } ?? 1
             return itemsByPath.keys
@@ -113,34 +120,42 @@ public enum TagQueries {
                     let display = displayByPath[key]!
                     return TagNode(segment: String(display.split(separator: "/").last!), path: display,
                                    isTag: tagPaths.contains(key), openCount: itemsByPath[key]!.count,
-                                   children: children(of: key), pages: leaves[key] ?? [])
+                                   children: children(of: key), items: leaves[key] ?? [])
                 }
         }
         return children(of: nil)
     }
 
-    /// Live pages per exact tag key, each with its other tags.
-    static func pageLeavesByTag(_ db: Database) throws -> [String: [PageLeaf]] {
+    /// Open tasks (task-list order) then live pages (by title), per exact tag key, each with its other tags.
+    static func leavesByTag(_ db: Database) throws -> [String: [TreeLeaf]] {
         let rows = try Row.fetchAll(db, sql: """
-            SELECT i.id, i.title, t.name, t.name_key FROM live_items i
+            SELECT i.id, i.kind, i.title, i.status, t.name, t.name_key FROM live_items i
             JOIN live_item_tags it ON it.item_id = i.id JOIN live_tags t ON t.id = it.tag_id
-            WHERE i.kind = 'info' ORDER BY i.title COLLATE NOCASE, t.name_key
+            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info'
+            ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL), t.name_key
             """)
-        var tagsOfPage: [String: [String]] = [:]
-        for r in rows { tagsOfPage[r["id"], default: []].append(r["name"]) }
-        var result: [String: [PageLeaf]] = [:]
+        var tagsOfItem: [String: [String]] = [:]
+        for r in rows { tagsOfItem[r["id"], default: []].append(r["name"]) }
+        var result: [String: [TreeLeaf]] = [:]
         for r in rows {
             let id: String = r["id"], name: String = r["name"]
-            result[r["name_key"], default: []].append(PageLeaf(id: id, title: r["title"], otherTags: (tagsOfPage[id] ?? []).filter { $0 != name }))
+            result[r["name_key"], default: []].append(TreeLeaf(
+                kind: (r["kind"] as String) == "info" ? .page : .task, id: id, title: r["title"],
+                otherTags: (tagsOfItem[id] ?? []).filter { $0 != name }, snoozed: (r["status"] as String?) == "snoozed"))
         }
         return result
     }
 
-    /// Live pages without any tag (the "Untagged" node).
-    public static func untaggedPages(_ db: Database) throws -> [PageLeaf] {
+    /// Open tasks and live pages without any tag (the "Untagged" node): tasks first.
+    public static func untaggedItems(_ db: Database) throws -> [TreeLeaf] {
         try Row.fetchAll(db, sql: """
-            SELECT id, title FROM live_items WHERE kind = 'info'
-              AND id NOT IN (SELECT item_id FROM live_item_tags) ORDER BY title COLLATE NOCASE
-            """).map { PageLeaf(id: $0["id"], title: $0["title"], otherTags: []) }
+            SELECT i.id, i.kind, i.title, i.status FROM live_items i
+            WHERE ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info')
+              AND i.id NOT IN (SELECT item_id FROM live_item_tags)
+            ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL)
+            """).map { r in
+                TreeLeaf(kind: (r["kind"] as String) == "info" ? .page : .task, id: r["id"], title: r["title"],
+                         otherTags: [], snoozed: (r["status"] as String?) == "snoozed")
+            }
     }
 }

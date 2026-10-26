@@ -202,9 +202,9 @@ struct TaskListContainer: View {
     }
 }
 
-/// The tag hierarchy, which doubles as the page tree (specs/tags "Tag list", "Move pages in the tree"):
-/// tag rows open their tag page; pages are leaves under their exact tags; untagged pages at the end.
-/// Dragging a page onto a tag moves it there (⌥ adds the tag instead).
+/// The tag hierarchy, which doubles as the tree of everything tagged (specs/tags "Tag list", "Move items in the tree"):
+/// tag rows open their tag page; open tasks and pages are leaves under their exact tags; untagged items at the end.
+/// Dragging an item onto a tag moves it there (⌥ adds the tag instead).
 struct TagTreeView: View {
     @Environment(TasksModel.self) private var tasks
     @Environment(WikiModel.self) private var wiki
@@ -217,35 +217,33 @@ struct TagTreeView: View {
         ForEach(tasks.tagTree) { node in TagTreeNode(node: node) }
         if !wiki.untagged.isEmpty {
             DisclosureGroup {
-                ForEach(wiki.untagged) { leaf in PageLeafRow(leaf: leaf, fromTag: nil) }
+                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil) }
             } label: {
                 Label("Untagged (\(wiki.untagged.count))", systemImage: "tray").foregroundStyle(.secondary)
-                    .dropDestination(for: String.self) { items, _ in move(items, to: nil); return true }
+                    .dropDestination(for: String.self) { items, _ in
+                        ItemMove.perform(items, to: nil, app: app, wiki: wiki, tasks: tasks); return true
+                    }
             }
         }
     }
-
-    /// Payload: "<page id>\n<source tag or empty>".
-    private func move(_ items: [String], to target: String?) {
-        PageMove.perform(items, to: target, app: app, wiki: wiki)
-    }
 }
 
-/// One tag node with its child tags and its pages.
+/// One tag node with its child tags, open tasks and pages.
 struct TagTreeNode: View {
     @Environment(Navigation.self) private var nav
     @Environment(WikiModel.self) private var wiki
+    @Environment(TasksModel.self) private var tasks
     @Environment(AppModel.self) private var app
     let node: TagNode
     @State private var expanded = false
 
     var body: some View {
-        if node.children.isEmpty && node.pages.isEmpty {
+        if node.children.isEmpty && node.items.isEmpty {
             row
         } else {
             DisclosureGroup(isExpanded: $expanded) {
                 ForEach(node.children) { TagTreeNode(node: $0) }
-                ForEach(node.pages) { PageLeafRow(leaf: $0, fromTag: node.path) }
+                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path) }
             } label: { row }
         }
     }
@@ -259,21 +257,31 @@ struct TagTreeNode: View {
         .contentShape(Rectangle())
         .onTapGesture { nav.go(.tag(node.path)) }
         .dropDestination(for: String.self) { items, _ in
-            PageMove.perform(items, to: node.path, app: app, wiki: wiki); return true
+            ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks); return true
         }
     }
 }
 
-/// A page leaf in the tag tree.
-struct PageLeafRow: View {
+/// A task or page leaf in the tag tree.
+struct TreeLeafRow: View {
     @Environment(Navigation.self) private var nav
-    let leaf: PageLeaf
+    let leaf: TreeLeaf
     let fromTag: String?
+
+    private var symbol: String {
+        switch leaf.kind {
+        case .page: "doc.text"
+        case .task: leaf.snoozed ? "moon.zzz" : "circle"
+        case .tag: "tag"
+        }
+    }
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "doc.text").foregroundStyle(.secondary)
-            Text(leaf.title).lineLimit(1).fontWeight(nav.current == .page(leaf.id) ? .bold : .regular)
+            Image(systemName: symbol).foregroundStyle(leaf.snoozed ? Color.blue : .secondary).imageScale(.small)
+            Text(leaf.title).lineLimit(1)
+                .fontWeight(nav.current == .page(leaf.itemID) ? .bold : .regular)
+                .foregroundStyle(leaf.snoozed ? .secondary : .primary)
             Spacer()
             if !leaf.otherTags.isEmpty {
                 Image(systemName: "link").font(.caption2).foregroundStyle(.tertiary)
@@ -281,21 +289,35 @@ struct PageLeafRow: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { nav.go(.page(leaf.id)) }
-        .draggable(leaf.id + "\n" + (fromTag ?? ""))
+        .onTapGesture {
+            switch leaf.kind {
+            case .page: nav.go(.page(leaf.itemID))
+            case .task: nav.editingTask = .edit(leaf.itemID)
+            case .tag: break
+            }
+        }
+        .help(leaf.snoozed ? "Snoozed" : "")
+        .draggable(leaf.kind.rawValue + "\n" + leaf.itemID + "\n" + (fromTag ?? ""))
     }
 }
 
-/// Drag & drop of pages in the tag tree: plain = move (replace the source tag), ⌥ = alias (add), onto Untagged = remove.
+/// Drag & drop in the tag tree: plain = move (replace the source tag), ⌥ = alias (add), onto Untagged = remove.
 @MainActor
-enum PageMove {
-    static func perform(_ items: [String], to target: String?, app: AppModel, wiki: WikiModel) {
+enum ItemMove {
+    static func perform(_ items: [String], to target: String?, app: AppModel, wiki: WikiModel, tasks: TasksModel) {
         let alias = NSEvent.modifierFlags.contains(.option)
         for item in items {
             let parts = item.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-            guard let id = parts.first, let page = wiki.page(id) else { continue }
-            let source = parts.count > 1 && !parts[1].isEmpty ? parts[1] : nil
-            var tags = page.tags
+            guard parts.count == 3, let kind = LinkRef.Kind(rawValue: parts[0]) else { continue }
+            let id = parts[1]
+            let source = parts[2].isEmpty ? nil : parts[2]
+            let current: [String]
+            switch kind {
+            case .page: guard let page = wiki.page(id) else { continue }; current = page.tags
+            case .task: guard let task = tasks.task(id: id) else { continue }; current = task.tags
+            case .tag: continue
+            }
+            var tags = current
             func has(_ t: String) -> Bool { tags.contains { TagName.key(for: $0) == TagName.key(for: t) } }
             if let target {
                 if !alias, let source { tags.removeAll { TagName.key(for: $0) == TagName.key(for: source) } }
@@ -303,8 +325,14 @@ enum PageMove {
             } else if let source {
                 tags.removeAll { TagName.key(for: $0) == TagName.key(for: source) }
             }
-            guard tags != page.tags else { continue }
-            Task { await app.send(.updatePage(id: id, PagePatch(tags: tags))) }
+            guard tags != current else { continue }
+            Task {
+                switch kind {
+                case .page: await app.send(.updatePage(id: id, PagePatch(tags: tags)))
+                case .task: await app.send(.updateTask(id: id, TaskPatch(tags: tags)))
+                case .tag: break
+                }
+            }
         }
     }
 }

@@ -24,8 +24,8 @@ Use neutral test data only (no real names).
 - [x] B5 Delete a page (… menu) → gone from Pages, search and tag pages; ⌘Z brings it back with text and tags.
 - [x] B6 Click a tag in the sidebar or a tag chip on a task row → its tag page: description (Edit to write one, with `[[` links), open tasks, pages, finished tasks (collapsed), backlinks. "Show in Tasks" filters the task list.
 - [ ] B7 Tag page of a group like `person` lists the items of all `person/…` tags; writing a description there works.
-- [ ] B8 Sidebar tags: expanding `project/atlas` lists its pages after child tags; a page with two tags appears under both with a link icon ("Also in …"); untagged pages appear under "Untagged".
-- [ ] B9 Drag a page from one tag onto another → it moves (one ⌘Z undoes it). Drag with ⌥ held → it's in both. Drag onto "Untagged" → that tag is removed.
+- [ ] B8 Sidebar tags: expanding `project/atlas` lists its open tasks (snoozed marked) and then its pages, after child tags; an item with two tags appears under both with a link icon ("Also in …"); untagged open tasks and pages appear under "Untagged". Clicking a task opens the task editor.
+- [ ] B9 Drag a page or a task from one tag onto another → it moves (one ⌘Z undoes it). Drag with ⌥ held → it's in both. Drag onto "Untagged" → that tag is removed.
 - [ ] B10 While an agent (Claude Code) edits a page you have open but aren't typing in, the page updates by itself.
 
 ## C. Search and task notes (tasks 5.5, 5.6)
