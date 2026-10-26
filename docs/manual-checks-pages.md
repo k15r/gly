@@ -6,14 +6,14 @@ Use neutral test data only (no real names).
 ## A. Editor (tasks 4.2–4.4)
 
 - [x] A1 New page (⌘⇧N) "Editor test", switch to Edit (⌘E). Type `## Decisions` on a line → shown as a heading; `**bold**`, `*italic*`, `` `code` ``, a fenced code block, `- item`, `> quote` are styled; the markdown stays visible (dimmed).
-- [ ] A2 Type `- [ ] send agenda`, click the box → becomes `- [x]`, line struck through. Click again → back.
-- [ ] A3 Type `[[` and a few letters of an existing page → picker shows pages/tasks/tags; ↑/↓ and Return insert the link as a chip with the page title. Typing `[[person/` offers tags ("Link to a tag").
-- [ ] A4 ⌘-click the chip → the page opens. ⌘[ goes back.
-- [ ] A5 Paste `https://example.com/report` and type `[Design doc](https://example.com/doc)` → both look like links; ⌘-click opens the browser.
-- [ ] A6 Type several words, click elsewhere (or switch page), then ⌘Z → the whole edit session is undone in one step (overlay shows "Edit page … (text)").
-- [ ] A7 Switch to Read: headings, lists, checkboxes, code, quotes render without syntax; a single click on a page link opens it; a web link opens the browser.
-- [ ] A8 `[[Retro notes]]` (no such page) shows red/dotted; clicking it (Read) or ⌘-clicking (Edit) creates and opens "Retro notes"; the original link now works.
-- [ ] A9 Delete a linked task → the link shows struck through ("link target deleted"); ⌘Z restores it and the link works again.
+- [x] A2 Type `- [ ] send agenda`, click the box → becomes `- [x]`, line struck through. Click again → back.
+- [x] A3 Type `[[` and a few letters of an existing page → picker shows pages/tasks/tags; ↑/↓ and Return insert the link as a chip with the page title. Typing `[[person/` offers tags ("Link to a tag").
+- [x] A4 ⌘-click the chip → the page opens. ⌘[ goes back.
+- [x] A5 Paste `https://example.com/report` and type `[Design doc](https://example.com/doc)` → both look like links; ⌘-click opens the browser.
+- [x] A6 Type several words, click elsewhere (or switch page), then ⌘Z → the whole edit session is undone in one step (overlay shows "Edit page … (text)").
+- [x] A7 Switch to Read: headings, lists, checkboxes, code, quotes render without syntax; a single click on a page link opens it; a web link opens the browser.
+- [x] A8 `[[Retro notes]]` (no such page) shows red/dotted; clicking it (Read) or ⌘-clicking (Edit) creates and opens "Retro notes"; the original link now works.
+- [x] A9 Delete a linked task → the link shows struck through ("link target deleted"); ⌘Z restores it and the link works again.
 
 ## B. Pages, navigation, tags (tasks 5.1–5.4)
 
@@ -43,4 +43,5 @@ Use neutral test data only (no real names).
 
 | Date | Checked by | Result | Notes |
 |---|---|---|---|
+| 2026-10-26 | owner | A ✅ | Editor: styling, checklists (added: toggling in the read view), `[[` picker, chips, web links, one undo step per session, read view, missing/deleted links. List editing feels odd; full markdown editor is a later change |
 | | | | |
