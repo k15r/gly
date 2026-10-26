@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Insert a link
-In any markdown text (page text, task notes, tag page description), typing `[[` SHALL open a picker that searches pages, tasks and tags by title or name as the user types, understanding the `page:`/`task:`/`tag:` prefixes and tag paths as typed links do. Each entry SHALL show its kind (icon), its title with the duplicate qualifier when needed, and a second line with its tags and last change. Choosing an entry SHALL insert a link to it. The picker SHALL also offer to link a page that doesn't exist yet.
+In any markdown text (page text, task notes, tag page description), typing `[[` SHALL open a picker that searches pages, tasks and tags by title or name as the user types, understanding the `page:`/`task:`/`tag:` prefixes and tag paths as typed links do. Each entry SHALL show its kind (icon), its title with the duplicate qualifier when needed, and a second line with its tags and last change. Choosing an entry SHALL insert a link to it. The picker SHALL also offer to link a page or a task that doesn't exist yet (a task as `[[task:…]]`).
 
 #### Scenario: Link to an existing page
 - **WHEN** the user types `[[atl` in a task's notes and picks the page "Atlas architecture"

@@ -227,11 +227,16 @@ public struct MarkdownEditor: NSViewRepresentable {
             guard let tv = textView, let (range, query) = pickerQuery() else { picker.close(); return }
             var items = parent.suggestions(query)
             let trimmed = query.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty, !items.contains(where: { $0.title.caseInsensitiveCompare(trimmed) == .orderedSame }),
-               let page = LinkResolver.newPage(for: trimmed) {
-                let title = "New page “\(page.title)”" + (page.tags.first.map { " in \($0)" } ?? "")
-                items.append(LinkSuggestion(id: "new:" + trimmed, symbol: "plus.circle", title: title,
-                                            subtitle: "Creates the page when you open the link", insert: "[[\(trimmed)]]"))
+            // New page / new task, as in the missing-link menu. Nothing exists yet, so the link stores only text:
+            // a task gets the `task:` prefix, so opening the link later creates a task.
+            if !trimmed.isEmpty, !items.contains(where: { $0.title.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+                for kind in [LinkRef.Kind.page, .task] {
+                    guard let label = MarkdownBlocks.createLabel(trimmed, kind: kind) else { continue }
+                    let typed = kind == .task && LinkResolver.parse(trimmed).kinds != [.task] ? "task:" + trimmed : trimmed
+                    items.append(LinkSuggestion(id: "new-\(kind.rawValue):" + trimmed, symbol: "plus.circle", title: label,
+                                                subtitle: "Creates the \(kind == .task ? "task" : "page") when you open the link",
+                                                insert: "[[\(typed)]]"))
+                }
             }
             picker.show(items, in: tv, at: range) { [weak self] chosen in
                 guard let self, let current = self.pickerQuery() else { return }
