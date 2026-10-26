@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import WorkDashCore
 
@@ -23,6 +24,20 @@ final class Navigation {
 
     /// Incremented to ask the visible view to open a new-task editor (⌘N).
     private(set) var newTaskRequest = 0
+
+    private var mouseMonitor: Any?
+
+    init() {
+        // Mouse side buttons: 3 = back, 4 = forward (like browsers and Finder).
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { [weak self] event in
+            guard let self else { return event }
+            switch event.buttonNumber {
+            case 3: self.back(); return nil
+            case 4: self.forward(); return nil
+            default: return event
+            }
+        }
+    }
 
     var canGoBack: Bool { !backStack.isEmpty }
     var canGoForward: Bool { !forwardStack.isEmpty }
