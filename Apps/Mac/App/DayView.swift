@@ -261,10 +261,9 @@ struct AppointmentRow: View {
         option("Ignore", .ignore, scope, current)
     }
 
+    /// A toggle item, so the menu draws the native checkmark at the current choice.
     private func option(_ title: String, _ value: BlockingOverride?, _ scope: BlockingScope, _ current: BlockingOverride?) -> some View {
-        Button { set(scope, value) } label: {
-            if current == value { Label(title, systemImage: "checkmark") } else { Text(title) }
-        }
+        Toggle(title, isOn: Binding(get: { current == value }, set: { _ in set(scope, value) }))
     }
 
     private func set(_ scope: BlockingScope, _ value: BlockingOverride?) {
