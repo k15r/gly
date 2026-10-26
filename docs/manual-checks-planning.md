@@ -5,12 +5,12 @@ Neutral test data only (no real names).
 
 ## A. Probe (task 1.1)
 
-- [ ] A1 Developer → Probe Attendance Data → a message with the file path appears (the file holds only counts per account type).
+- [x] A1 Developer → Probe Attendance Data → a message with the file path appears (the file holds only counts per account type).
 
 ## B. Settings and effort (tasks 5.1, 5.2)
 
-- [ ] B1 Settings (⌘,) → Planning: working hours 09:00–17:00, sizes XS 30m, S 2h, M 4h, L 8h, XL 24h, look-ahead 5 days.
-- [ ] B2 Change working hours to 08:00–16:00 → the day view's "free …" changes at once; L and XL follow the shorter day; "Default" resets a size.
+- [x] B1 Settings (⌘,) → Planning: working hours 09:00–17:00, sizes XS 30m, S 2h, M 4h, L 8h, XL 24h, look-ahead 5 days.
+- [x] B2 Change working hours to 08:00–16:00 → the day view's "free …" changes at once; L and XL follow the shorter day; "Default" resets a size.
 - [ ] B3 Right-click a task → Effort → M → an `M` chip appears on the row; ⌘Z removes it ("Effort of …").
 - [ ] B4 On a task page, the Effort picker sets and clears the effort; one ⌘Z per change.
 

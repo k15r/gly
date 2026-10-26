@@ -125,7 +125,7 @@ struct DayView: View {
             } else {
                 ForEach(items) { item in
                     TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, state: item.state)
-                        .help(item.effortMinutes.map { "Needs ~\(formatMinutes(Double($0))), free until due: \(formatMinutes(item.freeMinutes))" }
+                        .help(item.effortMinutes.map { "Needs ~\(formatEffort(Double($0), dayLength: planning.hours.minutesPerDay)), free until due: \(formatEffort(item.freeMinutes, dayLength: planning.hours.minutesPerDay))" }
                               ?? "No estimate – set an effort to see whether it fits")
                 }
             }

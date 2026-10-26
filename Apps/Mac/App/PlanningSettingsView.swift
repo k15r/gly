@@ -20,14 +20,14 @@ struct PlanningSettingsView: View {
             Section("Effort sizes") {
                 ForEach(Effort.allCases, id: \.self) { e in
                     LabeledContent(e.label) {
-                        Stepper(value: Binding(get: { planning.sizes[e] }, set: { planning.setEffortMinutes($0, for: e) }),
-                                in: 15...(10 * 24 * 60), step: e < .l ? 15 : 60) {
-                            Text(formatMinutes(Double(planning.sizes[e]))).monospacedDigit().frame(width: 80, alignment: .trailing)
+                        HStack(spacing: 8) {
+                            DurationField(minutes: Binding(get: { planning.sizes[e] }, set: { planning.setEffortMinutes(max(5, $0), for: e) }),
+                                          dayLength: planning.hours.minutesPerDay)
+                            Button("Default") { planning.setEffortMinutes(nil, for: e) }.buttonStyle(.borderless)
                         }
-                        Button("Default") { planning.setEffortMinutes(nil, for: e) }.buttonStyle(.borderless)
                     }
                 }
-                Text("Working time a task of each size roughly needs. L and XL follow the working day until you change them.")
+                Text("Working time a task of each size roughly needs. 1 d = one working day (\(formatMinutes(Double(planning.hours.minutesPerDay)))). L and XL follow the working day until you change them.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Work on") {
@@ -38,6 +38,30 @@ struct PlanningSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 560, height: 560)
+    }
+
+    /// Days · hours · minutes, where a day is one working day.
+    struct DurationField: View {
+        @Binding var minutes: Int
+        let dayLength: Int
+
+        var body: some View {
+            let day = max(60, dayLength)
+            let d = minutes / day, h = (minutes % day) / 60, m = minutes % 60
+            HStack(spacing: 4) {
+                part(d, "d") { minutes = $0 * day + h * 60 + m }
+                part(h, "h") { minutes = d * day + $0 * 60 + m }
+                part(m, "m") { minutes = d * day + h * 60 + $0 }
+            }
+        }
+
+        private func part(_ value: Int, _ unit: String, set: @escaping (Int) -> Void) -> some View {
+            HStack(spacing: 2) {
+                TextField("", value: Binding(get: { value }, set: { set(max(0, $0)) }), format: .number)
+                    .frame(width: 36).multilineTextAlignment(.trailing)
+                Text(unit).foregroundStyle(.secondary)
+            }
+        }
     }
 
     private func timePicker(_ minutes: Binding<Int>) -> some View {

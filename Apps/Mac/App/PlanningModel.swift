@@ -93,6 +93,14 @@ extension Effort {
     var label: String { rawValue }
 }
 
+/// Effort-style duration: working days when it's at least a day ("1d 2h"), otherwise hours and minutes.
+func formatEffort(_ m: Double, dayLength: Int) -> String {
+    let total = Int(m.rounded()), day = max(60, dayLength)
+    guard total >= day else { return formatMinutes(m) }
+    let d = total / day, rest = total % day
+    return rest == 0 ? "\(d)d" : "\(d)d " + formatMinutes(Double(rest))
+}
+
 func formatMinutes(_ m: Double) -> String {
     let total = Int(m.rounded())
     let h = total / 60, min = total % 60
