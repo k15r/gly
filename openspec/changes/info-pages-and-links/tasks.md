@@ -31,8 +31,8 @@
 - [x] 5.2 Add the Pages list (most recent first, tag filter, New Page ⌘N / ⌘⇧N) and `PageView` (title, tags, editor/read toggle ⌘E, backlinks, delete); verify manually page create/edit/delete/undo and that an agent's edit appears unless the user is typing
 - [x] 5.3 Add `TagPageView` (description editor, three groups, "Show in Tasks", backlinks) and route sidebar tags and tag chips to it; verify manually "Project tag page", "Group tag", "From a chip", "Select a tag"
 - [x] 5.4 Extend the sidebar tag tree with item leaves (exact-tag open tasks, snoozed marked, then pages, after child tags; "also in …" hint; "Untagged" node) and drag & drop for tasks and pages (plain = move, ⌥ = alias, onto Untagged = remove tag; one update each); verify with a query test for "Items as leaves of the tree", "Item with two tags", "Untagged items", and manually "Move a page", "Alias a page" and "Move a task" including one ⌘Z each
-- [ ] 5.5 Add quick open (⌘K: grouped live results, keyboard navigation, Return opens, "Create page …"); verify manually "Open a page" and "Create from quick open"
-- [ ] 5.6 Switch the task editor's notes to `MarkdownEditor` with session saving; verify manually "Task notes" and "Notes link to a page"
+- [x] 5.5 Add quick open (⌘K: grouped live results, keyboard navigation, Return opens, "Create page …"); verify manually "Open a page" and "Create from quick open"
+- [x] 5.6 Switch the task editor's notes to `MarkdownEditor` with session saving; verify manually "Task notes" and "Notes link to a page"
 
 ## 6. End to end
 

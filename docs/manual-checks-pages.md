@@ -30,9 +30,9 @@ Use neutral test data only (no real names).
 
 ## C. Search and task notes (tasks 5.5, 5.6)
 
-- [ ] C1 ⌘K, type part of a page title → grouped results (pages, tasks, tags) as you type; ↑/↓ + Return opens; `uberblick` finds "Überblick".
-- [ ] C2 ⌘K with a new title → "Create page …" creates and opens it.
-- [ ] C3 Open a task (double-click) → notes use the markdown editor with `[[` links; Save; the linked page lists the task under backlinks.
+- [x] C1 ⌘K, type part of a page title → grouped results (pages, tasks, tags) as you type; ↑/↓ + Return opens; `uberblick` finds "Überblick".
+- [x] C2 ⌘K with a new title → "Create page …" creates and opens it.
+- [x] C3 Open a task (double-click) → notes use the markdown editor with `[[` links; Save; the linked page lists the task under backlinks.
 
 ## D. End to end with an agent (task 6.1)
 
@@ -45,4 +45,5 @@ Use neutral test data only (no real names).
 |---|---|---|---|
 | 2026-10-26 | owner | A ✅ | Editor: styling, checklists (added: toggling in the read view), `[[` picker, chips, web links, one undo step per session, read view, missing/deleted links. List editing feels odd; full markdown editor is a later change |
 | 2026-10-26 | owner | B ✅ | Pages, navigation, tag pages, tree, drag & drop, live agent edits; fixed: tag tree counted snoozed tasks differently from tag pages (B7); added: open tasks as tree leaves next to pages (B8) |
+| 2026-10-26 | owner | C ✅ | Quick open (grouped results, keyboard, create page), markdown task notes with links and backlinks |
 | | | | |
