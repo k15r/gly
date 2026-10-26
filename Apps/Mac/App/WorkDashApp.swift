@@ -19,7 +19,7 @@ struct WorkDashApp: App {
                 .environment(app).environment(calendars).environment(tasks).environment(clock).environment(nav).environment(wiki).environment(planning)
                 .environment(\.linkOpener, opener)
                 .environment(\.openURL, OpenURLAction { url in opener.open(url); return .handled })
-                .frame(minWidth: 880, minHeight: 580)
+                .frame(minWidth: 960, minHeight: 580)
                 .task { await startUp() }
                 .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store) }
                 .onChange(of: nav.day) { syncDay() }
@@ -144,9 +144,9 @@ struct ContentView: View {
                     SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
                     Section("Tags") { TagTreeView() }
                 }
-                // The main pane's minimum (600) follows from the window minimum (880) minus the widest sidebar (280).
+                // The main pane's minimum (600) follows from the window minimum (960) minus the widest sidebar (360).
                 // Setting it on the detail column instead made the split view slide the sidebar out of the window.
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 280)
+                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 360)
             } detail: {
                 switch nav.current {
                 case .day: DayContainer()
