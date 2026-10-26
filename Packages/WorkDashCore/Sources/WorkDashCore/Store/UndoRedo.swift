@@ -123,7 +123,10 @@ extension Database {
         let isPage = (item["kind"] as String) == "info"
         let quoted = (isPage ? "page " : "") + "“\(item["title"] as String)”"
         if own.contains(where: { ($0["op"] as String) == "insert" }) { return "Create \(quoted)" }
-        if fields.contains("deleted_at") { return "Delete \(quoted)" }
+        if let entry = own.first(where: { ($0["field"] as String?) == "deleted_at" }) {
+            // Clearing deleted_at outside undo is a restore from the trash (trash-bin T2).
+            return ChangeValue.decode(entry["new_value"]).isNull ? "Restore \(quoted)" : "Delete \(quoted)"
+        }
         if fields.contains("status"), let entry = own.first(where: { ($0["field"] as String?) == "status" }),
            let status = String.fromDatabaseValue(ChangeValue.decode(entry["new_value"])) {
             let verb = ["done": "Complete", "snoozed": "Snooze", "dropped": "Drop", "open": "Reopen"][status] ?? "Status of"
@@ -144,8 +147,10 @@ extension Database {
     }
 
     /// Applies the inverse of every entry of `batchID`, newest first, logging into `batch`.
-    private func revert(batch batchID: String, using batch: Batch) throws {
+    /// - Parameter only: when set, entries for other rows are skipped (a restore reverts just one item's delete).
+    func revert(batch batchID: String, using batch: Batch, only: ((_ table: String, _ rowID: String) -> Bool)? = nil) throws {
         let entries = try Row.fetchAll(self, sql: "SELECT * FROM change_log WHERE batch = ? ORDER BY seq DESC", arguments: [batchID])
+            .filter { only?($0["table_name"], $0["row_id"]) ?? true }
         var tombstoned = Set<String>()
         for entry in entries {
             let table: String = entry["table_name"]

@@ -122,6 +122,8 @@ public enum Command: Codable, Equatable {
     case deletePage(id: String)
     /// Replaces a tag's page description; creates the tag if it doesn't exist (e.g. a group node like `person`).
     case updateTagPage(name: String, body: String, session: String? = nil)
+    /// Brings a deleted page or task back as it was when deleted, as a change of the caller (trash-bin T2).
+    case restore(id: String)
     /// Creates an (empty) tag, e.g. a new subtag; an existing tag is returned unchanged (case-insensitive).
     case createTag(name: String)
     /// Blocking override for one occurrence or a whole series; nil = automatic (specs/appointment-annotations).
@@ -275,6 +277,21 @@ public struct CommandHandler {
             }
             let tagID = try batch.insert("tags", ["name": tag.display, "name_key": tag.key, "page_body": text])
             return CommandOK(id: tagID, unresolved: unresolved)
+
+        case .restore(let id):
+            guard let entry = try TrashQueries.entry(db, id: id) else {
+                throw CommandFailure(.notFound, "\(id) is not in the trash.")
+            }
+            if let deleteBatch = entry.batch {
+                // Revert only this item and its tag assignments from the delete batch (assignments removed earlier stay removed).
+                let assignments = Set(try String.fetchAll(db, sql: "SELECT id FROM item_tags WHERE item_id = ?", arguments: [id]))
+                try db.revert(batch: deleteBatch, using: batch) { table, row in
+                    (table == "items" && row == id) || (table == "item_tags" && assignments.contains(row))
+                }
+            } else {
+                try batch.update("items", id: id, ["deleted_at": nil])    // deleted without history: the item only
+            }
+            return CommandOK(id: id)
 
         case .createTag(let name):
             let tag = try TagName(name)

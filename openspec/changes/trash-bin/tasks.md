@@ -2,8 +2,8 @@
 
 ## 1. Core
 
-- [ ] 1.1 Add `TrashQueries.list(db, since:)` and the older-count (T1): deleted pages and tasks newest first, with deleted-at, writer, the tags tombstoned in the delete batch and an excerpt; plus `WriterName.display` (T3); verify with tests for "Agent deletes a page" (entry fields), "Older deletes" (30-day split and count), a task and a page from different writers, and an item without a delete entry
-- [ ] 1.2 Add `Command.restore(id:)` (T2) that reverts only the item's delete batch as a new change of the current writer, with the label "Restore page/task “…”"; verify with tests for "Restore an agent's delete" (fields, tags, links work again, search finds it), "Undo a restore", "Delete and restore later" (other changes stay), tag assignments removed before the delete stay removed, and not-found for live and unknown ids
+- [x] 1.1 Add `TrashQueries.list(db, since:)` and the older-count (T1): deleted pages and tasks newest first, with deleted-at, writer, the tags tombstoned in the delete batch and an excerpt; plus `WriterName.display` (T3); verify with tests for "Agent deletes a page" (entry fields), "Older deletes" (30-day split and count), a task and a page from different writers, and an item without a delete entry
+- [x] 1.2 Add `Command.restore(id:)` (T2) that reverts only the item's delete batch as a new change of the current writer, with the label "Restore page/task “…”"; verify with tests for "Restore an agent's delete" (fields, tags, links work again, search finds it), "Undo a restore", "Delete and restore later" (other changes stay), tag assignments removed before the delete stay removed, and not-found for live and unknown ids
 
 ## 2. MCP
 
