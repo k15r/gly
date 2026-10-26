@@ -175,10 +175,20 @@ struct TagChip: View {
     /// Clicking opens the tag page (specs/tag-pages "From a chip"); off in editors.
     var opensTagPage = true
     var body: some View {
+        let tint = Self.tint(for: name)
         Text(name).font(.caption).padding(.horizontal, 5).padding(.vertical, 1)
-            .background(.secondary.opacity(0.15)).clipShape(Capsule())
+            .foregroundStyle(tint)
+            .background(tint.opacity(0.15)).clipShape(Capsule())
             .onTapGesture { if opensTagPage { nav.go(.tag(name)) } }
             .help(opensTagPage ? "Open tag page" : "")
+    }
+
+    /// One color per top-level tag (`person/…`, `project/…`), stable across launches.
+    static func tint(for name: String) -> Color {
+        let palette: [Color] = [.blue, .purple, .teal, .orange, .pink, .green, .indigo, .brown]
+        let root = TagName.key(for: String(name.split(separator: "/").first ?? Substring(name)))
+        let hash = root.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0x7fffffff }
+        return palette[hash % palette.count]
     }
 }
 

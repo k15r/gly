@@ -111,16 +111,25 @@ struct PagesListView: View {
                 let names = wiki.displayNames(wiki.pages.map(\.id))
                 List(wiki.pages) { page in
                     // A plain row with a tap, not a Button: a Button swallows the mouse-down and the row couldn't be dragged.
-                    HStack(alignment: .firstTextBaseline) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "doc.text").font(.system(size: 15, weight: .medium)).foregroundStyle(Color.accentColor)
+                            .frame(width: 30, height: 30)
+                            .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(names[page.id]?.display ?? page.title).fontWeight(.medium)
+                            // Title stands out; the duplicate qualifier stays quiet next to it.
+                            (Text(page.title).font(.headline)
+                             + Text(names[page.id]?.qualifier.map { "  · \($0)" } ?? "").font(.subheadline).foregroundColor(.secondary))
+                                .lineLimit(1)
+                            let excerpt = TreeLeaf.excerpt(of: page.body)
+                            if !excerpt.isEmpty { Text(excerpt).font(.callout).foregroundStyle(.secondary).lineLimit(1) }
                             if !page.tags.isEmpty {
-                                HStack(spacing: 4) { ForEach(page.tags, id: \.self) { TagChip(name: $0) } }
+                                HStack(spacing: 4) { ForEach(page.tags, id: \.self) { TagChip(name: $0) } }.padding(.top, 1)
                             }
                         }
                         Spacer()
-                        Text(page.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.secondary)
+                        Text(page.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.tertiary)
                     }
+                    .padding(.vertical, 4)
                     .contentShape(Rectangle())
                     .onTapGesture { nav.go(.page(page.id)) }
                     .draggableItem(.page, id: page.id, title: page.title)
