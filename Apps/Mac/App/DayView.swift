@@ -26,7 +26,6 @@ struct DayView: View {
                     AmbiguityBanner(day: day)
                     appointmentsSection(model)
                     tasksSection(model)
-                    if model.isToday { workOnSection() }
                 }
                 .padding()
             }
@@ -85,51 +84,111 @@ struct DayView: View {
 
     // MARK: Tasks
 
+    @ViewBuilder
     private func tasksSection(_ model: DayModel) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(model.isToday ? "Tasks due today" : "Tasks due this day").font(.headline)
-                Spacer()
-                Button { editing = .new(due: Due(day: day.description)) } label: { Label("New Task", systemImage: "plus") }
-                    .disabled(!app.canWrite)
-            }
-            if model.tasks.isEmpty {
-                Text("No tasks").foregroundStyle(.secondary)
-            } else {
-                let states = model.isToday ? Dictionary(uniqueKeysWithValues: planning.evaluate(model.tasks.map(\.task), now: clock.now,
-                    appointments: calendars.appointments(in: planning.horizonRange(today: clock.today))).map { ($0.task.id, $0.state) }) : [:]
-                ForEach(model.tasks) { dayTask in
-                    TaskRow(task: dayTask.task, overdue: dayTask.isOverdue,
-                            onEdit: { nav.go(.task(dayTask.task.id)) }, state: states[dayTask.task.id])
+        if model.isToday {
+            todaySections(model)
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Tasks due this day").font(.headline)
+                    Spacer()
+                    newTaskButton
+                }
+                if model.tasks.isEmpty {
+                    Text("No tasks").foregroundStyle(.secondary)
+                } else {
+                    ForEach(model.tasks) { dayTask in
+                        TaskRow(task: dayTask.task, overdue: dayTask.isOverdue, onEdit: { nav.go(.task(dayTask.task.id)) })
+                    }
                 }
             }
         }
     }
 
-    /// Open tasks due within the horizon, sorted by urgency (specs/daily-planning "Work on list").
-    private func workOnSection() -> some View {
+    private var newTaskButton: some View {
+        Button { editing = .new(due: Due(day: day.description)) } label: { Label("New Task", systemImage: "plus") }
+            .disabled(!app.canWrite)
+    }
+
+    /// Today (overdue, due today, needs work today) and Coming up (specs/daily-planning).
+    private func todaySections(_ model: DayModel) -> some View {
         @Bindable var planning = planning
-        let items = planning.evaluate(planning.upcoming, now: clock.now,
-                                      appointments: calendars.appointments(in: planning.horizonRange(today: clock.today)))
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("Work on").font(.headline)
-                Spacer()
-                Picker("", selection: $planning.horizon) {
-                    ForEach([3, 5, 7, 14], id: \.self) { Text("next \($0) days").tag($0) }
+        let dayLength = planning.hours.minutesPerDay
+        let plan = planning.plan(model.tasks.map(\.task) + planning.upcoming, now: clock.now,
+                                 appointments: calendars.appointments(in: planning.horizonRange(today: clock.today)))
+        let free = planning.freeMinutes(on: day, now: clock.now, appointments: calendars.appointments)
+        let short = Double(plan.neededMinutes) - free
+        return VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Today").font(.headline)
+                    Text("needs \(formatEffort(Double(plan.neededMinutes), dayLength: dayLength)) · free \(formatMinutes(free))")
+                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                    if short > 0 {
+                        Label("\(formatEffort(short, dayLength: dayLength)) short", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption.bold()).foregroundStyle(.orange)
+                    }
+                    if plan.withoutEstimate > 0 {
+                        Text("+ \(plan.withoutEstimate) without estimate").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    newTaskButton
                 }
-                .fixedSize().help("How far ahead to look (also in Settings → Planning)")
+                if plan.today.isEmpty {
+                    Text("Nothing needs work today").foregroundStyle(.secondary)
+                } else {
+                    ForEach(plan.today) { item in
+                        TaskRow(task: item.task, overdue: item.reason == .overdue, onEdit: { nav.go(.task(item.task.id)) },
+                                note: todayNote(item, dayLength: dayLength))
+                    }
+                }
             }
-            if items.isEmpty {
-                Text("Nothing due in the next \(planning.horizon) days").foregroundStyle(.secondary)
-            } else {
-                ForEach(items) { item in
-                    TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, state: item.state)
-                        .help(item.effortMinutes.map { "Needs ~\(formatEffort(Double($0), dayLength: planning.hours.minutesPerDay)), free until due: \(formatEffort(item.freeMinutes, dayLength: planning.hours.minutesPerDay))" }
-                              ?? "No estimate – set an effort to see whether it fits")
+            .padding(10)
+            .background(short > 0 ? Color.orange.opacity(0.07) : Color.accentColor.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Coming up").font(.headline)
+                    Spacer()
+                    Picker("", selection: $planning.horizon) {
+                        ForEach([3, 5, 7, 14], id: \.self) { Text("next \($0) days").tag($0) }
+                    }
+                    .fixedSize().help("How far ahead to look (also in Settings → Planning)")
+                }
+                if plan.comingUp.isEmpty {
+                    Text("Nothing else due in the next \(planning.horizon) days").foregroundStyle(.secondary)
+                } else {
+                    ForEach(plan.comingUp) { item in
+                        TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, note: comingUpNote(item))
+                    }
                 }
             }
         }
+    }
+
+    private func todayNote(_ item: TodayItem, dayLength: Int) -> PlanNote {
+        if item.cantFit { return PlanNote(text: "can't fit", color: .red, help: "Even all free time until the due date isn't enough – move the due date or cut scope") }
+        guard let needed = item.neededToday else {
+            return PlanNote(text: item.reason == .overdue ? "no estimate" : "due today · no estimate", color: .secondary, help: "Set an effort to plan it")
+        }
+        switch item.reason {
+        case .needsWork: return PlanNote(text: "today ≥ \(formatEffort(Double(needed), dayLength: dayLength))", color: .blue,
+                                         help: "At least this much today, or it won't be done by its due date")
+        case .dueToday: return PlanNote(text: "due today", color: .orange, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
+        case .overdue: return PlanNote(text: "", color: .red, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
+        }
+    }
+
+    private func comingUpNote(_ item: ComingUpItem) -> PlanNote {
+        guard let start = item.startBy else { return PlanNote(text: "no estimate", color: .secondary, help: "Set an effort to plan it") }
+        let text = start == clock.today.adding(days: 1) ? "start by tomorrow" : "start by " + DayView.weekday(start)
+        return PlanNote(text: text, color: .secondary, help: "The last day to start and still finish")
+    }
+
+    static func weekday(_ day: LocalDay) -> String {
+        let f = DateFormatter(); f.setLocalizedDateFormatFromTemplate("EEE")
+        return f.string(from: day.interval().start)
     }
 
     func newTask() { editing = .new(due: Due(day: day.description)) }
@@ -326,21 +385,17 @@ struct AppointmentDetails: View {
     }
 }
 
-/// Per-account "last change seen" (specs/calendar-sources "Calendar refresh indicator"); approximate by design.
+/// Per-account "last change seen" (specs/calendar-sources "Calendar refresh indicator"), in the refresh button's tooltip.
 struct SourceIndicators: View {
     @Environment(CalendarModel.self) private var calendars
     @Environment(Clock.self) private var clock
 
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(calendars.sourceStatuses, id: \.sourceID) { s in
-                Text("\(s.sourceTitle): \(age(s.lastChangeSeen))")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .help("Last change WorkDash saw from this account. EventKit doesn't report sync times, so this shows changes seen, not sync attempts.")
-            }
-            Button { calendars.refreshSources() } label: { Image(systemName: "arrow.clockwise") }
-                .buttonStyle(.borderless).help("Ask the calendar accounts to refresh")
-        }
+        let lines = calendars.sourceStatuses.map { "\($0.sourceTitle): \(age($0.lastChangeSeen))" }
+        Button { calendars.refreshSources() } label: { Image(systemName: "arrow.clockwise") }
+            .buttonStyle(.borderless)
+            .help((["Refresh calendar accounts", "Last change seen:"] + lines
+                   + ["(EventKit doesn't report sync times; this shows changes seen, not sync attempts.)"]).joined(separator: "\n"))
     }
 
     private func age(_ date: Date?) -> String {

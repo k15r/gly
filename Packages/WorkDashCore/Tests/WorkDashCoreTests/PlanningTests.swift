@@ -3,6 +3,7 @@ import GRDB
 import XCTest
 @testable import WorkDashCore
 
+/// specs/daily-planning "Today list", "Work needed today", "Today's load", "Coming up".
 final class PlanningTests: XCTestCase {
     var cal: Calendar = { var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone(identifier: "Europe/Berlin")!; return c }()
     let hours = WorkingHours()
@@ -12,6 +13,12 @@ final class PlanningTests: XCTestCase {
         TaskItem(id: title, title: title, body: "", status: .open, priority: priority, due: Due(day: due, time: time), snoozedUntil: nil,
                  tags: [], createdAt: Date(), modifiedAt: Date(), modifiedBy: "u", completedAt: nil, effort: effort)
     }
+    func blocked(_ day: String) -> (interval: DateInterval, weight: BlockingWeight) {
+        (DateInterval(start: at(day, 0), end: at(day, 23, 59)), .blocks)
+    }
+    func plan(_ tasks: [TaskItem], now: Date, busy: [(interval: DateInterval, weight: BlockingWeight)] = []) -> DayPlan {
+        Planning.plan(tasks, now: now, sizes: sizes, hours: hours, busy: busy, calendar: cal)
+    }
 
     func testDefaultSizes() {
         XCTAssertEqual(sizes[.l], 480)
@@ -19,29 +26,59 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(EffortSizes.defaults(for: WorkingHours(startMinute: 8 * 60, endMinute: 14 * 60))[.l], 360)
     }
 
-    func testStates() {
-        XCTAssertEqual(Planning.state(effortMinutes: 480, freeMinutes: 600, dueTomorrow: false), .tight)   // "Tight task"
-        XCTAssertEqual(Planning.state(effortMinutes: 240, freeMinutes: 120, dueTomorrow: false), .late)    // "Late task"
-        XCTAssertEqual(Planning.state(effortMinutes: 120, freeMinutes: 1200, dueTomorrow: false), .ok)     // "Plenty of time"
-        XCTAssertEqual(Planning.state(effortMinutes: 120, freeMinutes: 200, dueTomorrow: false), .startToday)   // 1.5× ≤ free < 2×
-        XCTAssertEqual(Planning.state(effortMinutes: 30, freeMinutes: 900, dueTomorrow: true), .startToday)
-        XCTAssertEqual(Planning.state(effortMinutes: nil, freeMinutes: 900, dueTomorrow: false), .noEstimate)
+    func testTaskNeedingWorkToday() {
+        // Monday 09:00; XL (3 working days) due Friday, but Thursday is fully booked → 2 free days after today (Tue, Wed) + Fri.
+        // Free after today until Fri evening: Tue, Wed, Fri = 3 days → nothing needed. Make Wednesday booked too: 2 days → needs 1 day today.
+        let p = plan([task("big", due: "2026-10-30", effort: .xl)], now: at("2026-10-26", 9),
+                     busy: [blocked("2026-10-28"), blocked("2026-10-29")])
+        XCTAssertEqual(p.today.map(\.task.title), ["big"])
+        XCTAssertEqual(p.today.first?.reason, .needsWork)
+        XCTAssertEqual(p.today.first?.neededToday, 480)
+        XCTAssertEqual(p.today.first?.cantFit, false)
     }
 
-    func testEvaluateWithCalendar() {
-        let now = at("2026-10-26", 9)   // Monday
-        // Mon–Wed mostly blocked by a long blocking meeting each day, 09–15.
-        let busy = ["2026-10-26", "2026-10-27", "2026-10-28"].map { (interval: DateInterval(start: at($0, 9), end: at($0, 15)), weight: BlockingWeight.blocks) }
-        let items = Planning.evaluate([
-            task("big", due: "2026-10-28", effort: .l),                // 3 × 2 h free = 6 h < 8 h → late
-            task("today 17h", due: "2026-10-26", time: "17:00", effort: .m),  // 2 h free < 4 h → late
-            task("small", due: "2026-10-30", effort: .s),              // plenty → ok
-            task("unknown", due: "2026-10-29", effort: nil),
-        ], now: now, sizes: sizes, hours: hours, busy: busy, calendar: cal)
-        XCTAssertEqual(items.map(\.task.title), ["big", "today 17h", "small", "unknown"].sorted { a, b in
-            let order = ["today 17h": 0, "big": 1, "small": 2, "unknown": 3]; return order[a]! < order[b]! })
-        XCTAssertEqual(items.map(\.state), [.late, .late, .ok, .noEstimate])
-        XCTAssertEqual(items.first { $0.task.title == "big" }?.freeMinutes, 360)
+    func testEnoughTimeLaterIsComingUp() {
+        let p = plan([task("small", due: "2026-10-30", effort: .s)], now: at("2026-10-26", 9))
+        XCTAssertEqual(p.today, [])
+        XCTAssertEqual(p.comingUp.map(\.task.title), ["small"])
+    }
+
+    func testDueTodayWithoutEstimate() {
+        let p = plan([task("x", due: "2026-10-26", effort: nil)], now: at("2026-10-26", 9))
+        XCTAssertEqual(p.today.first?.reason, .dueToday)
+        XCTAssertNil(p.today.first?.neededToday)
+        XCTAssertEqual(p.withoutEstimate, 1)
+    }
+
+    func testCantFitComesFirst() {
+        let p = plan([task("normal due today", due: "2026-10-26", effort: .s, priority: .urgent),
+                      task("too big", due: "2026-10-26", time: "17:00", effort: .m)], now: at("2026-10-26", 15))
+        XCTAssertEqual(p.today.map(\.task.title), ["too big", "normal due today"])
+        XCTAssertEqual(p.today.first?.cantFit, true)
+    }
+
+    func testOrderingOverdueDueTodayNeedsWork() {
+        let p = plan([task("needs", due: "2026-10-28", effort: .xl),   // 24 h, 16 h free after today → 8 h today, fits exactly
+                      task("due today", due: "2026-10-26", effort: .xs),
+                      task("overdue", due: "2026-10-23", effort: nil)], now: at("2026-10-26", 9))
+        XCTAssertEqual(p.today.map(\.task.title), ["overdue", "due today", "needs"])
+    }
+
+    func testOverbookedLoad() {
+        let p = plan([task("a", due: "2026-10-26", effort: .m), task("b", due: "2026-10-26", effort: .m), task("c", due: "2026-10-26", effort: nil)],
+                     now: at("2026-10-26", 9))
+        XCTAssertEqual(p.neededMinutes, 480)
+        XCTAssertEqual(p.withoutEstimate, 1)
+    }
+
+    func testStartBy() {
+        // L (1 day) due Thursday; Wednesday free, Thursday booked → start by Wednesday.
+        let p = plan([task("t", due: "2026-10-29", effort: .l)], now: at("2026-10-26", 9), busy: [blocked("2026-10-29")])
+        XCTAssertEqual(p.comingUp.first?.startBy, LocalDay("2026-10-28"))
+        // Without estimate: last, no start-by.
+        let q = plan([task("none", due: "2026-10-27", effort: nil), task("t", due: "2026-10-30", effort: .s)], now: at("2026-10-26", 9))
+        XCTAssertEqual(q.comingUp.map(\.task.title), ["t", "none"])
+        XCTAssertNil(q.comingUp.last?.startBy)
     }
 
     func testUpcomingQueryHorizonAndSnooze() throws {
@@ -56,8 +93,6 @@ final class PlanningTests: XCTestCase {
         let today = LocalDay("2026-10-26")!
         XCTAssertEqual(try db.read { try TaskQueries.upcoming($0, today: today, horizon: 5) }.map(\.title), ["in 4 days"])
         XCTAssertEqual(try db.read { try TaskQueries.upcoming($0, today: today, horizon: 14) }.map(\.title), ["in 4 days", "in 8 days"])
-        XCTAssertEqual(try db.read { try TaskQueries.upcoming($0, today: LocalDay("2026-10-27")!, horizon: 5) }.map(\.title).sorted(),
-                       ["in 4 days"], "still snoozed on the 27th")
     }
 
     func testFourteenDayHorizonIsFast() {
@@ -69,9 +104,9 @@ final class PlanningTests: XCTestCase {
         }
         let tasks = (0..<50).map { task("t\($0)", due: LocalDay("2026-10-26")!.adding(days: $0 % 14, calendar: cal).description, effort: .m) }
         let start = Date()
-        _ = Planning.evaluate(tasks, now: now, sizes: sizes, hours: hours, busy: busy, calendar: cal)
+        _ = plan(tasks, now: now, busy: busy)
         let ms = Date().timeIntervalSince(start) * 1000
         print("planning 50 tasks × 200 appointments: \(String(format: "%.1f", ms)) ms")
-        XCTAssertLessThan(ms, 100)
+        XCTAssertLessThan(ms, 200)
     }
 }

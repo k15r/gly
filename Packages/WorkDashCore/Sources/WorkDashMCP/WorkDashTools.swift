@@ -108,12 +108,21 @@ public final class WorkDashTools: @unchecked Sendable {
                 let range = DateInterval(start: today.interval().start, end: today.adding(days: horizon).interval().end)
                 let upcoming = try await reader.read { try TaskQueries.upcoming($0, today: today, horizon: horizon) }
                 let busy = overrides.busy(calendar.appointments(overlapping: range, calendarIDs: visible))
-                let items = Planning.evaluate(tasks.map(\.task) + upcoming, now: now(), sizes: sizes, hours: hours, busy: busy)
-                result["work_on"] = .array(items.map { item in
+                let plan = Planning.plan(tasks.map(\.task) + upcoming, now: now(), sizes: sizes, hours: hours, busy: busy)
+                result["today"] = .array(plan.today.map { item in
                     guard case .object(var o) = encode(item.task) else { return .null }
-                    o["state"] = .string(item.state.rawValue)
+                    o["reason"] = .string(item.reason.rawValue)
                     o["effort_minutes"] = item.effortMinutes.map { .int($0) } ?? .null
-                    o["free_until_due_minutes"] = .int(Int(item.freeMinutes.rounded()))
+                    o["needed_today_minutes"] = item.neededToday.map { .int($0) } ?? .null
+                    o["cant_fit"] = .bool(item.cantFit)
+                    return .object(o)
+                })
+                result["needed_today_minutes"] = .int(plan.neededMinutes)
+                result["without_estimate"] = .int(plan.withoutEstimate)
+                result["coming_up"] = .array(plan.comingUp.map { item in
+                    guard case .object(var o) = encode(item.task) else { return .null }
+                    o["effort_minutes"] = item.effortMinutes.map { .int($0) } ?? .null
+                    o["start_by"] = item.startBy.map { .string($0.description) } ?? .null
                     return .object(o)
                 })
             }

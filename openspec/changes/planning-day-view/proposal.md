@@ -18,16 +18,16 @@ The day view shows only what's due today. That's too late for planning: a task d
     - tentative and unanswered appointments count half ("maybe")
     - accepted appointments block
   - **Override:** a small menu on each appointment in the day view: *blocks*, *optional* (counts half) or *ignore*, for this occurrence or for the whole series.
-- **"Work on" in the day view:**
-  - Besides the tasks due today, the day view lists the open tasks due within the next *N* days. *N* defaults to 5, is configurable, and can be switched in the header.
-  - Each task's effort is compared on its own with the free time left until its due date. The result is a state: *ok*, *start today*, *tight* or *late*. The list is sorted by urgency.
-  - Tasks without an effort appear without a state, marked "no estimate".
+- **"Today" and "Coming up" in the day view:**
+  - **Today** holds the tasks that are overdue, due today, or need work today: *effort − free time after today until the due date*, shown as "today ≥ 2h". Tasks that can't be finished even with all the time left are marked "can't fit". The header compares the sum needed today with today's free time.
+  - **Coming up** holds the other open tasks due within the next *N* days (default 5, configurable, switchable in the day view), each with "start by <day>". Tasks without an effort are marked "no estimate".
+  - Tasks are evaluated one by one, without sharing free time. (Changed from per-task states after manual testing: the states didn't say what has to happen today.)
 - **Capacity in the header:** today's free time, as a number and a small bar.
 - **Appointment identity (foundation for annotations):** an override is stored as a minimal annotation, with the appointment key and a snapshot (title, start, end, calendar).
   - The key and the two-stage matching follow foundation spike D4: exact key, then fuzzy matching on the snapshot, key migration on every calendar change, and the states `active`, `cancelled` and `gone`.
   - Series overrides follow series splits.
 - **MCP:**
-  - `get_schedule` also returns the free time and the "Work on" list with states.
+  - `get_schedule` also returns the free time, the Today list (reason, work needed today, can't fit) and Coming up (start by).
   - The task tools read and write `effort`.
 
 Not in this change: appointment notes, prep view, series tag rules and appointment leaves in the tag tree (next change: annotations proper); a time-grid layout of the day; allocating free time across tasks; per-weekday working hours; local appointments.
@@ -36,13 +36,15 @@ Not in this change: appointment notes, prep view, series tag rules and appointme
 
 ### New Capabilities
 
-- `daily-planning`: effort sizes, working hours, how appointments block time, free time per day, the horizon and the "Work on" list with its states, and the capacity indicator.
+- `daily-planning`: effort sizes, working hours, how appointments block time, free time per day, the Today list with the work needed today and today's load, Coming up with start-by days, and the capacity indicator.
 - `appointment-annotations`: stable identity of calendar appointments (key, snapshot, matching, life-cycle states) and blocking overrides per occurrence and per series. Notes, prep view and series tags will extend it later.
 
 ### Modified Capabilities
 
 - `tasks`: tasks get an effort field, shown on rows and editable on the task page.
-- `agent-access`: `get_schedule` includes free time and the "Work on" list, and the task tools carry `effort`.
+- `agent-access`: `get_schedule` includes free time, Today and Coming up, and the task tools carry `effort`.
+- `day-view`: on today, the task section becomes the Today list (overdue, due today, needs work today).
+- `calendar-sources`: the per-account refresh indicator moves into the refresh button's tooltip, which makes room for the capacity header.
 
 ## Impact
 

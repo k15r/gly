@@ -66,9 +66,9 @@ final class PlanningModel {
         return FreeTime.minutes(from: from, to: day.interval().end, busy: overrides.busy(appointments), hours: hours)
     }
 
-    /// States for tasks, each on its own against the free time until its deadline.
-    func evaluate(_ tasks: [TaskItem], now: Date, appointments: [Appointment]) -> [WorkOnItem] {
-        Planning.evaluate(tasks, now: now, sizes: sizes, hours: hours, busy: overrides.busy(appointments))
+    /// Today and Coming up, each task on its own against the free time until its deadline.
+    func plan(_ tasks: [TaskItem], now: Date, appointments: [Appointment]) -> DayPlan {
+        Planning.plan(tasks, now: now, sizes: sizes, hours: hours, busy: overrides.busy(appointments))
     }
 
     /// The range "Work on" needs appointments for: today through the horizon.
@@ -77,16 +77,13 @@ final class PlanningModel {
     }
 }
 
-extension WorkOnState {
-    var label: String {
-        switch self {
-        case .late: "late"
-        case .tight: "tight"
-        case .startToday: "start today"
-        case .ok: "ok"
-        case .noEstimate: "no estimate"
-        }
-    }
+import SwiftUI
+
+/// A short planning note on a task row ("today ≥ 2h", "start by Wed", "can't fit").
+struct PlanNote: Equatable {
+    let text: String
+    let color: Color
+    let help: String
 }
 
 extension Effort {

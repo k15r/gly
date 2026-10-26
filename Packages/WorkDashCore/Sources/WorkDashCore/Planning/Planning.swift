@@ -15,32 +15,43 @@ public struct EffortSizes: Equatable, Codable {
     public subscript(_ e: Effort) -> Int { minutes[e] ?? 0 }
 }
 
-/// Urgency of a task relative to its effort and the free time until its due date (specs/daily-planning "Work on states").
-public enum WorkOnState: String, Codable, CaseIterable, Comparable {
-    case late, tight, startToday = "start_today", ok, noEstimate = "no_estimate"
-    var rank: Int { WorkOnState.allCases.firstIndex(of: self)! }
-    public static func < (a: WorkOnState, b: WorkOnState) -> Bool { a.rank < b.rank }
+/// Why a task is on today's list (specs/daily-planning "Today list").
+public enum TodayReason: String, Codable, Comparable {
+    case overdue, dueToday = "due_today", needsWork = "needs_work"
+    var rank: Int { switch self { case .overdue: 0; case .dueToday: 1; case .needsWork: 2 } }
+    public static func < (a: TodayReason, b: TodayReason) -> Bool { a.rank < b.rank }
 }
 
-public struct WorkOnItem: Equatable, Identifiable {
+public struct TodayItem: Equatable, Identifiable {
+    public var id: String { task.id }
+    public let task: TaskItem
+    public let reason: TodayReason
+    public let effortMinutes: Int?
+    /// Minimum work needed today to finish by the due date (nil without estimate).
+    public let neededToday: Int?
+    /// Even all free time until the due date isn't enough.
+    public let cantFit: Bool
+}
+
+public struct ComingUpItem: Equatable, Identifiable {
     public var id: String { task.id }
     public let task: TaskItem
     public let effortMinutes: Int?
-    /// Free working minutes from now until the task's deadline.
-    public let freeMinutes: Double
-    public let state: WorkOnState
+    /// Last day to start and still finish (nil without estimate).
+    public let startBy: LocalDay?
+}
+
+public struct DayPlan: Equatable {
+    public var today: [TodayItem] = []
+    public var comingUp: [ComingUpItem] = []
+    /// Sum of work needed today.
+    public var neededMinutes: Int = 0
+    /// Today-list tasks without an estimate.
+    public var withoutEstimate: Int = 0
+    public init() {}
 }
 
 public enum Planning {
-    /// late < effort ≤ tight < 1.5× ≤ start today < 2× (or due tomorrow) ≤ ok.
-    public static func state(effortMinutes: Int?, freeMinutes: Double, dueTomorrow: Bool) -> WorkOnState {
-        guard let e = effortMinutes.map(Double.init) else { return .noEstimate }
-        if freeMinutes < e { return .late }
-        if freeMinutes < 1.5 * e { return .tight }
-        if freeMinutes < 2 * e || dueTomorrow { return .startToday }
-        return .ok
-    }
-
     /// The moment a task must be done by: its due time, or the end of its due day.
     public static func deadline(of task: TaskItem, calendar: Calendar = .current) -> Date? {
         guard let due = task.due, let day = LocalDay(due.day) else { return nil }
@@ -48,23 +59,64 @@ public enum Planning {
         return day.interval(in: calendar).end
     }
 
-    /// Evaluates each task on its own (no sharing of free time), sorted by state, due date, priority.
-    public static func evaluate(_ tasks: [TaskItem], now: Date, sizes: EffortSizes, hours: WorkingHours,
-                                busy: [(interval: DateInterval, weight: BlockingWeight)], calendar: Calendar = .current) -> [WorkOnItem] {
-        let tomorrow = LocalDay(date: now, calendar: calendar).adding(days: 1, calendar: calendar).description
-        let items = tasks.compactMap { task -> WorkOnItem? in
-            guard let deadline = deadline(of: task, calendar: calendar) else { return nil }
-            let free = FreeTime.minutes(from: now, to: deadline, busy: busy, hours: hours, calendar: calendar)
+    /// Plans today (design Q7): each task on its own against the free time until its deadline.
+    public static func plan(_ tasks: [TaskItem], now: Date, sizes: EffortSizes, hours: WorkingHours,
+                            busy: [(interval: DateInterval, weight: BlockingWeight)], calendar: Calendar = .current) -> DayPlan {
+        let today = LocalDay(date: now, calendar: calendar)
+        let tomorrowStart = today.adding(days: 1, calendar: calendar).interval(in: calendar).start
+        func free(_ from: Date, _ to: Date) -> Double { FreeTime.minutes(from: from, to: to, busy: busy, hours: hours, calendar: calendar) }
+
+        var plan = DayPlan()
+        var seen = Set<String>()
+        for task in tasks where seen.insert(task.id).inserted {
+            guard let due = task.due, let dueDay = LocalDay(due.day), let deadline = deadline(of: task, calendar: calendar) else { continue }
             let effort = task.effort.map { sizes[$0] }
-            return WorkOnItem(task: task, effortMinutes: effort, freeMinutes: free,
-                              state: state(effortMinutes: effort, freeMinutes: free, dueTomorrow: task.due?.day == tomorrow))
+            let reason: TodayReason? = dueDay < today ? .overdue : (dueDay == today ? .dueToday : nil)
+            if let e = effort {
+                let freeUntil = free(now, deadline)
+                let needed = reason != nil ? e : max(0, e - Int(free(tomorrowStart, deadline).rounded(.down)))
+                if reason != nil || needed > 0 {
+                    plan.today.append(TodayItem(task: task, reason: reason ?? .needsWork, effortMinutes: e, neededToday: needed,
+                                                cantFit: Double(e) > freeUntil))
+                    plan.neededMinutes += needed
+                } else {
+                    plan.comingUp.append(ComingUpItem(task: task, effortMinutes: e,
+                                                      startBy: startBy(effort: e, deadline: deadline, today: today, dueDay: dueDay, now: now, free: free, calendar: calendar)))
+                }
+            } else if let reason {
+                plan.today.append(TodayItem(task: task, reason: reason, effortMinutes: nil, neededToday: nil, cantFit: false))
+                plan.withoutEstimate += 1
+            } else {
+                plan.comingUp.append(ComingUpItem(task: task, effortMinutes: nil, startBy: nil))
+            }
         }
-        return items.sorted { a, b in
-            if a.state != b.state { return a.state < b.state }
-            let da = a.task.due?.day ?? "", dbb = b.task.due?.day ?? ""
-            if da != dbb { return da < dbb }
-            return a.task.priority > b.task.priority
+        plan.today.sort { a, b in
+            if a.cantFit != b.cantFit { return a.cantFit }
+            if a.reason != b.reason { return a.reason < b.reason }
+            if a.task.priority != b.task.priority { return a.task.priority > b.task.priority }
+            return (a.task.due?.day ?? "") < (b.task.due?.day ?? "")
         }
+        plan.comingUp.sort { a, b in
+            switch (a.startBy, b.startBy) {
+            case let (x?, y?) where x != y: return x < y
+            case (nil, _?): return false
+            case (_?, nil): return true
+            default: return (a.task.due?.day ?? "") < (b.task.due?.day ?? "")
+            }
+        }
+        return plan
+    }
+
+    /// The latest day from which the free time until the deadline still covers the effort.
+    static func startBy(effort: Int, deadline: Date, today: LocalDay, dueDay: LocalDay, now: Date,
+                        free: (Date, Date) -> Double, calendar: Calendar) -> LocalDay? {
+        var day = dueDay
+        while day >= today {
+            let from = day == today ? now : day.interval(in: calendar).start
+            if free(from, deadline) >= Double(effort) { return day }
+            day = day.adding(days: -1, calendar: calendar)
+        }
+        return nil
     }
 }
 

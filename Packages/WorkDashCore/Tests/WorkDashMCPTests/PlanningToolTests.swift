@@ -42,12 +42,19 @@ final class PlanningToolTests: XCTestCase {
         XCTAssertFalse(isError, text)
         XCTAssertEqual(list(v, "appointments").compactMap { if case .string(let s)? = field($0, "counts_as") { s } else { nil } }, ["blocks", "maybe", "free"])
         XCTAssertEqual(field(v, "free_minutes"), .int(480 - 120 - 30))
-        let work = list(v, "work_on")
-        XCTAssertEqual(work.count, 1)
-        XCTAssertEqual(field(work.first, "effort"), "L")
-        // L = 8 h; free until tomorrow evening = 5.5 h today + 8 h tomorrow = 13.5 h: ≥ 1.5× (12 h), < 2× (16 h) → start today.
-        XCTAssertEqual(field(work.first, "state"), "start_today")
-        XCTAssertEqual(field(work.first, "free_until_due_minutes"), .int(810))
+        // L = 8 h due tomorrow; free after today until tomorrow evening = 8 h → nothing needed today → coming up, start by tomorrow.
+        XCTAssertEqual(list(v, "today").count, 0)
+        let coming = list(v, "coming_up")
+        XCTAssertEqual(coming.count, 1)
+        XCTAssertEqual(field(coming.first, "effort"), "L")
+        XCTAssertEqual(field(coming.first, "start_by"), .string(tomorrow))
+        XCTAssertEqual(field(v, "needed_today_minutes"), .int(0))
+        // An M task due today goes into today with its whole effort.
+        _ = await call("create_task", ["title": "Today thing", "due_date": .string(LocalDay(date: now).description), "effort": "M"])
+        let (v2, _, _) = await call("get_schedule")
+        XCTAssertEqual(field(list(v2, "today").first, "reason"), "due_today")
+        XCTAssertEqual(field(list(v2, "today").first, "needed_today_minutes"), .int(240))
+        XCTAssertEqual(field(list(v2, "today").first, "cant_fit"), .bool(false))
     }
 
     func testAgentEstimatesATask() async throws {

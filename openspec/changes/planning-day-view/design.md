@@ -127,18 +127,20 @@ This covers "today from now on" (from = now) and "until due" (to = end of the du
 
 ### Q7: Planning model
 
-`Planning.workOn(tasks, today, now, horizon, sizes, workingHours, freeTime: (Date, Date) -> Minutes) -> [WorkOnItem]`:
-- `WorkOnItem` has the task, the effort in minutes, the free minutes until due, and the state.
-- **Thresholds:**
-  - late: free < effort
-  - tight: free < 1.5 × effort
-  - start today: free < 2 × effort, or due tomorrow
-  - ok: otherwise
-- **Sorting:** state, then due date, then priority.
-
-Tasks come from a new query `TaskQueries.upcoming(day: today, horizon: N)`: open tasks with due date from tomorrow to today + N, and snoozed tasks only from their snooze date. Due-today and overdue tasks keep their existing section, but get states too, so the most urgent ones are visible there.
+`Planning.plan(tasks, now, sizes, hours, busy) -> DayPlan`:
+- **Input tasks:** due-today and overdue tasks (from `tasksForDay`), plus `TaskQueries.upcoming(day: today, horizon: N)` (open tasks due tomorrow…today+N; snoozed only from their snooze date).
+- **Per task with effort `e`, deadline `d`** (due time, or the end of the due day):
+  - `freeUntil` = free time from now to `d`
+  - `freeAfterToday` = free time from tomorrow to `d`
+  - **needed today** = `e` for overdue and due-today tasks, otherwise `max(0, e − freeAfterToday)`
+  - **can't fit** = `e > freeUntil`
+- **Today list:** overdue, due today, or needed > 0. Sorted by can't fit, overdue, due today, needs work, then priority, then due date.
+- **Load:** the sum of needed-today minutes, plus the number of tasks without an estimate.
+- **Coming up:** the rest, each with **start by** = the latest day *D* (today … due day) where the free time from *D* (from now for today) to `d` is still ≥ `e`. Sorted by start-by, then due; tasks without effort last.
 
 The appointments for the horizon come from one `EventSource.appointments(overlapping: today…today+N)` call, together with the annotations and series rules from the store.
+
+**Changed after manual testing:** the first version gave each task a state (late, tight, start today, ok). That didn't say what has to happen *today*, so it was replaced by "needed today" and "start by". Subtasks (next change) will make "effort" mean "what's left": the larger of the parent's estimate and the sum of its subtasks, minus the done subtasks.
 
 ### Q8: Settings
 
@@ -149,7 +151,7 @@ The app's Settings gets a "Planning" tab next to "Agents".
 ### Q9: UI
 
 - **Day view header:** "free 3h 30m" plus a capacity bar (free over working length), and a horizon menu (3, 5, 7, 14 days).
-- **Sections:** "Due today" (with states), then "Work on", each row showing the effort chip, due date and a state badge.
+- **Sections:** **Today**, with a load header ("needs 7h · free 5h 30m · ⚠ 1h 30m short"; rows show overdue, due today or "today ≥ …", and "can't fit"), then **Coming up** with the horizon picker (rows show "start by <day>" or "no estimate").
 - **Appointment rows:**
   - a small menu button and a context menu: Automatic / Blocks / Optional / Ignore, × This occurrence / Whole series
   - an icon showing a non-automatic weight (dimmed for ignore, half-filled for optional)
@@ -159,7 +161,10 @@ The app's Settings gets a "Planning" tab next to "Agents".
 
 ### Q10: MCP
 
-- **`get_schedule`** adds per appointment `counts_as` (`blocks`, `maybe`, `free`) and `reason`, plus `free_minutes`. For today it adds `work_on: [{task…, effort, free_until_due_minutes, state}]`.
+- **`get_schedule`** adds per appointment `counts_as` (`blocks`, `maybe`, `free`) and `reason`, plus `free_minutes`. For today it adds:
+  - `today: [{task…, reason (overdue/due_today/needs_work), effort_minutes, needed_today_minutes, cant_fit}]`
+  - `needed_today_minutes`, `without_estimate`
+  - `coming_up: [{task…, effort_minutes, start_by}]`
 - **Task encoding** adds `effort`; `create_task` and `update_task` accept it.
 - Tool descriptions explain the sizes and states.
 
@@ -168,7 +173,7 @@ The app's Settings gets a "Planning" tab next to "Agents".
 - **[Exchange doesn't expose availability or my participation status]** → Probed first (task 1.1). The fallback assumes busy and accepted, so the appointment blocks: planning stays safe and less precise. The user can override anything.
 - **[Fuzzy matching attaches an annotation to the wrong appointment]** → Exact title, organizer, calendar and day are all required. Several candidates are never guessed; they're asked about. Everything is logged and undoable.
 - **[Series rules matching unrelated series with the same title]** → Calendar and organizer must match too. Rare in practice; the user can set an occurrence override against it.
-- **[States per task overstate free time when several tasks compete]** → An accepted simplification (user choice). The header's capacity bar keeps the total in view.
+- **[Per-task evaluation overstates free time when several tasks compete]** → An accepted simplification (user choice). The Today header shows the total needed against today's free time.
 - **[EventKit range query cost for 14 days]** → One query per recompute, already debounced. Measured in task 2.4.
 
 ## Migration Plan

@@ -37,8 +37,8 @@ struct TaskRow: View {
     let task: TaskItem
     var overdue = false
     var onEdit: () -> Void
-    /// Planning state shown as a badge (day view).
-    var state: WorkOnState? = nil
+    /// Planning note (day view).
+    var note: PlanNote? = nil
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
 
@@ -82,7 +82,7 @@ struct TaskRow: View {
                     if overdue { Text("overdue").font(.caption.bold()).foregroundStyle(.red) }
                     if let due = task.due { Text(Self.dueText(due)).font(.caption).foregroundStyle(.secondary) }
                     if let effort = task.effort { EffortChip(effort: effort) }
-                    if let state { StateBadge(state: state) }
+                    if let note, !note.text.isEmpty { Text(note.text).font(.caption.bold()).foregroundStyle(note.color).help(note.help) }
                     if task.isSnoozed(today: LocalDay(date: Date())), let until = task.snoozedUntil.flatMap(LocalDay.init) {
                         Label("until \(DayView.title(for: until))", systemImage: "moon.zzz").font(.caption).foregroundStyle(.blue)
                     }
@@ -166,17 +166,6 @@ struct EffortChip: View {
         Text(effort.label).font(.caption2.bold()).monospaced().padding(.horizontal, 4).padding(.vertical, 1)
             .overlay(RoundedRectangle(cornerRadius: 3).stroke(.secondary.opacity(0.5)))
             .foregroundStyle(.secondary).help("Effort")
-    }
-}
-
-/// Planning state badge (specs/daily-planning "Work on states").
-struct StateBadge: View {
-    let state: WorkOnState
-    var color: Color {
-        switch state { case .late: .red; case .tight: .orange; case .startToday: .blue; case .ok: .green; case .noEstimate: .secondary }
-    }
-    var body: some View {
-        Text(state.label).font(.caption.bold()).foregroundStyle(color)
     }
 }
 
