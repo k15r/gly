@@ -233,7 +233,12 @@ struct AppointmentRow: View {
     private var blockingMenu: some View {
         let (weight, reason) = planning.classify(entry.appointment)
         let symbol: String = switch weight { case .blocks: "circle.fill"; case .maybe: "circle.lefthalf.filled"; case .free: "circle" }
-        let reasonText: String = switch reason { case .automatic: "automatic"; case .occurrenceOverride: "set for this occurrence"; case .seriesOverride: "set for the series" }
+        let seriesValue = planning.overrides.series.first { $0.matches(entry.appointment) && $0.blocking != nil }?.blocking
+        let reasonText: String = switch reason {
+        case .automatic: "automatic"
+        case .occurrenceOverride: seriesValue == nil ? "set for this occurrence" : "set for this occurrence (overrides the series setting “\(seriesValue!.rawValue)”)"
+        case .seriesOverride: "set for the series"
+        }
         return Menu {
             Section("This occurrence") { options(.occurrence) }
             if entry.appointment.isRecurring { Section("Whole series") { options(.series) } }
@@ -244,12 +249,22 @@ struct AppointmentRow: View {
         .help("Counts as \(weight == .maybe ? "half (maybe)" : weight.rawValue) for free time – \(reasonText)")
     }
 
+    /// The four choices of one scope, with a checkmark at the one currently set.
     @ViewBuilder
     private func options(_ scope: BlockingScope) -> some View {
-        Button("Automatic") { set(scope, nil) }
-        Button("Blocks") { set(scope, .blocks) }
-        Button("Optional (counts half)") { set(scope, .optional) }
-        Button("Ignore") { set(scope, .ignore) }
+        let current: BlockingOverride? = scope == .occurrence
+            ? planning.overrides.occurrence[entry.appointment.identity.occurrenceKey]
+            : planning.overrides.series.first { $0.matches(entry.appointment) && $0.blocking != nil }?.blocking
+        option("Automatic", nil, scope, current)
+        option("Blocks", .blocks, scope, current)
+        option("Optional (counts half)", .optional, scope, current)
+        option("Ignore", .ignore, scope, current)
+    }
+
+    private func option(_ title: String, _ value: BlockingOverride?, _ scope: BlockingScope, _ current: BlockingOverride?) -> some View {
+        Button { set(scope, value) } label: {
+            if current == value { Label(title, systemImage: "checkmark") } else { Text(title) }
+        }
     }
 
     private func set(_ scope: BlockingScope, _ value: BlockingOverride?) {

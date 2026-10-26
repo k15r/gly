@@ -12,18 +12,18 @@ Neutral test data only (no real names).
 - [x] B1 Settings (⌘,) → Planning: working hours 09:00–17:00, sizes XS 30m, S 2h, M 4h, L 8h, XL 24h, look-ahead 5 days.
 - [x] B2 Change working hours to 08:00–16:00 → the day view's "free …" changes at once; L and XL follow the shorter day; "Default" resets a size.
 - [x] B3 Right-click a task → Effort → M → an `M` chip appears on the row; ⌘Z removes it ("Effort of …").
-- [ ] B4 On a task page, the Effort picker sets and clears the effort; one ⌘Z per change.
+- [x] B4 On a task page, the Effort picker sets and clears the effort; one ⌘Z per change.
 
 ## C. Day view (task 5.3)
 
-- [ ] C1 The header shows "free Xh Ym" and a bar; on a busy day the bar is short. Viewing tomorrow shows tomorrow's free time.
-- [ ] C2 "Work on" lists open tasks due in the next 5 days, sorted late → tight → start today → ok → no estimate; the picker switches to 3/7/14 days and the choice is kept.
-- [ ] C3 Hover a "Work on" row → tooltip "Needs ~…, free until due: …". Tasks due today show a state badge too.
+- [x] C1 The header shows "free Xh Ym" and a bar; on a busy day the bar is short. Viewing tomorrow shows tomorrow's free time.
+- [x] C2 "Work on" lists open tasks due in the next 5 days, sorted late → tight → start today → ok → no estimate; the picker switches to 3/7/14 days and the choice is kept.
+- [x] C3 Hover a "Work on" row → tooltip "Needs ~…, free until due: …". Tasks due today show a state badge too.
 - [ ] C4 Decline a meeting in Outlook (or Apple Calendar) → once it reaches the calendar, free time and states update by themselves.
 
 ## D. Appointment overrides (task 5.4)
 
-- [ ] D1 Each appointment row has a small circle (filled = blocks, half = maybe, empty = free). Its tooltip says why ("automatic" or "set for …").
+- [x] D1 Each appointment row has a small circle (filled = blocks, half = maybe, empty = free). Its tooltip says why ("automatic" or "set for …").
 - [ ] D2 Circle menu → This occurrence → Ignore → the circle turns empty/accented, free time grows; the next week's occurrence still blocks. ⌘Z undoes it.
 - [ ] D3 On a recurring meeting: Whole series → Optional → every occurrence counts half; a single occurrence set to Blocks overrides the series. Non-recurring meetings don't offer "Whole series".
 - [ ] D4 Automatic → back to the calendar's classification.
