@@ -13,12 +13,12 @@ Neutral test data only (no real names). Setup: two pages "Goals" tagged `person/
 
 ## B. Broken links (task 3.1)
 
-- [ ] B1 On "Hub", the link to the deleted bob "Goals" is struck through; its tooltip mentions ⌘-click.
-- [ ] B2 ⌘-click it in edit mode → menu: "Restore “Goals”", a greyed "deleted … by Claude Code", "Link to “Goals · person/alex” instead", "Show in Trash"; Esc closes it without changes.
-- [ ] B3 Choose "Link to … instead" → this link now points to the alex page; the bob page stays in the Trash; one ⌘Z brings the old link back.
-- [ ] B4 In read mode, click the broken link → the same menu at the pointer; "Restore “Goals”" → the page is back and every link to it works again.
-- [ ] B5 "Show in Trash" → the Trash opens with that page selected.
-- [ ] B6 Missing links (`[[Nothing here]]`) still show their old menu (New page / New task).
+- [x] B1 On "Hub", the link to the deleted bob "Goals" is struck through; its tooltip mentions ⌘-click.
+- [x] B2 ⌘-click it in edit mode → menu: "Restore “Goals”", a greyed "deleted … by Claude Code", "Link to “Goals · person/alex” instead", "Show in Trash"; Esc closes it without changes.
+- [x] B3 Choose "Link to … instead" → this link now points to the alex page; the bob page stays in the Trash; one ⌘Z brings the old link back.
+- [x] B4 In read mode, click the broken link → the same menu at the pointer; "Restore “Goals”" → the page is back and every link to it works again.
+- [x] B5 "Show in Trash" → the Trash opens with that page selected.
+- [x] B6 Missing links (`[[Nothing here]]`) still show their old menu (New page / New task).
 
 ## C. Agents and history (task 4.1)
 

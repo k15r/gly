@@ -139,9 +139,9 @@ struct ContentView: View {
             NavigationSplitView {
                 List(selection: Binding(get: { nav.current }, set: { if let d = $0 { nav.go(d) } })) {
                     Label("Day", systemImage: "calendar").tag(Navigation.Destination.day)
-                    Label("Tasks", systemImage: "checklist").tag(Navigation.Destination.tasks)
-                    Label("Pages", systemImage: "doc.text").tag(Navigation.Destination.pages)
-                    TrashSidebarRow().tag(Navigation.Destination.trash)
+                    SidebarCountRow(title: "Tasks", symbol: "checklist", count: SidebarCountRow.openTasks).tag(Navigation.Destination.tasks)
+                    SidebarCountRow(title: "Pages", symbol: "doc.text", count: SidebarCountRow.pages).tag(Navigation.Destination.pages)
+                    SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
                     Section("Tags") { TagTreeView() }
                 }
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240)

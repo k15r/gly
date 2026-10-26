@@ -1,24 +1,35 @@
+import GRDB
 import SwiftUI
 import WorkDashCore
 import WorkDashEditor
 
-/// Sidebar row with the number of items deleted in the last 30 days (trash-bin T4).
-struct TrashSidebarRow: View {
+/// A sidebar row with a live count from the store (Tasks: open, Pages: all, Trash: deleted in the last 30 days).
+struct SidebarCountRow: View {
     @Environment(AppModel.self) private var app
+    let title: String
+    let symbol: String
+    let count: @Sendable (Database) throws -> Int
     @State private var live = Live<Int>()
+
     var body: some View {
         HStack {
-            Label("Trash", systemImage: "trash")
+            Label(title, systemImage: symbol)
             Spacer()
             if let n = live.value, n > 0 { Text("\(n)").foregroundStyle(.secondary).monospacedDigit() }
         }
-        // The row appears before the store is open: start (again) once it is.
-        .task(id: app.store.map(ObjectIdentifier.init)) {
-            let cutoff = Date().addingTimeInterval(-Double(TrashQueries.defaultDays) * 86400)
-            live.observe(app.store) { db in
-                try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM items WHERE kind IN ('info', 'task') AND deleted_at >= ?", arguments: [cutoff]) ?? 0
-            }
-        }
+        // The sidebar appears before the store is open: start (again) once it is.
+        .task(id: app.store.map(ObjectIdentifier.init)) { live.observe(app.store, count) }
+    }
+
+    static let openTasks: @Sendable (Database) throws -> Int = { db in
+        try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_items WHERE kind = 'task' AND status IN ('open', 'snoozed')") ?? 0
+    }
+    static let pages: @Sendable (Database) throws -> Int = { db in
+        try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_items WHERE kind = 'info'") ?? 0
+    }
+    static let recentlyDeleted: @Sendable (Database) throws -> Int = { db in
+        let cutoff = Date().addingTimeInterval(-Double(TrashQueries.defaultDays) * 86400)
+        return try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM items WHERE kind IN ('info', 'task') AND deleted_at >= ?", arguments: [cutoff]) ?? 0
     }
 }
 
