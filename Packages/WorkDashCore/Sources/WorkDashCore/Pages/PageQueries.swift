@@ -18,6 +18,7 @@ public struct LinkRef: Equatable, Hashable, Identifiable {
     public let kind: Kind
     public let id: String
     public let title: String
+    public init(kind: Kind, id: String, title: String) { self.kind = kind; self.id = id; self.title = title }
 }
 
 public enum PageQueries {

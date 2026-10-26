@@ -16,7 +16,7 @@
 
 ## 3. MCP
 
-- [ ] 3.1 Add `create_page`, `get_page`, `update_page`, `delete_page`, `search`, `get_context`, `get_tag_page`, `update_tag_page` with schemas and link-writing guidance in descriptions; extend `get_task` with `links`/`backlinks`; responses carry canonical text and `unresolved`; verify with tool tests for "Meeting notes from an agent", "Partial page update", "Agent links by title", "Unresolved link reported", "Find notes", "Context of a page", "Describe a project", "Task with links", and the tool list scenario (15 tools)
+- [x] 3.1 Add `create_page`, `get_page`, `update_page`, `delete_page`, `search`, `get_context`, `get_tag_page`, `update_tag_page` with schemas and link-writing guidance in descriptions; extend `get_task` with `links`/`backlinks`; responses carry canonical text and `unresolved`; verify with tool tests for "Meeting notes from an agent", "Partial page update", "Agent links by title", "Unresolved link reported", "Find notes", "Context of a page", "Describe a project", "Task with links", and the tool list scenario (15 tools)
 
 ## 4. App: editor
 

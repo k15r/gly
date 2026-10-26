@@ -25,6 +25,8 @@ public enum ToolDefinitions {
     ])
 
     static let taskShape = "A task is {id, title, notes, status, priority, due: {day, time?} or null, snoozed_until, tags, created_at, modified_at, modified_by}."
+    static let linkNote = "Markdown may link to pages, tasks and tags: write [[Exact Title]] (resolved if exactly one page, task or tag has that title or name) or reuse the canonical form [label](workdash://item/<id>) or [label](workdash://tag/<id>) returned by tools. Unresolved [[…]] links stay as 'missing page' links and are listed in `unresolved`. Ordinary web links ([text](https://…)) are fine too."
+    static let pageShape = "A page is {id, title, text, tags, created_at, modified_at, modified_by, links: [{id, kind, title, state}], backlinks: [{id, kind, title, excerpt}]}; kind is page, task or tag; state is live, deleted or missing."
 
     public static let all: [Tool] = [
         Tool(name: "get_schedule",
@@ -43,11 +45,11 @@ public enum ToolDefinitions {
              ]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "get_task",
-             description: "One task with all fields, by id. \(taskShape)",
+             description: "One task with all fields, by id, plus `links` (what its notes link to) and `backlinks` (what links to it). \(taskShape)",
              inputSchema: object(["id": string("Task id.")], required: ["id"]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "create_task",
-             description: "Create a task. Only the title is required; new tasks are open with priority none unless given. Returns the created task. \(dateNote)",
+             description: "Create a task. Only the title is required; new tasks are open with priority none unless given. Returns the created task. \(dateNote) \(linkNote)",
              inputSchema: object([
                 "title": string("Short, actionable title."),
                 "notes": string("Details (markdown)."),
@@ -58,7 +60,7 @@ public enum ToolDefinitions {
              ], required: ["title"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
         Tool(name: "update_task",
-             description: "Change a task. Only given fields change; all changes are one step in the history. tags replaces the whole tag set. Set due_date to null to remove the due date. status: done = complete, open = reopen, dropped = won't do, snoozed = hide from the day view until snoozed_until (required then). Returns the updated task. \(dateNote)",
+             description: "Change a task. Only given fields change; all changes are one step in the history. tags replaces the whole tag set. Set due_date to null to remove the due date. status: done = complete, open = reopen, dropped = won't do, snoozed = hide from the day view until snoozed_until (required then). Returns the updated task. \(dateNote) \(linkNote)",
              inputSchema: object([
                 "id": string("Task id."),
                 "title": string("New title."),
@@ -79,5 +81,56 @@ public enum ToolDefinitions {
              description: "Existing tags with their number of open tasks (unused tags included), optionally only those starting with a prefix. Use it to reuse existing tags instead of inventing new ones.",
              inputSchema: object(["prefix": string("Only tags starting with this text, e.g. \"person/\".")]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
+        Tool(name: "create_page",
+             description: "Create an info page (notes, knowledge, meeting notes). Only the title is required. Organize pages with tags (no folders). Returns the page. \(linkNote) \(pageShape)",
+             inputSchema: object([
+                "title": string("Page title."),
+                "text": string("Page text (markdown)."),
+                "tags": tagsSchema,
+             ], required: ["title"]),
+             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
+        Tool(name: "get_page",
+             description: "One page by id with its text, tags, links and backlinks. \(pageShape)",
+             inputSchema: object(["id": string("Page id.")], required: ["id"]),
+             annotations: .init(readOnlyHint: true, openWorldHint: false)),
+        Tool(name: "update_page",
+             description: "Change a page. Only given fields change; one step in the history. text replaces the whole text; tags replaces the tag set. Returns the page. \(linkNote)",
+             inputSchema: object([
+                "id": string("Page id."),
+                "title": string("New title (links to the page follow the rename)."),
+                "text": string("New text (markdown)."),
+                "tags": tagsSchema,
+             ], required: ["id"]),
+             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
+        Tool(name: "delete_page",
+             description: "Delete a page. It disappears from all views; its data stays in WorkDash's history. Links to it show as 'link target deleted'.",
+             inputSchema: object(["id": string("Page id.")], required: ["id"]),
+             annotations: .init(readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false)),
+        Tool(name: "search",
+             description: "Full-text search over pages, tasks and tags (titles, texts, tag descriptions). Case- and accent-insensitive; the last word matches as a prefix. Returns {results: [{id, kind, title, excerpt}]}, grouped by kind (pages, tasks, tags), best matches first within each kind.",
+             inputSchema: object([
+                "query": string("Words to search for."),
+                "kind": string("Only this kind.", enum: ["page", "task", "tag"]),
+                "limit": .object(["type": "integer", "minimum": 1, "maximum": 100, "description": "Maximum results per kind (default 10)."]),
+             ], required: ["query"]),
+             annotations: .init(readOnlyHint: true, openWorldHint: false)),
+        Tool(name: "get_context",
+             description: "Everything connected to a page, task or tag: `links` (what its text links to), `backlinks` (what links to it) and, for tags, `tagged` items (open tasks, pages, finished tasks). Give either id (page or task) or tag (tag name).",
+             inputSchema: object([
+                "id": string("Page or task id."),
+                "tag": string("Tag name, e.g. \"project/atlas\"."),
+             ]),
+             annotations: .init(readOnlyHint: true, openWorldHint: false)),
+        Tool(name: "get_tag_page",
+             description: "A tag's page: its markdown description and everything tagged with it or below it, grouped as open_tasks, pages and finished_tasks. Works for group names like \"person\" too. \(taskShape)",
+             inputSchema: object(["name": string("Tag name, e.g. \"project/atlas\".")], required: ["name"]),
+             annotations: .init(readOnlyHint: true, openWorldHint: false)),
+        Tool(name: "update_tag_page",
+             description: "Replace a tag's page description (markdown). Creates the tag if it doesn't exist. \(linkNote)",
+             inputSchema: object([
+                "name": string("Tag name."),
+                "text": string("New description (markdown)."),
+             ], required: ["name", "text"]),
+             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
     ]
 }

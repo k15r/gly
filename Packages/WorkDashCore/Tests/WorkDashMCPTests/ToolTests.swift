@@ -48,7 +48,8 @@ final class ToolTests: XCTestCase {
 
     func testToolListHasAllSevenWithSchemas() {
         let names = ToolDefinitions.all.map(\.name)
-        XCTAssertEqual(names, ["get_schedule", "list_tasks", "get_task", "create_task", "update_task", "delete_task", "list_tags"])
+        XCTAssertEqual(names, ["get_schedule", "list_tasks", "get_task", "create_task", "update_task", "delete_task", "list_tags",
+                               "create_page", "get_page", "update_page", "delete_page", "search", "get_context", "get_tag_page", "update_tag_page"])
         for tool in ToolDefinitions.all {
             XCTAssertFalse(tool.description?.isEmpty ?? true, tool.name)
             guard case .object(let schema) = tool.inputSchema else { return XCTFail("\(tool.name) schema") }
@@ -64,7 +65,7 @@ final class ToolTests: XCTestCase {
         for key in ["created_at", "modified_at"] {
             json = json.replacingOccurrences(of: #""\#(key)":"[^"]*""#, with: #""\#(key)":"T""#, options: .regularExpression)
         }
-        XCTAssertEqual(json, #"{"created_at":"T","due":{"day":"2026-10-29","time":"14:00"},"id":"\#(id)","modified_at":"T","modified_by":"user@mac","notes":"","priority":"high","snoozed_until":null,"status":"open","tags":["project/atlas"],"title":"Send report"}"#)
+        XCTAssertEqual(json, #"{"backlinks":[],"created_at":"T","due":{"day":"2026-10-29","time":"14:00"},"id":"\#(id)","links":[],"modified_at":"T","modified_by":"user@mac","notes":"","priority":"high","snoozed_until":null,"status":"open","tags":["project/atlas"],"title":"Send report"}"#)
     }
 
     // MARK: 3.3 read tools
@@ -267,7 +268,7 @@ final class ToolTests: XCTestCase {
         XCTAssertNil(note)
 
         let list = await reply(server, #"{"jsonrpc":"2.0","id":"a","method":"tools/list"}"#)
-        XCTAssertEqual(((list?["result"] as? [String: Any])?["tools"] as? [Any])?.count, 7)
+        XCTAssertEqual(((list?["result"] as? [String: Any])?["tools"] as? [Any])?.count, 15)
 
         let ping = await reply(server, #"{"jsonrpc":"2.0","id":2,"method":"ping"}"#)
         XCTAssertNotNil(ping?["result"])

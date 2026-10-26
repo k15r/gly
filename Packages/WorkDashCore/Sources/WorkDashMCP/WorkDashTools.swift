@@ -45,11 +45,19 @@ public final class WorkDashTools: @unchecked Sendable {
             switch name {
             case "get_schedule": value = try await getSchedule(args)
             case "list_tasks": value = try listTasks(args)
-            case "get_task": value = try encode(task(args.requiredString("id")))
+            case "get_task": value = try taskWithLinks(args.requiredString("id"))
             case "list_tags": value = try listTags(args)
             case "create_task": value = try createTask(args, writer: writer(client: client))
             case "update_task": value = try updateTask(args, writer: writer(client: client))
             case "delete_task": value = try deleteTask(args, writer: writer(client: client))
+            case "create_page": value = try createPage(args, writer: writer(client: client))
+            case "get_page": value = try pageValue(args.requiredString("id"))
+            case "update_page": value = try updatePage(args, writer: writer(client: client))
+            case "delete_page": value = try deletePage(args, writer: writer(client: client))
+            case "search": value = try search(args)
+            case "get_context": value = try context(args)
+            case "get_tag_page": value = try tagPage(args)
+            case "update_tag_page": value = try updateTagPage(args, writer: writer(client: client))
             default: throw ToolError("Unknown tool \(name).")
             }
             return CallTool.Result(content: [Self.text(Self.json(value))], structuredContent: Optional.some(value))
@@ -130,8 +138,8 @@ public final class WorkDashTools: @unchecked Sendable {
                               priority: try args.priority("priority") ?? .none,
                               due: try args.due(),
                               tags: try args.strings("tags") ?? [])
-        let id = try perform(.createTask(draft), writer: writer)
-        return encode(try task(id))
+        let ok = try performOK(.createTask(draft), writer: writer)
+        return withUnresolved(encode(try task(ok.id ?? "")), ok.unresolved)
     }
 
     func updateTask(_ args: Arguments, writer: String) throws -> Value {
@@ -150,8 +158,8 @@ public final class WorkDashTools: @unchecked Sendable {
             patch.snoozedUntil = try args.day("snoozed_until")?.description
         }
         _ = try task(id)    // not found → clear error before anything else
-        _ = try perform(.updateTask(id: id, patch), writer: writer)
-        return encode(try task(id))
+        let ok = try performOK(.updateTask(id: id, patch), writer: writer)
+        return withUnresolved(encode(try task(id)), ok.unresolved)
     }
 
     func deleteTask(_ args: Arguments, writer: String) throws -> Value {
@@ -163,10 +171,143 @@ public final class WorkDashTools: @unchecked Sendable {
 
     @discardableResult
     func perform(_ command: Command, writer: String) throws -> String {
+        try performOK(command, writer: writer).id ?? ""
+    }
+
+    func performOK(_ command: Command, writer: String) throws -> CommandOK {
         switch handler.perform(command, writer: writer) {
-        case .ok(let ok): return ok.id ?? ""
+        case .ok(let ok): return ok
         case .failure(let f): throw f
         }
+    }
+
+    func withUnresolved(_ value: Value, _ unresolved: [String]?) -> Value {
+        guard case .object(var o) = value else { return value }
+        o["unresolved"] = .array((unresolved ?? []).map { .string($0) })
+        return .object(o)
+    }
+
+    // MARK: - Pages, links, search, tag pages
+
+    func taskWithLinks(_ id: String) throws -> Value {
+        guard case .object(var o) = encode(try task(id)) else { return .null }
+        try addLinks(&o, table: "items", id: id)
+        return .object(o)
+    }
+
+    func page(_ id: String) throws -> PageItem {
+        guard let page = try reader.read({ try PageQueries.page($0, id: id) }) else { throw ToolError("Page \(id) not found.") }
+        return page
+    }
+
+    func pageValue(_ id: String) throws -> Value {
+        let p = try page(id)
+        var o: [String: Value] = [
+            "id": .string(p.id), "title": .string(p.title), "text": .string(p.body),
+            "tags": .array(p.tags.map { .string($0) }),
+            "created_at": .string(Self.timestamp.string(from: p.createdAt)),
+            "modified_at": .string(Self.timestamp.string(from: p.modifiedAt)),
+            "modified_by": .string(p.modifiedBy),
+        ]
+        try addLinks(&o, table: "items", id: id)
+        return .object(o)
+    }
+
+    func addLinks(_ o: inout [String: Value], table: String, id: String, isTag: Bool = false) throws {
+        let (outgoing, backlinks) = try reader.read { db in
+            (try LinkQueries.outgoing(db, sourceTable: table, sourceID: id), try LinkQueries.backlinks(db, to: id, isTag: isTag))
+        }
+        o["links"] = .array(outgoing.map(encode))
+        o["backlinks"] = .array(backlinks.map { b in
+            .object(["id": .string(b.source.id), "kind": .string(b.source.kind.rawValue), "title": .string(b.source.title), "excerpt": .string(b.excerpt)])
+        })
+    }
+
+    func encode(_ link: OutgoingLink) -> Value {
+        switch link.target {
+        case .live(let r): return .object(["id": .string(r.id), "kind": .string(r.kind.rawValue), "title": .string(r.title), "state": "live"])
+        case .deleted(let r): return .object(["id": .string(r.id), "kind": .string(r.kind.rawValue), "title": .string(r.title), "state": "deleted"])
+        case .missing(let t): return .object(["id": .null, "kind": "page", "title": .string(t), "state": "missing"])
+        }
+    }
+
+    func encode(_ ref: LinkRef) -> Value {
+        .object(["id": .string(ref.id), "kind": .string(ref.kind.rawValue), "title": .string(ref.title)])
+    }
+
+    func createPage(_ args: Arguments, writer: String) throws -> Value {
+        let draft = PageDraft(title: try args.requiredString("title"), body: try args.string("text") ?? "", tags: try args.strings("tags") ?? [])
+        let ok = try performOK(.createPage(draft), writer: writer)
+        return withUnresolved(try pageValue(ok.id ?? ""), ok.unresolved)
+    }
+
+    func updatePage(_ args: Arguments, writer: String) throws -> Value {
+        let id = try args.requiredString("id")
+        _ = try page(id)
+        let patch = PagePatch(title: try args.string("title"), body: try args.string("text"), tags: try args.strings("tags"))
+        let ok = try performOK(.updatePage(id: id, patch), writer: writer)
+        return withUnresolved(try pageValue(id), ok.unresolved)
+    }
+
+    func deletePage(_ args: Arguments, writer: String) throws -> Value {
+        let id = try args.requiredString("id")
+        _ = try page(id)
+        try perform(.deletePage(id: id), writer: writer)
+        return .object(["deleted": .string(id)])
+    }
+
+    func search(_ args: Arguments) throws -> Value {
+        let query = try args.requiredString("query")
+        var kinds: Set<LinkRef.Kind> = [.page, .task, .tag]
+        if let k = try args.string("kind") {
+            guard let kind = LinkRef.Kind(rawValue: k) else { throw ToolError("Unknown kind “\(k)” (use page, task or tag).") }
+            kinds = [kind]
+        }
+        let limit = min(100, max(1, try args.int("limit") ?? 10))
+        let results = try reader.read { try SearchQueries.search($0, query, kinds: kinds, limit: limit) }
+        return .object(["results": .array(results.all.map { hit in
+            .object(["id": .string(hit.ref.id), "kind": .string(hit.ref.kind.rawValue), "title": .string(hit.ref.title), "excerpt": .string(hit.excerpt)])
+        })])
+    }
+
+    func context(_ args: Arguments) throws -> Value {
+        if let name = try args.string("tag") {
+            let tag = try TagName(name)
+            let today = self.today
+            let data = try reader.read { try TagPageQueries.page($0, name: tag, today: today) }
+            var o: [String: Value] = ["tag": .string(data.name)]
+            if let tagID = data.tagID { try addLinks(&o, table: "tags", id: tagID, isTag: true) } else { o["links"] = .array([]); o["backlinks"] = .array([]) }
+            o["tagged"] = .array(data.openTasks.map { encode(LinkRef(kind: .task, id: $0.id, title: $0.title)) }
+                                 + data.pages.map { encode(LinkRef(kind: .page, id: $0.id, title: $0.title)) }
+                                 + data.finishedTasks.map { encode(LinkRef(kind: .task, id: $0.id, title: $0.title)) })
+            return .object(o)
+        }
+        let id = try args.requiredString("id")
+        guard let (ref, deleted) = try reader.read({ try LinkQueries.reference($0, id: id, isTag: false) }), !deleted else {
+            throw ToolError("Item \(id) not found.")
+        }
+        var o: [String: Value] = ["item": encode(ref)]
+        try addLinks(&o, table: "items", id: ref.id)
+        return .object(o)
+    }
+
+    func tagPage(_ args: Arguments) throws -> Value {
+        let tag = try TagName(try args.requiredString("name"))
+        let today = self.today
+        let data = try reader.read { try TagPageQueries.page($0, name: tag, today: today) }
+        return .object([
+            "name": .string(data.name), "text": .string(data.body),
+            "open_tasks": .array(data.openTasks.map(encode)),
+            "pages": .array(data.pages.map { encode(LinkRef(kind: .page, id: $0.id, title: $0.title)) }),
+            "finished_tasks": .array(data.finishedTasks.map(encode)),
+        ])
+    }
+
+    func updateTagPage(_ args: Arguments, writer: String) throws -> Value {
+        let name = try args.requiredString("name")
+        guard let text = try args.string("text") else { throw ToolError("text is required.") }
+        let ok = try performOK(.updateTagPage(name: name, body: text), writer: writer)
+        return withUnresolved(try tagPage(Arguments(["name": .string(name)])), ok.unresolved)
     }
 
     // MARK: - Encoding
