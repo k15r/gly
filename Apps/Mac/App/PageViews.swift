@@ -17,7 +17,8 @@ struct WDMarkdownEditor: View {
         MarkdownEditor(text: text, onChange: onChange, onCommit: onCommit,
                        appearance: { wiki.appearance($0) },
                        onOpenLink: { opener?.open($0) },
-                       suggestions: { wiki.suggestions($0) })
+                       suggestions: { wiki.suggestions($0) },
+                       candidates: { wiki.candidates($0) })
     }
 }
 
@@ -27,7 +28,9 @@ struct WDMarkdownReadView: View {
     let text: String
     /// Saves a checkbox toggle (one undo step each).
     var onChange: ((String) -> Void)?
-    var body: some View { MarkdownReadView(text: text, appearance: { wiki.appearance($0) }, onChange: onChange) }
+    var body: some View {
+        MarkdownReadView(text: text, appearance: { wiki.appearance($0) }, onChange: onChange, candidates: { wiki.candidates($0) })
+    }
 }
 
 private struct LinkOpenerKey: EnvironmentKey { static let defaultValue: LinkOpener? = nil }
@@ -39,14 +42,13 @@ extension EnvironmentValues {
 }
 
 extension LinkRef.Kind {
-    var symbol: String {
-        switch self { case .page: "doc.text"; case .task: "checkmark.circle"; case .tag: "tag" }
-    }
+    var symbol: String { linkSymbol }
 }
 
 /// "What links here" (specs/links "Backlinks").
 struct BacklinksView: View {
     @Environment(Navigation.self) private var nav
+    @Environment(WikiModel.self) private var wiki
     let backlinks: [Backlink]
 
     var body: some View {
@@ -55,10 +57,11 @@ struct BacklinksView: View {
             if backlinks.isEmpty {
                 Text("Nothing links here yet").font(.callout).foregroundStyle(.secondary)
             } else {
+                let names = wiki.displayNames(backlinks.map(\.source.id))
                 ForEach(backlinks) { b in
                     Button { open(b.source) } label: {
                         VStack(alignment: .leading, spacing: 2) {
-                            Label(b.source.title, systemImage: b.source.kind.symbol).fontWeight(.medium)
+                            Label(names[b.source.id]?.display ?? b.source.title, systemImage: b.source.kind.symbol).fontWeight(.medium)
                             if !b.excerpt.isEmpty { Text(b.excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -105,11 +108,12 @@ struct PagesListView: View {
                 Text(wiki.pageTagFilter == nil ? "No pages yet" : "No pages with this tag").foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
+                let names = wiki.displayNames(wiki.pages.map(\.id))
                 List(wiki.pages) { page in
                     Button { nav.go(.page(page.id)) } label: {
                         HStack(alignment: .firstTextBaseline) {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(page.title).fontWeight(.medium)
+                                Text(names[page.id]?.display ?? page.title).fontWeight(.medium)
                                 if !page.tags.isEmpty {
                                     HStack(spacing: 4) { ForEach(page.tags, id: \.self) { TagChip(name: $0) } }
                                 }
@@ -309,9 +313,10 @@ struct TagPageView: View {
                     }
                 }
                 section("Pages", count: data.pages.count) {
+                    let names = wiki.displayNames(data.pages.map(\.id))
                     ForEach(data.pages) { page in
                         Button { nav.go(.page(page.id)) } label: {
-                            HStack { Label(page.title, systemImage: "doc.text"); Spacer()
+                            HStack { Label(names[page.id]?.display ?? page.title, systemImage: "doc.text"); Spacer()
                                 Text(page.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.secondary) }
                                 .contentShape(Rectangle())
                         }.buttonStyle(.plain)
@@ -402,7 +407,9 @@ struct QuickOpenView: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: hit.ref.kind.symbol).foregroundStyle(.secondary).frame(width: 16)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(hit.ref.title).lineLimit(1)
+                    Text(wiki.displayNames([hit.ref.id])[hit.ref.id]?.display ?? hit.ref.title).lineLimit(1)
+                    Text(WikiModel.secondLine(kind: hit.ref.kind, tags: hit.tags, modified: hit.modifiedAt))
+                        .font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
                     if !hit.excerpt.isEmpty { Text(hit.excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 }
             }

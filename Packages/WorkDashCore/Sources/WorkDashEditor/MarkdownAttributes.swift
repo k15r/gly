@@ -8,6 +8,23 @@ public extension NSAttributedString.Key {
     static let wdCheckbox = NSAttributedString.Key("wdCheckbox")
     /// A collapsed range the caret skips (WorkDash link syntax).
     static let wdHidden = NSAttributedString.Key("wdHidden")
+    /// Icon / qualifier drawn around a link label (`LinkDecoration`), link-disambiguation K3.
+    static let wdDecoration = NSAttributedString.Key("wdDecoration")
+}
+
+/// What `WDTextView` draws around a link label, in space reserved by kerning (never part of the text).
+public final class LinkDecoration: NSObject {
+    public let symbol: String
+    public let qualifier: String?
+    public init(symbol: String, qualifier: String?) { self.symbol = symbol; self.qualifier = qualifier }
+
+    static var iconSpace: CGFloat { MarkdownAttributes.baseFont.pointSize + 5 }
+    static var qualifierFont: NSFont { .systemFont(ofSize: NSFont.smallSystemFontSize) }
+    func qualifierText() -> String? { qualifier.map { " · " + $0 } }
+    var qualifierSpace: CGFloat {
+        guard let q = qualifierText() else { return 0 }
+        return (q as NSString).size(withAttributes: [.font: Self.qualifierFont]).width + 4
+    }
 }
 
 /// Applies `StyleRun`s as fonts, colors and paragraph styles (design P8).
@@ -68,6 +85,15 @@ public enum MarkdownAttributes {
                 text.addAttribute(.paragraphStyle, value: p, range: r)
             case .chip(let appearance, let url):
                 text.addAttribute(.wdLink, value: url, range: r)
+                if let kind = appearance.kind {
+                    let deco = LinkDecoration(symbol: kind.linkSymbol, qualifier: appearance.qualifier)
+                    text.addAttribute(.wdDecoration, value: deco, range: r)
+                    // Room for the icon after the hidden "[" and for the qualifier after the hidden "]" (kerning adds space, not text).
+                    if r.location > 0 { text.addAttribute(.kern, value: LinkDecoration.iconSpace, range: NSRange(location: r.location - 1, length: 1)) }
+                    if deco.qualifierSpace > 0, NSMaxRange(r) < text.length {
+                        text.addAttribute(.kern, value: deco.qualifierSpace, range: NSRange(location: NSMaxRange(r), length: 1))
+                    }
+                }
                 text.addAttribute(.cursor, value: NSCursor.pointingHand, range: r)
                 switch appearance {
                 case .live:
@@ -90,6 +116,11 @@ public enum MarkdownAttributes {
                 text.addAttribute(.wdLink, value: "workdash://missing/" + (title.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? title), range: r)
                 text.addAttribute(.toolTip, value: "Missing page – ⌘-click to create “\(title)”", range: r)
             case .webLink(let url):
+                // Markdown web links get a globe after their "["; bare URLs show the address itself.
+                if r.location > 0, (text.string as NSString).substring(with: NSRange(location: r.location - 1, length: 1)) == "[" {
+                    text.addAttribute(.wdDecoration, value: LinkDecoration(symbol: "globe", qualifier: nil), range: r)
+                    text.addAttribute(.kern, value: LinkDecoration.iconSpace, range: NSRange(location: r.location - 1, length: 1))
+                }
                 text.addAttribute(.foregroundColor, value: NSColor.linkColor, range: r)
                 text.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: r)
                 text.addAttribute(.wdLink, value: url, range: r)

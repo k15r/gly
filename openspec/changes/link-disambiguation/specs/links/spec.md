@@ -43,7 +43,7 @@ A `[[…]]` typed or pasted as text (also by agents) SHALL be resolved when the 
 ## ADDED Requirements
 
 ### Requirement: Kind shown on links
-Links SHALL show the kind of their target with an icon (page, task, tag page, web link) in the editor and the read view; missing-page links SHALL keep their distinct style.
+Links SHALL show the kind of their target with an icon (page, task, tag page, web link written as `[text](url)`) in the editor and the read view; bare URLs show the address itself, and missing-page links SHALL keep their distinct style.
 
 #### Scenario: Task link
 - **WHEN** a page links to a task

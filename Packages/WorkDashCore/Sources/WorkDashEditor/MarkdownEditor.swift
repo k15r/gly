@@ -28,15 +28,18 @@ public struct MarkdownEditor: NSViewRepresentable {
     public var appearance: (ParsedLink.Target) -> LinkAppearance
     public var onOpenLink: (URL) -> Void
     public var suggestions: (String) -> [LinkSuggestion]
+    /// Targets an ambiguous typed link could mean (link-disambiguation K5); empty = none.
+    public var candidates: (String) -> [LinkSuggestion]
 
     public init(text: String,
                 onChange: ((String) -> Void)? = nil,
                 onCommit: ((String, String) -> Void)? = nil,
                 appearance: @escaping (ParsedLink.Target) -> LinkAppearance,
                 onOpenLink: @escaping (URL) -> Void,
-                suggestions: @escaping (String) -> [LinkSuggestion]) {
+                suggestions: @escaping (String) -> [LinkSuggestion],
+                candidates: @escaping (String) -> [LinkSuggestion] = { _ in [] }) {
         self.text = text; self.onChange = onChange; self.onCommit = onCommit
-        self.appearance = appearance; self.onOpenLink = onOpenLink; self.suggestions = suggestions
+        self.appearance = appearance; self.onOpenLink = onOpenLink; self.suggestions = suggestions; self.candidates = candidates
     }
 
     public func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -113,6 +116,7 @@ public struct MarkdownEditor: NSViewRepresentable {
             storage.beginEditing()
             MarkdownAttributes.apply(runs, to: storage)
             storage.endEditing()
+            tv.needsDisplay = true
             tv.selectedRanges = selection
             tv.typingAttributes = MarkdownAttributes.base()
         }
@@ -179,12 +183,45 @@ public struct MarkdownEditor: NSViewRepresentable {
                     return true
                 }
                 if command, let url = storage.attribute(.wdLink, at: i, effectiveRange: &range) as? String, let u = URL(string: url) {
+                    // An ambiguous typed link: offer its candidates before creating a page (link-disambiguation K5).
+                    if u.host == "missing", let link = LinkParser.links(in: tv.string).first(where: { NSLocationInRange(i, $0.range) }),
+                       case .missing(let typed) = link.target {
+                        let options = parent.candidates(typed)
+                        if !options.isEmpty {
+                            showCandidates(options, typed: typed, linkRange: link.range, url: u, at: i)
+                            return true
+                        }
+                    }
                     commitNow()
                     parent.onOpenLink(u)
                     return true
                 }
             }
             return false
+        }
+
+        private var candidateActions: [CandidateAction] = []
+
+        /// A menu at the link with each candidate and "Create page …".
+        private func showCandidates(_ options: [LinkSuggestion], typed: String, linkRange: NSRange, url: URL, at index: Int) {
+            guard let tv = textView else { return }
+            let menu = NSMenu()
+            candidateActions = options.map { o in CandidateAction { [weak self] in self?.replace(linkRange, with: o.insert) } }
+            for (o, action) in zip(options, candidateActions) {
+                let item = NSMenuItem(title: o.title, action: #selector(CandidateAction.run), keyEquivalent: "")
+                item.target = action
+                item.image = NSImage(systemSymbolName: o.symbol, accessibilityDescription: nil)
+                if !o.subtitle.isEmpty { item.toolTip = o.subtitle }
+                menu.addItem(item)
+            }
+            menu.addItem(.separator())
+            let create = CandidateAction { [weak self] in self?.commitNow(); self?.parent.onOpenLink(url) }
+            candidateActions.append(create)
+            let item = NSMenuItem(title: "Create page “\(typed)”", action: #selector(CandidateAction.run), keyEquivalent: "")
+            item.target = create
+            menu.addItem(item)
+            let rect = tv.segmentRects(for: NSRange(location: index, length: 1)).first ?? .zero
+            menu.popUp(positioning: nil, at: NSPoint(x: rect.minX, y: rect.maxY + 2), in: tv)
         }
 
         // MARK: `[[` picker
@@ -231,9 +268,63 @@ public struct MarkdownEditor: NSViewRepresentable {
     }
 }
 
-/// Text view that routes clicks on checkboxes and ⌘-clicks on links to the coordinator.
+/// Target-action wrapper for menu items built from closures.
+final class CandidateAction: NSObject {
+    let action: () -> Void
+    init(_ action: @escaping () -> Void) { self.action = action }
+    @objc func run() { action() }
+}
+
+/// Text view that routes clicks on checkboxes and ⌘-clicks on links to the coordinator,
+/// and draws link icons and qualifiers into kerning-reserved space (link-disambiguation K3).
 public final class WDTextView: NSTextView {
     weak var coordinator: MarkdownEditor.Coordinator?
+
+    public override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard let storage = textStorage, storage.length > 0 else { return }
+        storage.enumerateAttribute(.wdDecoration, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            guard let deco = value as? LinkDecoration else { return }
+            let rects = segmentRects(for: range)
+            guard let first = rects.first, let last = rects.last else { return }
+            let color = (storage.attribute(.foregroundColor, at: range.location, effectiveRange: nil) as? NSColor) ?? .secondaryLabelColor
+            if let image = NSImage(systemSymbolName: deco.symbol, accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: MarkdownAttributes.baseFont.pointSize - 2, weight: .regular)) {
+                let size = image.size
+                let tinted = NSImage(size: size, flipped: false) { r in
+                    image.draw(in: r); color.set(); r.fill(using: .sourceAtop); return true
+                }
+                tinted.draw(in: NSRect(x: first.minX - LinkDecoration.iconSpace + 2, y: first.midY - size.height / 2,
+                                       width: size.width, height: size.height))
+            }
+            if let q = deco.qualifierText() {
+                let attrs: [NSAttributedString.Key: Any] = [.font: LinkDecoration.qualifierFont, .foregroundColor: NSColor.secondaryLabelColor]
+                let size = (q as NSString).size(withAttributes: attrs)
+                (q as NSString).draw(at: NSPoint(x: last.maxX + 1, y: last.midY - size.height / 2), withAttributes: attrs)
+            }
+        }
+    }
+
+    /// Line-fragment rectangles of a character range, in view coordinates (TextKit 2, with a TextKit 1 fallback).
+    func segmentRects(for range: NSRange) -> [CGRect] {
+        let origin = textContainerOrigin
+        if let tlm = textLayoutManager, let tcm = tlm.textContentManager,
+           let start = tcm.location(tcm.documentRange.location, offsetBy: range.location),
+           let end = tcm.location(start, offsetBy: range.length), let textRange = NSTextRange(location: start, end: end) {
+            var rects: [CGRect] = []
+            tlm.enumerateTextSegments(in: textRange, type: .standard, options: []) { _, rect, _, _ in
+                rects.append(rect.offsetBy(dx: origin.x, dy: origin.y)); return true
+            }
+            return rects
+        }
+        guard let lm = layoutManager, let container = textContainer else { return [] }
+        let glyphs = lm.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        var rects: [CGRect] = []
+        lm.enumerateEnclosingRects(forGlyphRange: glyphs, withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0), in: container) { r, _ in
+            rects.append(r.offsetBy(dx: origin.x, dy: origin.y))
+        }
+        return rects
+    }
 
     public override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)

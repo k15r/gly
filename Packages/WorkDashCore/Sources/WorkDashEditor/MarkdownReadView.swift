@@ -58,6 +58,12 @@ public enum MarkdownBlocks {
         return blocks.enumerated().filter { i, b in !(b == .blank && (i == 0 || blocks[i - 1] == .blank)) }.map(\.1)
     }
 
+    /// The text with the first `[[typed]]` replaced by `insert` (a canonical link).
+    public static func pin(_ text: String, typed: String, with insert: String) -> String {
+        guard let link = LinkParser.links(in: text).first(where: { $0.target == .missing(typed) }) else { return text }
+        return (text as NSString).replacingCharacters(in: link.range, with: insert)
+    }
+
     /// The text with the checklist box on `line` toggled (`[ ]` ↔ `[x]`); unchanged if that line isn't a checklist item.
     public static func toggleChecklist(_ text: String, line: Int) -> String {
         var lines = text.components(separatedBy: "\n")
@@ -94,7 +100,7 @@ public enum MarkdownBlocks {
                 let id = url.lastPathComponent.uppercased()
                 let target: ParsedLink.Target = url.host == "tag" ? .tag(id) : .item(id)
                 switch appearance(target) {
-                case .live(let title):
+                case .live(let title, _, _):
                     if String(attributed[range].characters) != title { titleReplacements.append((range, title, url)) }
                 case .deleted:
                     attributed[range].strikethroughStyle = .single
@@ -114,15 +120,51 @@ public enum MarkdownBlocks {
     }
 }
 
+extension MarkdownBlocks {
+    /// Inline markdown as `Text`, with a kind icon before WorkDash and web links and the duplicate qualifier after
+    /// WorkDash links (link-disambiguation K3). Display only; the source text is untouched.
+    public static func inlineText(_ text: String, appearance: (ParsedLink.Target) -> LinkAppearance) -> Text {
+        let attributed = inline(text, appearance: appearance)
+        var result = Text("")
+        var lastLink: URL?
+        for run in attributed.runs {
+            let piece = Text(AttributedString(attributed[run.range]))
+            guard let url = run.link, url != lastLink else {
+                result = result + piece
+                if run.link == nil { lastLink = nil }
+                continue
+            }
+            lastLink = url
+            var qualifier: String?
+            if url.scheme == LinkParser.scheme, let host = url.host, host == "item" || host == "tag" {
+                let id = url.lastPathComponent.uppercased()
+                let a = appearance(host == "tag" ? .tag(id) : .item(id))
+                if let kind = a.kind { result = result + Text(Image(systemName: kind.linkSymbol)).foregroundColor(.secondary) + Text(" ") }
+                qualifier = a.qualifier
+            } else if ["http", "https", "mailto", "message"].contains(url.scheme ?? "") {
+                result = result + Text(Image(systemName: "globe")).foregroundColor(.secondary) + Text(" ")
+            }
+            result = result + piece
+            if let qualifier { result = result + Text(" · " + qualifier).font(.caption).foregroundColor(.secondary) }
+        }
+        return result
+    }
+}
+
 /// Rendered markdown (design P8). Links open through the environment's `openURL` (set by the app).
 public struct MarkdownReadView: View {
     let text: String
     let appearance: (ParsedLink.Target) -> LinkAppearance
-    /// Called with the new text when a checkbox is clicked; nil = checkboxes are read-only.
+    /// Called with the new text when a checkbox is clicked or an ambiguous link is pinned; nil = read-only.
     let onChange: ((String) -> Void)?
+    /// Targets an ambiguous typed link could mean (link-disambiguation K5).
+    let candidates: (String) -> [LinkSuggestion]
+    @Environment(\.openURL) private var openURL
+    @State private var choosing: (typed: String, options: [LinkSuggestion], url: URL)?
 
-    public init(text: String, appearance: @escaping (ParsedLink.Target) -> LinkAppearance, onChange: ((String) -> Void)? = nil) {
-        self.text = text; self.appearance = appearance; self.onChange = onChange
+    public init(text: String, appearance: @escaping (ParsedLink.Target) -> LinkAppearance, onChange: ((String) -> Void)? = nil,
+                candidates: @escaping (String) -> [LinkSuggestion] = { _ in [] }) {
+        self.text = text; self.appearance = appearance; self.onChange = onChange; self.candidates = candidates
     }
 
     public var body: some View {
@@ -133,20 +175,41 @@ public struct MarkdownReadView: View {
         }
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // A missing link with candidates asks which one is meant before anything is created.
+        .environment(\.openURL, OpenURLAction { url in
+            if url.scheme == LinkParser.scheme, url.host == "missing", onChange != nil {
+                let typed = url.lastPathComponent.removingPercentEncoding ?? url.lastPathComponent
+                let options = candidates(typed)
+                if !options.isEmpty { choosing = (typed, options, url); return .handled }
+            }
+            openURL(url)
+            return .handled
+        })
+        .confirmationDialog("Which “\(choosing?.typed ?? "")” do you mean?",
+                            isPresented: Binding(get: { choosing != nil }, set: { if !$0 { choosing = nil } })) {
+            if let c = choosing {
+                ForEach(c.options) { o in
+                    Button(o.subtitle.isEmpty ? o.title : "\(o.title) – \(o.subtitle)") {
+                        onChange?(MarkdownBlocks.pin(text, typed: c.typed, with: o.insert))
+                    }
+                }
+                Button("Create page “\(c.typed)”") { openURL(c.url) }
+            }
+        }
     }
 
     @ViewBuilder
     private func view(for block: MarkdownBlock) -> some View {
         switch block {
         case .heading(let level, let t):
-            Text(inline(t)).font([.title, .title2, .title3, .headline, .headline, .subheadline][min(level, 6) - 1]).bold()
+            inline(t).font([.title, .title2, .title3, .headline, .headline, .subheadline][min(level, 6) - 1]).bold()
                 .padding(.top, level <= 2 ? 6 : 2)
         case .paragraph(let t):
-            Text(inline(t))
+            inline(t)
         case .listItem(let indent, let marker, let t):
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(marker.first?.isNumber == true ? marker : "•").foregroundStyle(.secondary)
-                Text(inline(t))
+                inline(t)
             }.padding(.leading, CGFloat(indent) * 16)
         case .checklistItem(let indent, let checked, let t, let line):
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -154,12 +217,12 @@ public struct MarkdownReadView: View {
                     .contentShape(Rectangle())
                     .onTapGesture { onChange?(MarkdownBlocks.toggleChecklist(text, line: line)) }
                     .help(onChange == nil ? "" : (checked ? "Mark as not done" : "Mark as done"))
-                Text(inline(t)).strikethrough(checked).foregroundStyle(checked ? .secondary : .primary)
+                inline(t).strikethrough(checked).foregroundStyle(checked ? .secondary : .primary)
             }.padding(.leading, CGFloat(indent) * 16)
         case .quote(let t):
             HStack(spacing: 8) {
                 RoundedRectangle(cornerRadius: 1).fill(.tertiary).frame(width: 3)
-                Text(inline(t)).foregroundStyle(.secondary)
+                inline(t).foregroundStyle(.secondary)
             }
         case .code(let t):
             Text(t).font(.system(.body, design: .monospaced)).padding(8)
@@ -170,5 +233,5 @@ public struct MarkdownReadView: View {
         }
     }
 
-    private func inline(_ t: String) -> AttributedString { MarkdownBlocks.inline(t, appearance: appearance) }
+    private func inline(_ t: String) -> Text { MarkdownBlocks.inlineText(t, appearance: appearance) }
 }

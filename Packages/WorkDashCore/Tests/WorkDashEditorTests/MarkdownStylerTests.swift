@@ -80,3 +80,30 @@ final class MarkdownStylerTests: XCTestCase {
         XCTAssertEqual(s.attribute(.wdCheckbox, at: (t as NSString).range(of: "[ ]").location, effectiveRange: nil) as? Bool, false)
     }
 }
+
+extension MarkdownStylerTests {
+    /// link-disambiguation K3: icon and qualifier are drawn into kerning space; the string never changes.
+    func testDecorationAndKerningAroundChips() {
+        let t = "see [Goals](workdash://item/\(id)) now"
+        let s = NSMutableAttributedString(string: t)
+        MarkdownAttributes.apply(runs(t, appearance: .live(title: "Goals", kind: .page, qualifier: "person/alex")), to: s)
+        XCTAssertEqual(s.string, t)
+        let label = (t as NSString).range(of: "Goals")
+        let deco = s.attribute(.wdDecoration, at: label.location, effectiveRange: nil) as? LinkDecoration
+        XCTAssertEqual(deco?.symbol, "doc.text")
+        XCTAssertEqual(deco?.qualifier, "person/alex")
+        XCTAssertNotNil(s.attribute(.kern, at: label.location - 1, effectiveRange: nil), "room for the icon before the label")
+        XCTAssertNotNil(s.attribute(.kern, at: NSMaxRange(label), effectiveRange: nil), "room for the qualifier after it")
+    }
+
+    func testTaskIconAndWebGlobe() {
+        let t = "[Do it](workdash://item/\(id)) [docs](https://example.com) https://example.com/x"
+        let s = NSMutableAttributedString(string: t)
+        MarkdownAttributes.apply(runs(t, appearance: .live(title: "Do it", kind: .task)), to: s)
+        XCTAssertEqual((s.attribute(.wdDecoration, at: 1, effectiveRange: nil) as? LinkDecoration)?.symbol, "checkmark.circle")
+        let docs = (t as NSString).range(of: "docs")
+        XCTAssertEqual((s.attribute(.wdDecoration, at: docs.location, effectiveRange: nil) as? LinkDecoration)?.symbol, "globe")
+        let bare = (t as NSString).range(of: "https://example.com/x")
+        XCTAssertNil(s.attribute(.wdDecoration, at: bare.location, effectiveRange: nil), "bare URLs show the address itself")
+    }
+}

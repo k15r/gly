@@ -3,9 +3,22 @@ import WorkDashCore
 
 /// How a link target should look (looked up by the editor, design P8).
 public enum LinkAppearance: Equatable {
-    case live(title: String)
-    case deleted(title: String)
+    /// `qualifier` tells same-titled targets apart ("person/alex"), link-disambiguation K2.
+    case live(title: String, kind: LinkRef.Kind = .page, qualifier: String? = nil)
+    case deleted(title: String, kind: LinkRef.Kind = .page)
     case missing
+
+    var kind: LinkRef.Kind? {
+        switch self { case .live(_, let k, _), .deleted(_, let k): k; case .missing: nil }
+    }
+    var qualifier: String? { if case .live(_, _, let q) = self { q } else { nil } }
+}
+
+extension LinkRef.Kind {
+    /// SF Symbol shown before links of this kind.
+    public var linkSymbol: String {
+        switch self { case .page: "doc.text"; case .task: "checkmark.circle"; case .tag: "tag" }
+    }
 }
 
 /// One styling decision over a UTF-16 range of the text. Pure data, so it can be tested without AppKit.

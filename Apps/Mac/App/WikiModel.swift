@@ -58,7 +58,9 @@ final class WikiModel {
     func appearance(_ target: ParsedLink.Target) -> LinkAppearance {
         let lookup: (String, Bool) -> LinkAppearance = { id, isTag in
             guard let result = try? self.store?.read({ try LinkQueries.reference($0, id: id, isTag: isTag) }) else { return .missing }
-            return result.1 ? .deleted(title: result.0.title) : .live(title: result.0.title)
+            if result.1 { return .deleted(title: result.0.title, kind: result.0.kind) }
+            let qualifier = isTag ? nil : self.displayNames([result.0.id])[result.0.id]?.qualifier
+            return .live(title: result.0.title, kind: result.0.kind, qualifier: qualifier)
         }
         switch target {
         case .item(let id): return lookup(id, false)
@@ -67,19 +69,39 @@ final class WikiModel {
         }
     }
 
-    /// Entries for the `[[` picker.
+    /// Display names (title + qualifier for duplicates) for items and tags (link-disambiguation K2).
+    func displayNames(_ ids: [String]) -> [String: DisplayName] {
+        (try? store?.read { try DisplayNames.display($0, ids: ids) }) ?? [:]
+    }
+
+    /// "Page · person/alex · edited 3 days ago"
+    static func secondLine(kind: LinkRef.Kind, tags: [String], modified: Date?) -> String {
+        let kindText = switch kind { case .page: "Page"; case .task: "Task"; case .tag: "Tag page" }
+        let edited = modified.map { "edited " + RelativeDateTimeFormatter().localizedString(for: $0, relativeTo: Date()) }
+        return ([kindText] + (tags.isEmpty ? [] : [tags.joined(separator: ", ")]) + [edited].compactMap { $0 }).joined(separator: " · ")
+    }
+
+    /// Entries for the `[[` picker: icon, title with qualifier, second line (link-disambiguation K4).
     func suggestions(_ query: String) -> [LinkSuggestion] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty, let results = try? store?.read({ try SearchQueries.search($0, q, limit: 6) }) else { return [] }
+        let names = displayNames(results.all.map(\.ref.id))
         return results.all.map { hit in
-            let (symbol, subtitle): (String, String) = switch hit.ref.kind {
-            case .page: ("doc.text", "Page")
-            case .task: ("checkmark.circle", "Task")
-            case .tag: ("tag", "Tag page")
-            }
             let insert = hit.ref.kind == .tag ? LinkParser.canonical(label: hit.ref.title, tag: hit.ref.id)
                                               : LinkParser.canonical(label: hit.ref.title, item: hit.ref.id)
-            return LinkSuggestion(id: hit.ref.id, symbol: symbol, title: hit.ref.title, subtitle: subtitle, insert: insert)
+            return LinkSuggestion(id: hit.ref.id, symbol: hit.ref.kind.linkSymbol, title: names[hit.ref.id]?.display ?? hit.ref.title,
+                                  subtitle: Self.secondLine(kind: hit.ref.kind, tags: hit.tags, modified: hit.modifiedAt), insert: insert)
+        }
+    }
+
+    /// What an ambiguous typed link could mean, as picker entries (link-disambiguation K5).
+    func candidates(_ typed: String) -> [LinkSuggestion] {
+        guard let found = try? store?.read({ try LinkResolver.candidates($0, typed: typed) }), found.count > 1 else { return [] }
+        let names = displayNames(found.map(\.id))
+        return found.map { c in
+            LinkSuggestion(id: c.id, symbol: c.kind.linkSymbol, title: names[c.id]?.display ?? c.title,
+                           subtitle: Self.secondLine(kind: c.kind, tags: c.tags, modified: nil),
+                           insert: c.kind == .tag ? LinkParser.canonical(label: c.title, tag: c.id) : LinkParser.canonical(label: c.title, item: c.id))
         }
     }
 
