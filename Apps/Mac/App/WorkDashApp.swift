@@ -292,8 +292,7 @@ struct TagTreeView: View {
         ForEach(tasks.tagTree) { node in TagTreeNode(node: node, drop: drop) }
         if !wiki.untagged.isEmpty {
             DisclosureGroup(isExpanded: $untaggedExpanded) {
-                let dupes = TreeLeaf.duplicateTitles(wiki.untagged)
-                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil, drop: drop, sharesTitle: dupes.contains(leaf.title.lowercased())) }
+                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil, drop: drop) }
             } label: {
                 Label("Untagged (\(wiki.untagged.count))", systemImage: "tray").foregroundStyle(.secondary)
                     .treeRow(group: .untagged, state: drop, onTap: { untaggedExpanded.toggle() }) { items in
@@ -352,8 +351,7 @@ struct TagTreeNode: View {
         } else {
             DisclosureGroup(isExpanded: $expanded) {
                 ForEach(node.children) { TagTreeNode(node: $0, drop: drop) }
-                let dupes = TreeLeaf.duplicateTitles(node.items)
-                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path, drop: drop, sharesTitle: dupes.contains($0.title.lowercased())) }
+                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path, drop: drop) }
             } label: { row }
             .springLoaded(.tag(node.path), state: drop, expanded: $expanded)
         }
@@ -382,8 +380,6 @@ struct TreeLeafRow: View {
     let leaf: TreeLeaf
     let fromTag: String?
     let drop: TreeDropState
-    /// Another leaf in this group has the same title: show the excerpt below the title to tell them apart.
-    var sharesTitle = false
 
     private var symbol: String {
         switch leaf.kind {
@@ -400,8 +396,9 @@ struct TreeLeafRow: View {
                 Text(leaf.title).lineLimit(1)
                     .fontWeight(nav.current == .page(leaf.itemID) || nav.current == .task(leaf.itemID) ? .bold : .regular)
                     .foregroundStyle(leaf.snoozed ? .secondary : .primary)
-                if sharesTitle {
-                    Text(leaf.excerpt.isEmpty ? "(empty)" : leaf.excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                // The start of the text, so items (same-titled ones especially) can be told apart without opening them.
+                if !leaf.excerpt.isEmpty {
+                    Text(leaf.excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             Spacer()
@@ -423,13 +420,6 @@ struct TreeLeafRow: View {
                  }) { items in
             ItemMove.perform(items, to: fromTag, app: app, wiki: wiki, tasks: tasks)
         }
-    }
-}
-
-extension TreeLeaf {
-    /// Lowercased titles that occur more than once among `leaves`.
-    static func duplicateTitles(_ leaves: [TreeLeaf]) -> Set<String> {
-        Dictionary(grouping: leaves, by: { $0.title.lowercased() }).filter { $0.value.count > 1 }.keys.reduce(into: []) { $0.insert($1) }
     }
 }
 
