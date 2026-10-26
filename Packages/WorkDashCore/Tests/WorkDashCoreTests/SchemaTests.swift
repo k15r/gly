@@ -67,3 +67,35 @@ final class SchemaTests: XCTestCase {
         }
     }
 }
+
+extension SchemaTests {
+    func testV1DatabaseMigratesAndBackfills() throws {
+        let queue = try DatabaseQueue()
+        try Schema.migrator.migrate(queue, upTo: "v1")
+        try queue.write { db in
+            try db.execute(sql: """
+                INSERT INTO items (id, created_at, modified_at, modified_by, kind, title, body, status, priority)
+                VALUES ('T1', '2026-10-26', '2026-10-26', 'u', 'task', 'Old task', 'see [[Atlas]]', 'open', 'none')
+                """)
+        }
+        try Schema.migrator.migrate(queue)
+        try queue.read { db in
+            XCTAssertTrue(try db.tableExists("link_index"))
+            XCTAssertTrue(try db.tableExists("search_index"))
+            XCTAssertTrue(try db.columns(in: "change_log").contains { $0.name == "session" })
+            XCTAssertEqual(try String.fetchOne(db, sql: "SELECT missing_title FROM link_index WHERE source_id = 'T1'"), "Atlas")
+            XCTAssertEqual(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM search_index WHERE search_index MATCH 'old'"), 1)
+        }
+        XCTAssertFalse(Schema.syncedTables.contains("link_index"))
+        XCTAssertFalse(Schema.syncedTables.contains("search_index"))
+    }
+
+    /// Rollback check (design Migration Plan): what an older build's migrator does with a v2 database.
+    func testOlderMigratorOnV2Database() throws {
+        let queue = try StoreFactory.openInMemory()
+        var old = DatabaseMigrator()
+        old.registerMigration("v1") { _ in XCTFail("v1 must not run again") }
+        XCTAssertNoThrow(try old.migrate(queue), "an older migrator accepts the unknown applied migration v2")
+        try queue.read { db in XCTAssertTrue(try old.hasBeenSuperseded(db)) }
+    }
+}

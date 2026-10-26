@@ -188,5 +188,5 @@ Tool descriptions say how to link: "write `[[Exact Title]]` or reuse the canonic
   - adds `change_log.session`
   - creates `link_index` and `search_index`
   - backfills both from existing tasks and tags
-- **Rollback:** the new tables and the column are additive, and the old code never reads them. Whether an older build's `DatabaseMigrator` accepts a database with the unknown applied migration `v2` is checked in task 1.1 (GRDB behavior). If it refuses, a rollback needs a copy of the database taken before the migration, and the migration step makes that backup.
+- **Rollback:** the new tables and the column are additive, and the old code never reads them. **Checked in task 1.1:** an older build's `DatabaseMigrator` accepts a database with the unknown applied migration `v2` (no error; `hasBeenSuperseded` is true), so rolling back to the previous build needs no backup (`SchemaTests.testOlderMigratorOnV2Database`).
 - **Existing task notes are plain text,** which is already valid markdown. Nothing to convert.

@@ -56,6 +56,7 @@ public struct Batch {
                 try log(op: "insert", table: table, rowID: rowID, field: column, old: .null, new: value)
             }
         }
+        if DerivedIndex.needsRefresh(table, columns: columns) { try DerivedIndex.refresh(db, table: table, id: rowID) }
         return rowID
     }
 
@@ -80,6 +81,7 @@ public struct Batch {
         for (column, old, new) in changes {
             try log(op: op ?? updateOp, table: table, rowID: rowID, field: column, old: old, new: new)
         }
+        if DerivedIndex.needsRefresh(table, columns: changes.map(\.0)) { try DerivedIndex.refresh(db, table: table, id: rowID) }
         return changes.map(\.0)
     }
 

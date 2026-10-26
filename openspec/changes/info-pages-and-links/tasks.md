@@ -2,9 +2,9 @@
 
 ## 1. Store: v2 migration and derived indexes
 
-- [ ] 1.1 Add the `v2` migration (design P2): `change_log.session`, `link_index`, `search_index` (FTS5, `unicode61 remove_diacritics 2`, `prefix='2 3 4'`), with backfill from existing tasks and tags; check how an older migrator treats a database with `v2` applied and record the rollback path in `design.md`; verify with schema tests that a v1 database migrates, backfills, and that the new tables aren't in `Schema.syncedTables`
-- [ ] 1.2 Implement the link parser (canonical `[label](workdash://item|tag/<uuid>)`, missing `[[Title]]`, ranges; ignores links inside code spans/fences and web links) and plain-text extraction for search; verify with unit tests for each form, nested brackets, code exclusion, web links not indexed, and ranges
-- [ ] 1.3 Implement `DerivedIndex.refresh` and hook it into `Batch.insert`/`update` for `title`, `body`, `name`, `page_body`, `deleted_at` of items and tags, plus `DerivedIndex.rebuild`; verify with tests that create, edit, delete, undo and redo of a task leave `link_index` and `search_index` matching a fresh rebuild
+- [x] 1.1 Add the `v2` migration (design P2): `change_log.session`, `link_index`, `search_index` (FTS5, `unicode61 remove_diacritics 2`, `prefix='2 3 4'`), with backfill from existing tasks and tags; check how an older migrator treats a database with `v2` applied and record the rollback path in `design.md`; verify with schema tests that a v1 database migrates, backfills, and that the new tables aren't in `Schema.syncedTables`
+- [x] 1.2 Implement the link parser (canonical `[label](workdash://item|tag/<uuid>)`, missing `[[Title]]`, ranges; ignores links inside code spans/fences and web links) and plain-text extraction for search; verify with unit tests for each form, nested brackets, code exclusion, web links not indexed, and ranges
+- [x] 1.3 Implement `DerivedIndex.refresh` and hook it into `Batch.insert`/`update` for `title`, `body`, `name`, `page_body`, `deleted_at` of items and tags, plus `DerivedIndex.rebuild`; verify with tests that create, edit, delete, undo and redo of a task leave `link_index` and `search_index` matching a fresh rebuild
 
 ## 2. Core: pages, resolution, sessions
 

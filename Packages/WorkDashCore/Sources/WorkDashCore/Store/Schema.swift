@@ -15,6 +15,9 @@ public enum Schema {
         migrator.registerMigration("v1") { db in
             try createV1(db)
         }
+        migrator.registerMigration("v2") { db in
+            try createV2(db)
+        }
         return migrator
     }
 
@@ -87,5 +90,33 @@ public enum Schema {
         for table in syncedTables {
             try db.execute(sql: "CREATE VIEW live_\(table) AS SELECT * FROM \(table) WHERE deleted_at IS NULL")
         }
+    }
+
+    /// Pages and links (info-pages-and-links design P2, P6). Local-only, derived tables; not in `syncedTables`.
+    private static func createV2(_ db: Database) throws {
+        // Edit sessions: saves of one text field in one session coalesce into one undo step.
+        try db.alter(table: "change_log") { t in t.add(column: "session", .text) }
+
+        try db.create(table: "link_index") { t in
+            t.autoIncrementedPrimaryKey("seq")
+            t.column("source_table", .text).notNull()       // items | tags
+            t.column("source_id", .text).notNull()
+            t.column("target_kind", .text).notNull().check { ["item", "tag", "missing"].contains($0) }
+            t.column("target_id", .text)                     // item/tag id (uppercased UUID)
+            t.column("missing_title", .text)                 // [[Title]] as typed
+            t.column("missing_key", .text)                   // case-folded, for resolution
+            t.column("range_location", .integer).notNull()   // UTF-16 offsets in the source text
+            t.column("range_length", .integer).notNull()
+        }
+        try db.create(index: "link_index_source", on: "link_index", columns: ["source_table", "source_id"])
+        try db.create(index: "link_index_target", on: "link_index", columns: ["target_kind", "target_id"])
+        try db.create(index: "link_index_missing", on: "link_index", columns: ["missing_key"])
+
+        try db.execute(sql: """
+            CREATE VIRTUAL TABLE search_index USING fts5(
+                owner_table UNINDEXED, owner_id UNINDEXED, kind UNINDEXED, title, text,
+                tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3 4')
+            """)
+        try DerivedIndex.rebuild(db)
     }
 }
