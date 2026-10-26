@@ -304,6 +304,36 @@ struct TagTreeView: View {
     }
 }
 
+/// "New Subtag…" (tag tree and tag page): asks for a name, creates `parent/name` and opens its tag page.
+struct NewSubtagPrompt: ViewModifier {
+    @Environment(AppModel.self) private var app
+    @Environment(Navigation.self) private var nav
+    let parent: String
+    @Binding var isPresented: Bool
+    var onCreate: () -> Void = {}
+    @State private var name = ""
+
+    func body(content: Content) -> some View {
+        content.alert("New subtag of \(parent)", isPresented: $isPresented) {
+            TextField("Name", text: $name)
+            Button("Create", action: create).keyboardShortcut(.defaultAction)
+            Button("Cancel", role: .cancel) { name = "" }
+        } message: { Text("Use / for deeper levels, e.g. work/2027.") }
+    }
+
+    private func create() {
+        let child = name.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        name = ""
+        guard !child.isEmpty else { return }
+        let path = parent + "/" + child
+        Task {
+            guard case .ok = await app.send(.createTag(name: path)) else { return }
+            onCreate()
+            nav.go(.tag(path))
+        }
+    }
+}
+
 /// One tag node with its child tags, open tasks and pages.
 struct TagTreeNode: View {
     @Environment(Navigation.self) private var nav
@@ -313,6 +343,7 @@ struct TagTreeNode: View {
     let node: TagNode
     let drop: TreeDropState
     @State private var expanded = false
+    @State private var newSubtag = false
 
     var body: some View {
         if node.children.isEmpty && node.items.isEmpty {
@@ -335,6 +366,8 @@ struct TagTreeNode: View {
         .treeRow(group: .tag(node.path), state: drop, onTap: { nav.go(.tag(node.path)) }) { items in
             ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks)
         }
+        .contextMenu { Button("New Subtag…") { newSubtag = true }.disabled(!app.canWrite) }
+        .modifier(NewSubtagPrompt(parent: node.path, isPresented: $newSubtag, onCreate: { expanded = true }))
     }
 }
 

@@ -258,6 +258,7 @@ struct TagPageView: View {
     @State private var live = Live<TagPageDetail>()
     @State private var editing = false
     @State private var showFinished = false
+    @State private var newSubtag = false
 
     var body: some View {
         Group {
@@ -290,9 +291,11 @@ struct TagPageView: View {
                         wiki.pageTagFilter = try? TagName(data.name)
                         nav.go(.pages)
                     }
+                    Button { newSubtag = true } label: { Label("New Subtag", systemImage: "tag") }.disabled(!app.canWrite)
                     Button { nav.showNewPage = true } label: { Label("New Page", systemImage: "plus") }.disabled(!app.canWrite)
                     Toggle("Edit", isOn: $editing).toggleStyle(.button).keyboardShortcut("e")
                 }
+                .modifier(NewSubtagPrompt(parent: data.name, isPresented: $newSubtag))
                 if editing {
                     WDMarkdownEditor(text: data.body, onCommit: { text, session in
                         Task { await app.send(.updateTagPage(name: data.name, body: text, session: session)) }

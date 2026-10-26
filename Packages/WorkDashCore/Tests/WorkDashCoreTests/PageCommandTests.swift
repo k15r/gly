@@ -72,6 +72,19 @@ final class PageCommandTests: XCTestCase {
         XCTAssertEqual(again.id, r.id, "existing tag reused (case-insensitive)")
     }
 
+    func testCreateSubtag() throws {
+        let r = ok(.createTag(name: "person/alex/goals"))
+        XCTAssertEqual(try db.read { try String.fetchOne($0, sql: "SELECT name FROM tags WHERE id = ?", arguments: [r.id!]) }, "person/alex/goals")
+        XCTAssertEqual(try undoLabel(), "Create tag “person/alex/goals”")
+        let again = ok(.createTag(name: "Person/Alex/Goals"))
+        XCTAssertEqual(again.id, r.id); XCTAssertFalse(again.changed)
+        ok(.updateTagPage(name: "person/alex/goals", body: "kept"))
+        ok(.createTag(name: "person/alex/goals"))
+        XCTAssertEqual(try db.read { try String.fetchOne($0, sql: "SELECT page_body FROM tags WHERE id = ?", arguments: [r.id!]) }, "kept",
+                       "creating an existing tag never touches its description")
+        XCTAssertEqual(failure(.createTag(name: " / "))?.code, .validation)
+    }
+
     // MARK: 2.2
 
     func testUniqueTitleResolves() throws {

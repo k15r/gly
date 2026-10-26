@@ -122,6 +122,8 @@ public enum Command: Codable, Equatable {
     case deletePage(id: String)
     /// Replaces a tag's page description; creates the tag if it doesn't exist (e.g. a group node like `person`).
     case updateTagPage(name: String, body: String, session: String? = nil)
+    /// Creates an (empty) tag, e.g. a new subtag; an existing tag is returned unchanged (case-insensitive).
+    case createTag(name: String)
     /// Blocking override for one occurrence or a whole series; nil = automatic (specs/appointment-annotations).
     case setBlocking(AppointmentSnapshot, scope: BlockingScope, value: BlockingOverride?)
     /// Re-attaches annotations in `[from, to)` to the calendar's current appointments (agent, design Q4).
@@ -271,6 +273,13 @@ public struct CommandHandler {
             }
             let tagID = try batch.insert("tags", ["name": tag.display, "name_key": tag.key, "page_body": text])
             return CommandOK(id: tagID, unresolved: unresolved)
+
+        case .createTag(let name):
+            let tag = try TagName(name)
+            if let tagID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [tag.key]) {
+                return CommandOK(id: tagID, changed: false)
+            }
+            return CommandOK(id: try batch.insert("tags", ["name": tag.display, "name_key": tag.key, "page_body": ""]))
 
         case .setStatus(let id, let status, let snoozedUntil):
             try requireTask(id, db)

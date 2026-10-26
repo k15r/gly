@@ -7,8 +7,8 @@ Neutral test data only (no real names). Setup: tags `person/alex` and `person/sa
 
 - [x] A1 In a new page, type `[[Review notes]]` → the chip shows a task icon (checkmark circle); a link to a page shows a page icon, a tag link a tag icon, `[text](https://example.com)` a globe. A bare URL shows just the address.
 - [x] A2 Link one of the Goals pages (via the picker) → the chip reads "Goals · alex" (or the deepest tag that tells the two apart); the read view shows the same icon and qualifier.
-- [ ] A3 Retag the `person/alex` Goals page to `person/alex/work` → the qualifier updates without editing the linking page; the stored text is unchanged (open it via MCP `get_page` or check that ⌘Z doesn't change anything).
-- [ ] A4 Delete the second Goals page → the qualifier disappears (one Goals left).
+- [x] A3 Retag the `person/alex` Goals page to `person/alex/work` → the qualifier updates without editing the linking page; the stored text is unchanged (open it via MCP `get_page` or check that ⌘Z doesn't change anything).
+- [x] A4 Delete the second Goals page → the qualifier disappears (one Goals left).
 - [ ] A5 Caret, selection and scrolling around chips: arrow keys across a chip, select across it, type right after it, wrap a long line with chips, scroll up and down → no overlapping or misplaced icons or text. (If this misbehaves: fallback, icon only with the qualifier in the tooltip.)
 
 ## B. Picker, lists and search (task 3.2)

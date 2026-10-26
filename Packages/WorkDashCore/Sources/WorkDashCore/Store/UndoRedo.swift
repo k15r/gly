@@ -106,7 +106,12 @@ extension Database {
         let tagsChanged = entries.contains { ($0["table_name"] as String) == "item_tags" }
 
         if table == "tags" {
-            let name = try String.fetchOne(self, sql: "SELECT name FROM tags WHERE id = ?", arguments: [rowID]) ?? "tag"
+            let tag = try Row.fetchOne(self, sql: "SELECT name, page_body FROM tags WHERE id = ?", arguments: [rowID])
+            let name = tag?["name"] as String? ?? "tag"
+            // A bare new tag (New Subtag) vs. a description written to a tag (which may create it too).
+            if own.contains(where: { ($0["op"] as String) == "insert" }), (tag?["page_body"] as String? ?? "").isEmpty {
+                return "Create tag “\(name)”"
+            }
             return "Edit tag page “\(name)”"
         }
         guard table == "items",

@@ -56,7 +56,8 @@ public struct TreeLeaf: Equatable, Identifiable {
 }
 
 public enum TagQueries {
-    /// Tags assigned to at least one open task or live page, as a hierarchy with roll-up open-task counts.
+    /// Tags assigned to at least one open task or live page, plus empty tags (nothing assigned, e.g. a new subtag),
+    /// as a hierarchy with roll-up open-task counts. Tags used only by finished tasks stay hidden.
     /// "Open" includes snoozed tasks, as in the task list (snoozed = not now, still open).
     public static func tagTree(_ db: Database, today: String) throws -> [TagNode] {
         let rows = try Row.fetchAll(db, sql: """
@@ -64,21 +65,24 @@ public enum TagQueries {
             JOIN live_tags t ON t.id = it.tag_id
             JOIN live_items i ON i.id = it.item_id
             WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info'
+            UNION ALL
+            SELECT NULL, t.name, NULL FROM live_tags t
+            WHERE NOT EXISTS (SELECT 1 FROM live_item_tags it JOIN live_items i ON i.id = it.item_id WHERE it.tag_id = t.id)
             """)
         // path key -> (display path, items, isTag)
         var itemsByPath: [String: Set<String>] = [:]
         var displayByPath: [String: String] = [:]
         var tagPaths = Set<String>()
         for row in rows {
-            let item: String = row["item_id"]
+            let item: String? = row["item_id"]
             let name: String = row["name"]
-            let isTask = (row["kind"] as String) == "task"
+            let isTask = (row["kind"] as String?) == "task"
             let segments = name.split(separator: "/").map(String.init)
             tagPaths.insert(TagName.key(for: name))
             for depth in 1...segments.count {
                 let path = segments.prefix(depth).joined(separator: "/")
                 let key = TagName.key(for: path)
-                if isTask { itemsByPath[key, default: []].insert(item) } else { itemsByPath[key, default: []] = itemsByPath[key] ?? [] }
+                if isTask, let item { itemsByPath[key, default: []].insert(item) } else { itemsByPath[key, default: []] = itemsByPath[key] ?? [] }
                 if displayByPath[key] == nil || depth == segments.count { displayByPath[key] = displayByPath[key] ?? path }
             }
         }
