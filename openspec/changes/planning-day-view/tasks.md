@@ -30,8 +30,8 @@
 - [x] 5.3 Add the planning model to the day view: capacity header with bar, the Today list with load header, Coming up with horizon picker; verify manually "Busy day", "Overbooked day", "Switch the horizon", and that the lists update when a meeting is declined ("Meeting declined in Outlook")
 - [x] 5.4 Add the appointment menu (Automatic/Blocks/Optional/Ignore × occurrence/series), the weight icon on rows, and the ambiguity banner; verify manually "Skip one meeting", "Optional series", "Back to automatic", and that free time updates immediately
 
-- [ ] 5.5 Move the calendar list (show/hide per calendar, grouped by account) from the sidebar into a Settings tab "Calendars"; verify manually that hiding a calendar there updates the day view
-- [ ] 5.6 Replace the tag text field with the "Add tag" picker (hierarchical submenus, group tags selectable, "New tag in <group>/…" and "New tag…" with validation); verify manually "Pick a nested tag", "New tag in a group", "Invalid new tag" on a task and on a page
+- [x] 5.5 Move the calendar list (show/hide per calendar, grouped by account) from the sidebar into a Settings tab "Calendars"; verify manually that hiding a calendar there updates the day view
+- [x] 5.6 Replace the tag text field with the "Add tag" picker (hierarchical submenus, group tags selectable, "New tag in <group>/…" and "New tag…" with validation); verify manually "Pick a nested tag", "New tag in a group", "Invalid new tag" on a task and on a page
 
 ## 6. End to end
 

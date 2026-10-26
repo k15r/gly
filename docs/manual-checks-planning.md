@@ -40,8 +40,8 @@ Neutral test data only (no real names).
 
 - [x] F1 Settings (⌘,) → Calendars lists the calendars by account; hiding one updates the day view at once. The sidebar has no "Calendars" entry anymore.
 - [x] F2 On a task page: "Add tag" → project ▸ atlas adds `project/atlas`; tags already on the task are greyed out.
-- [ ] F3 "Add tag" → project ▸ "New tag in project/…" → type `gamma` → Return adds `project/gamma`; "New tag…" at the top accepts a full path; `a//b` shows the empty-segment error.
-- [ ] F4 The same picker works on a page.
+- [x] F3 "Add tag" → project ▸ "New tag in project/…" → type `gamma` → Return adds `project/gamma`; "New tag…" at the top accepts a full path; `a//b` shows the empty-segment error.
+- [x] F4 The same picker works on a page.
 
 ## Results
 
@@ -52,4 +52,5 @@ Neutral test data only (no real names).
 | 2026-10-26 | owner | C ✅ | Day view; changed after testing: per-task states replaced by one Today list (overdue, due today, "today ≥ …", can't fit, load header) and Coming up with "start by"; account refresh times moved into the ↻ tooltip |
 | 2026-10-26 | owner | D ✅ | Appointment overrides; fixed: current choice wasn't visible (an occurrence "Ignore" hid a series "Blocks") → native checkmarks per section |
 | 2026-10-26 | owner | E ✅ | End to end on the SAP Mac with real meetings and Claude Code |
+| 2026-10-26 | owner | F ✅ | Calendars moved to Settings; hierarchical tag picker with "New tag in …" (cursor goes straight into the name field) |
 | | | | |
