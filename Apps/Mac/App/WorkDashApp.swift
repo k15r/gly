@@ -146,15 +146,18 @@ struct ContentView: View {
                 }
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240)
             } detail: {
-                switch nav.current {
-                case .day: DayContainer()
-                case .tasks: TaskListContainer()
-                case .pages: PagesListView()
-                case .trash: TrashView()
-                case .page(let id): PageView(id: id)
-                case .task(let id): TaskPageView(id: id)
-                case .tag(let name): TagPageView(name: name)
+                Group {
+                    switch nav.current {
+                    case .day: DayContainer()
+                    case .tasks: TaskListContainer()
+                    case .pages: PagesListView()
+                    case .trash: TrashView()
+                    case .page(let id): PageView(id: id)
+                    case .task(let id): TaskPageView(id: id)
+                    case .tag(let name): TagPageView(name: name)
+                    }
                 }
+                .frame(minWidth: 600)        // the main pane never gets squeezed below this; the window grows instead
             }
         }
         .sheet(isPresented: $nav.showQuickOpen) { QuickOpenView() }
