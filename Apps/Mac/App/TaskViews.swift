@@ -101,7 +101,7 @@ struct TaskRow: View {
         }
         .animation(.easeOut(duration: 0.2), value: pendingCompletion != nil)
         .contentShape(Rectangle())
-        .onTapGesture(count: 2, perform: onEdit)
+        .onTapGesture(perform: onEdit)          // single click opens, like page rows; the circle, priority and tags keep their own clicks
         .contextMenu { TaskActions(task: task, onEdit: onEdit) }
         .padding(.vertical, 2)
     }
