@@ -25,7 +25,7 @@ The user SHALL be able to edit a tag page's description with the markdown editor
 - **THEN** the description is saved and shown the next time the tag page opens
 
 ### Requirement: Open the tag page
-Clicking a tag (in the sidebar, on a tag chip, or via a tag link) SHALL open its tag page. The tag page SHALL offer to show its tasks in the task list with the tag as filter.
+Clicking a tag (in the sidebar, on a tag chip, or via a tag link) SHALL open its tag page. The tag page SHALL offer to show its tasks in the task list, and its pages in the pages list, with the tag as filter.
 
 #### Scenario: From a chip
 - **WHEN** the user clicks the chip `project/atlas` on a task row

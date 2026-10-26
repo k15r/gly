@@ -18,6 +18,10 @@ public enum Schema {
         migrator.registerMigration("v2") { db in
             try createV2(db)
         }
+        // Re-derive the search text once after LinkParser.plainText started stripping web-link markup.
+        migrator.registerMigration("v3-rebuild-derived") { db in
+            try DerivedIndex.rebuild(db)
+        }
         return migrator
     }
 

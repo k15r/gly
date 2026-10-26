@@ -86,7 +86,7 @@ On rename (`updatePage` or `updateTask` with a new title), labels of canonical l
 - **`PageQueries`:** list with an optional tag filter (same descendant `IN` subquery as tasks), ordered by `modified_at DESC`; `page(id)`.
 - **`LinkQueries`:**
   - `outgoing(source)` gives resolved targets with their current titles, or deleted or missing states.
-  - `backlinks(target)` gives live sources with an excerpt cut from the source text around the stored range, about 80 characters.
+  - `backlinks(target)` gives live sources with an excerpt cut from the source text around the stored range, about 140 characters.
 - **`TagPageQueries.page(name)`:** the description plus three groups (open tasks, pages, finished tasks), using the tag's descendant filter.
 - **`SearchQueries.search(query, kinds, limit)`:**
   - Tokens are quoted and the last one gets `*`.
@@ -200,3 +200,4 @@ Tool descriptions say how to link: "write `[[Exact Title]]` or reuse the canonic
   - backfills both from existing tasks and tags
 - **Rollback:** the new tables and the column are additive, and the old code never reads them. **Checked in task 1.1:** an older build's `DatabaseMigrator` accepts a database with the unknown applied migration `v2` (no error; `hasBeenSuperseded` is true), so rolling back to the previous build needs no backup (`SchemaTests.testOlderMigratorOnV2Database`).
 - **Existing task notes are plain text,** which is already valid markdown. Nothing to convert.
+- **`v3-rebuild-derived`** re-derives both indexes once, after search text started dropping web-link markup. It's local-only and can be repeated safely.

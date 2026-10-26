@@ -282,6 +282,10 @@ struct TagPageView: View {
                         tasks.tagFilter = try? TagName(data.name)
                         nav.go(.tasks)
                     }
+                    Button("Show in Pages") {
+                        wiki.pageTagFilter = try? TagName(data.name)
+                        nav.go(.pages)
+                    }
                     Button { nav.showNewPage = true } label: { Label("New Page", systemImage: "plus") }.disabled(!app.canWrite)
                     Toggle("Edit", isOn: $editing).toggleStyle(.button).keyboardShortcut("e")
                 }

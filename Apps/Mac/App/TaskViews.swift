@@ -1,13 +1,12 @@
 import SwiftUI
 import WorkDashCore
 
+/// The new-task form's preset (tasks are edited on their task page, specs/tasks "Task page").
 enum TaskEditorTarget: Identifiable {
     case new(due: Due?)
-    case edit(String)
     var id: String {
         switch self {
         case .new(let due): return "new-\(due?.day ?? "")"
-        case .edit(let id): return id
         }
     }
 }
@@ -203,7 +202,7 @@ struct TaskListView: View {
     }
 }
 
-/// Edit form with explicit confirm (specs/tasks "Create a task", "Edit a task", "Task fields").
+/// New-task form with explicit confirm (specs/tasks "Create a task", "Edit a task").
 struct TaskEditor: View {
     @Environment(AppModel.self) private var app
     @Environment(TasksModel.self) private var tasks
@@ -218,16 +217,13 @@ struct TaskEditor: View {
     @State private var dueHasTime = false
     @State private var tagNames: [String] = []
     @State private var pendingTag = ""
-    @State private var status: TaskStatus = .open
-    @State private var snoozeDate = Date().addingTimeInterval(86_400)
-    @State private var original: TaskItem?
     @State private var titleMissing = false
     @State private var saving = false
     @State private var error: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(original == nil ? "New Task" : "Edit Task").font(.title3.bold())
+            Text("New Task").font(.title3.bold())
             Form {
                 TextField("Title", text: $title, prompt: Text("Required"))
                     .overlay(alignment: .trailing) {
@@ -241,17 +237,6 @@ struct TaskEditor: View {
                     Toggle("With time", isOn: $dueHasTime)
                     DatePicker("Due", selection: $dueDate, displayedComponents: dueHasTime ? [.date, .hourAndMinute] : [.date])
                 }
-                if original != nil {
-                    Picker("Status", selection: $status) {
-                        Text("Open").tag(TaskStatus.open)
-                        Text("Snoozed").tag(TaskStatus.snoozed)
-                        Text("Done").tag(TaskStatus.done)
-                        Text("Dropped").tag(TaskStatus.dropped)
-                    }
-                    if status == .snoozed {
-                        DatePicker("Snooze until", selection: $snoozeDate, displayedComponents: [.date])
-                    }
-                }
                 TagField(tags: $tagNames, input: $pendingTag)
                 LabeledContent("Notes") {
                     // Markdown with links; saved with the form (explicit confirm, specs/tasks "Edit a task").
@@ -263,7 +248,7 @@ struct TaskEditor: View {
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(original == nil ? "Create" : "Save") { Task { await save() } }
+                Button("Create") { Task { await save() } }
                     .keyboardShortcut(.defaultAction)
                     .disabled(saving || !app.canWrite)
             }
@@ -277,12 +262,6 @@ struct TaskEditor: View {
         switch target {
         case .new(let due):
             if let due, let date = due.date() { hasDue = true; dueDate = date; dueHasTime = due.time != nil }
-        case .edit(let id):
-            guard let t = tasks.task(id: id) else { error = "This task no longer exists."; return }
-            original = t
-            title = t.title; notes = t.body; priority = t.priority; tagNames = t.tags; status = t.status
-            if let due = t.due, let date = due.date() { hasDue = true; dueDate = date; dueHasTime = due.time != nil }
-            if let s = t.snoozedUntil, let d = LocalDay(s) { snoozeDate = d.interval().start }
         }
     }
 
@@ -307,24 +286,8 @@ struct TaskEditor: View {
             do { _ = try TagName(t) } catch { self.error = (error as? TagName.Invalid)?.description ?? "\(error)"; return }
         }
 
-        if let original {
-            // One command, so one save is one undo step.
-            var patch = TaskPatch()
-            if title != original.title { patch.title = title }
-            if notes != original.body { patch.body = notes }
-            if priority != original.priority { patch.priority = priority }
-            if due != original.due { patch.due = .some(due) }
-            if Set(tagNames.map(TagName.key)) != Set(original.tags.map(TagName.key)) { patch.tags = tagNames }
-            let snoozeDay = LocalDay(date: snoozeDate).description
-            if status != original.status || (status == .snoozed && snoozeDay != original.snoozedUntil) {
-                patch.status = status
-                patch.snoozedUntil = status == .snoozed ? snoozeDay : nil
-            }
-            if patch != TaskPatch(), case .failure(let f) = await app.send(.updateTask(id: original.id, patch)) { error = f.message; return }
-        } else {
-            let r = await app.send(.createTask(TaskDraft(title: title, body: notes, priority: priority, due: due, tags: tagNames)))
-            if case .failure(let f) = r { error = f.message; return }
-        }
+        let r = await app.send(.createTask(TaskDraft(title: title, body: notes, priority: priority, due: due, tags: tagNames)))
+        if case .failure(let f) = r { error = f.message; return }
         dismiss()
     }
 }
