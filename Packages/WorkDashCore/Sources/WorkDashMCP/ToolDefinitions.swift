@@ -78,7 +78,7 @@ public enum ToolDefinitions {
              ], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
         Tool(name: "delete_task",
-             description: "Delete a task. It disappears from all views; its data stays in WorkDash's history and can be restored there. Prefer update_task with status dropped for tasks that won't be done.",
+             description: "Delete a task. It disappears from all views and goes to the trash, from which restore brings it back. Prefer update_task with status dropped for tasks that won't be done.",
              inputSchema: object(["id": string("Task id.")], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false)),
         Tool(name: "list_tags",
@@ -107,7 +107,7 @@ public enum ToolDefinitions {
              ], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
         Tool(name: "delete_page",
-             description: "Delete a page. It disappears from all views; its data stays in WorkDash's history. Links to it show as 'link target deleted'.",
+             description: "Delete a page. It disappears from all views and goes to the trash, from which restore brings it back. Links to it show as 'link target deleted' until then.",
              inputSchema: object(["id": string("Page id.")], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false)),
         Tool(name: "search",
@@ -136,5 +136,15 @@ public enum ToolDefinitions {
                 "text": string("New description (markdown)."),
              ], required: ["name", "text"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
+        Tool(name: "list_trash",
+             description: "List deleted pages and tasks, most recently deleted first: {items: [{id, kind (page|task), title, tags (as when deleted), excerpt, status (tasks), deleted_at (YYYY-MM-DDTHH:mm, local time), deleted_by}], older_count}. By default the last 30 days; older_count says how many older ones exist (all: true lists everything). Nothing in the trash is ever erased.",
+             inputSchema: object([
+                "all": .object(["type": "boolean", "description": "List all deleted items, not just the last 30 days."]),
+             ], required: []),
+             annotations: .init(readOnlyHint: true, openWorldHint: false)),
+        Tool(name: "restore",
+             description: "Restore a deleted page or task by id (from list_trash), with the fields and tags it had when deleted; links to it work again. Use it to fix a wrong delete. Returns the item like get_page / get_task.",
+             inputSchema: object(["id": string("Id of the deleted page or task.")], required: ["id"]),
+             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
     ]
 }

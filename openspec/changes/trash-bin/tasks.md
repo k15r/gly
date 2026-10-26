@@ -7,7 +7,7 @@
 
 ## 2. MCP
 
-- [ ] 2.1 Add `list_trash` and `restore` (T6) with descriptions, attribution, the "in the trash" hint on `get_page`/`get_task` for deleted ids, and the updated tool list; verify with MCP tests for "Agent undoes its own delete", "Restore something that isn't deleted" and "Agent discovers the tools"
+- [x] 2.1 Add `list_trash` and `restore` (T6) with descriptions, attribution, the "in the trash" hint on `get_page`/`get_task` for deleted ids, and the updated tool list; verify with MCP tests for "Agent undoes its own delete", "Restore something that isn't deleted" and "Agent discovers the tools"
 
 ## 3. Editor and app
 

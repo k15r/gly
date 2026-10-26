@@ -7,7 +7,7 @@ public final class WorkDashMCPServer: @unchecked Sendable {
     /// Header carrying the MCP client name for messages that arrive via `wd-mcp` (design M4).
     public static let clientHeader = "x-workdash-client"
 
-    static let instructions = "WorkDash is the user's single source for their day: calendar appointments (read-only) and tasks. Read the schedule with get_schedule, find tasks with list_tasks, and keep tasks up to date with create_task, update_task and delete_task. Reuse existing tags (list_tags)."
+    static let instructions = "WorkDash is the user's single source for their day: calendar appointments (read-only) and tasks. Read the schedule with get_schedule, find tasks with list_tasks, and keep tasks up to date with create_task, update_task and delete_task. Reuse existing tags (list_tags). Deleted pages and tasks go to the trash; list_trash and restore bring them back."
 
     let tools: WorkDashTools
     let server: Server

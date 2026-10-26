@@ -135,6 +135,53 @@ extension PageToolTests {
         XCTAssertEqual(str(list(back.value, "backlinks").first, "display"), "Hub")
     }
 
+    // MARK: trash-bin 2.1 (specs/agent-access "Trash over MCP")
+
+    func testAgentUndoesItsOwnDelete() async throws {
+        let alex = str(await call("create_page", ["title": "Goals", "text": "grow", "tags": ["person/alex"]]).value, "id")!
+        _ = await call("create_page", ["title": "Goals", "tags": ["person/bob"]])
+        _ = await call("delete_page", ["id": .string(alex)])          // the wrong one
+        let gone = await call("get_page", ["id": .string(alex)])
+        XCTAssertTrue(gone.isError)
+        XCTAssertTrue(gone.text.contains("in the trash"), gone.text)
+
+        let trash = await call("list_trash")
+        let entry = list(trash.value, "items").first
+        XCTAssertEqual(str(entry, "id"), alex)
+        XCTAssertEqual(str(entry, "kind"), "page")
+        XCTAssertEqual(list(entry, "tags"), ["person/alex"])
+        XCTAssertEqual(str(entry, "excerpt"), "grow")
+        XCTAssertEqual(str(entry, "deleted_by"), "Claude Code")
+        XCTAssertNil(field(trash.value, "older_count"))
+
+        let r = await call("restore", ["id": .string(alex)])
+        XCTAssertFalse(r.isError, r.text)
+        XCTAssertEqual(str(r.value, "id"), alex)
+        XCTAssertEqual(list(r.value, "tags"), ["person/alex"])
+        XCTAssertEqual(str(r.value, "modified_by"), "agent:claude-code@mac-test01", "attributed to the agent")
+        let after = await call("list_trash")
+        XCTAssertEqual(list(after.value, "items"), [])
+    }
+
+    func testRestoreSomethingThatIsntDeleted() async throws {
+        let live = str(await call("create_page", ["title": "Live"]).value, "id")!
+        for id in [live, "nope"] {
+            let r = await call("restore", ["id": .string(id)])
+            XCTAssertTrue(r.isError)
+            XCTAssertTrue(r.text.contains("not in the trash"), r.text)
+        }
+    }
+
+    func testRestoreATaskReturnsItLikeGetTask() async throws {
+        let id = str(await call("create_task", ["title": "Call", "tags": ["x"]]).value, "id")!
+        _ = await call("delete_task", ["id": .string(id)])
+        let gone = await call("get_task", ["id": .string(id)])
+        XCTAssertTrue(gone.text.contains("in the trash"), gone.text)
+        let r = await call("restore", ["id": .string(id)])
+        XCTAssertEqual(str(r.value, "title"), "Call")
+        XCTAssertEqual(str(r.value, "status"), "open")
+    }
+
     func testDuplicateCreatePageNamesTheOthers() async throws {
         let alex = str(await call("create_page", ["title": "Profile", "tags": ["person/alex"]]).value, "id")!
         let r = await call("create_page", ["title": "profile", "tags": ["person/sam"]])

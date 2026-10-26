@@ -62,6 +62,8 @@ public final class WorkDashTools: @unchecked Sendable {
             case "get_context": value = try context(args)
             case "get_tag_page": value = try tagPage(args)
             case "update_tag_page": value = try updateTagPage(args, writer: writer(client: client))
+            case "list_trash": value = try listTrash(args)
+            case "restore": value = try restore(args, writer: writer(client: client))
             default: throw ToolError("Unknown tool \(name).")
             }
             return CallTool.Result(content: [Self.text(Self.json(value))], structuredContent: Optional.some(value))
@@ -162,7 +164,7 @@ public final class WorkDashTools: @unchecked Sendable {
     }
 
     func task(_ id: String) throws -> TaskItem {
-        guard let task = try reader.read({ try TaskQueries.task($0, id: id) }) else { throw ToolError("Task \(id) not found.") }
+        guard let task = try reader.read({ try TaskQueries.task($0, id: id) }) else { throw try notFound("Task", id) }
         return task
     }
 
@@ -248,7 +250,7 @@ public final class WorkDashTools: @unchecked Sendable {
     }
 
     func page(_ id: String) throws -> PageItem {
-        guard let page = try reader.read({ try PageQueries.page($0, id: id) }) else { throw ToolError("Page \(id) not found.") }
+        guard let page = try reader.read({ try PageQueries.page($0, id: id) }) else { throw try notFound("Page", id) }
         return page
     }
 
@@ -330,6 +332,46 @@ public final class WorkDashTools: @unchecked Sendable {
         _ = try page(id)
         try perform(.deletePage(id: id), writer: writer)
         return .object(["deleted": .string(id)])
+    }
+
+    /// Not found, pointing to `restore` when the item is in the trash (trash-bin T6).
+    func notFound(_ kind: String, _ id: String) throws -> ToolError {
+        try reader.read({ try TrashQueries.entry($0, id: id) }) != nil
+            ? ToolError("\(kind) \(id) was deleted; it is in the trash (restore it with restore).")
+            : ToolError("\(kind) \(id) not found.")
+    }
+
+    func listTrash(_ args: Arguments) throws -> Value {
+        let cutoff = now().addingTimeInterval(-Double(TrashQueries.defaultDays) * 86400)
+        let all = try args.bool("all") ?? false
+        let (entries, older) = try reader.read { db in
+            (try TrashQueries.list(db, since: all ? nil : cutoff), all ? 0 : try TrashQueries.count(db, before: cutoff))
+        }
+        var result: [String: Value] = ["items": .array(entries.map { e in
+            var o: [String: Value] = [
+                "id": .string(e.id), "kind": .string(e.kind.rawValue), "title": .string(e.title),
+                "tags": .array(e.tags.map { .string($0) }), "excerpt": .string(e.excerpt),
+                "deleted_at": .string(Self.timestamp(e.deletedAt)), "deleted_by": .string(WriterName.display(e.deletedBy)),
+            ]
+            if let status = e.status { o["status"] = .string(status.rawValue) }
+            return .object(o)
+        })]
+        if older > 0 { result["older_count"] = .int(older) }
+        return .object(result)
+    }
+
+    func restore(_ args: Arguments, writer: String) throws -> Value {
+        let id = try args.requiredString("id")
+        guard let entry = try reader.read({ try TrashQueries.entry($0, id: id) }) else {
+            throw ToolError("\(id) is not in the trash (list_trash shows what is).")
+        }
+        try perform(.restore(id: id), writer: writer)
+        return entry.kind == .page ? try pageValue(id) : try taskWithLinks(id)
+    }
+
+    static func timestamp(_ date: Date) -> String {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        return f.string(from: date)
     }
 
     func search(_ args: Arguments) throws -> Value {
@@ -461,6 +503,14 @@ struct Arguments {
     func requiredString(_ key: String) throws -> String {
         guard let s = try string(key), !s.trimmingCharacters(in: .whitespaces).isEmpty else { throw ToolError("\(key) is required.") }
         return s
+    }
+
+    func bool(_ key: String) throws -> Bool? {
+        switch values[key] {
+        case nil, .null: return nil
+        case .bool(let b): return b
+        default: throw ToolError("\(key) must be true or false.")
+        }
     }
 
     func int(_ key: String) throws -> Int? {
