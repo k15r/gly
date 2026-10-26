@@ -7,7 +7,7 @@ Lets AI agents (MCP clients such as Claude Code) read the day's schedule and tas
 ## Requirements
 
 ### Requirement: Read the schedule of a day
-The system SHALL provide an MCP tool `get_schedule` that returns, for a given date (default: today, local time), the appointments of all visible calendars and the tasks the day view shows for that date. Each appointment SHALL include title, start, end, all-day flag, cancelled flag, calendar name, location, organizer, attendees, and how it counts for free time (blocks, maybe, free) with the reason (automatic or override). The response SHALL include the day's free time and, for today, the Today list (with why each task is there, the work needed today and whether it can't fit) and the Coming up list (with each task's start-by day).
+The system SHALL provide an MCP tool `get_schedule` that returns, for a given date (default: today, local time), the appointments of all visible calendars and the tasks the day view shows for that date.
 
 #### Scenario: Today's schedule
 - **WHEN** an agent calls `get_schedule` without arguments
@@ -20,6 +20,16 @@ The system SHALL provide an MCP tool `get_schedule` that returns, for a given da
 #### Scenario: No calendar access
 - **WHEN** the agent process has no calendar access
 - **THEN** `get_schedule` still returns the tasks, and reports that appointments are unavailable because calendar access is missing
+
+### Requirement: Appointment details in the schedule
+Each appointment returned by `get_schedule` SHALL include title, start, end, all-day flag, cancelled flag, calendar name, location, organizer, attendees, and how it counts for free time (blocks, maybe, free) with the reason (automatic or override).
+
+#### Scenario: Appointment with an override
+- **WHEN** one occurrence of a recurring meeting is set to Ignore and an agent calls `get_schedule` for that day
+- **THEN** that appointment counts as free with the reason override, and the other appointments carry their automatic classification
+
+### Requirement: Planning data in the schedule
+The `get_schedule` response SHALL include the day's free time and, for today, the Today list (with why each task is there, the work needed today and whether it can't fit) and the Coming up list (with each task's start-by day).
 
 #### Scenario: Planning data
 - **WHEN** an agent calls `get_schedule` for today

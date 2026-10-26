@@ -5,7 +5,7 @@ import XCTest
 @testable import WorkDashCore
 @testable import WorkDashMCP
 
-/// specs/agent-access "Read the schedule of a day" (planning data) and "Effort over MCP".
+/// specs/agent-access "Planning data in the schedule", "Appointment details in the schedule" and "Effort over MCP".
 final class PlanningToolTests: XCTestCase {
     var db: DatabaseQueue!
     var source: FakeEventSource!
@@ -55,6 +55,18 @@ final class PlanningToolTests: XCTestCase {
         XCTAssertEqual(field(list(v2, "today").first, "reason"), "due_today")
         XCTAssertEqual(field(list(v2, "today").first, "needed_today_minutes"), .int(240))
         XCTAssertEqual(field(list(v2, "today").first, "cant_fit"), .bool(false))
+    }
+
+    /// specs/agent-access "Appointment details in the schedule": Appointment with an override.
+    func testAppointmentWithAnOverride() async throws {
+        let a = meeting(10, 1, id: "a"), b = meeting(14, 1, id: "b")
+        source.events = [a, b]
+        _ = CommandHandler(writer: db).perform(.setBlocking(AppointmentSnapshot(a), scope: .occurrence, value: .ignore), writer: "u")
+        let (v, isError, text) = await call("get_schedule")
+        XCTAssertFalse(isError, text)
+        let appts = list(v, "appointments")
+        XCTAssertEqual(appts.map { field($0, "counts_as") }, [.string("free"), .string("blocks")])
+        XCTAssertEqual(appts.map { field($0, "reason") }, [.string("override (this occurrence)"), .string("automatic")])
     }
 
     func testAgentEstimatesATask() async throws {
