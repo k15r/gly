@@ -46,9 +46,9 @@ targets:
       - name: Copy launch agent plist
         script: |
           mkdir -p "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents"
-          cp "${SRCROOT}/LaunchAgents/dev.k15r.workdash.agent.plist" "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents/"
-        inputFiles: [$(SRCROOT)/LaunchAgents/dev.k15r.workdash.agent.plist]
-        outputFiles: [$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchAgents/dev.k15r.workdash.agent.plist]
+          cp "${SRCROOT}/LaunchAgents/dev.k15r.workdash.spike-agent.plist" "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents/"
+        inputFiles: [$(SRCROOT)/LaunchAgents/dev.k15r.workdash.spike-agent.plist]
+        outputFiles: [$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchAgents/dev.k15r.workdash.spike-agent.plist]
   WorkDashAgent:
     type: tool
     platform: macOS
@@ -58,7 +58,7 @@ targets:
       - package: StoreSpike
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.agent
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.spike-agent
         GENERATE_INFOPLIST_FILE: YES
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         SKIP_INSTALL: YES

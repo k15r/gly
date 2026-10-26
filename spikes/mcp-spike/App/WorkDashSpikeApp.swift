@@ -7,7 +7,7 @@ struct WorkDashSpikeApp: App {
     init() {
         // Cleanup helper: `open WorkDashSpike.app --args --unregister` removes the login item and quits.
         if CommandLine.arguments.contains("--unregister") {
-            let service = SMAppService.agent(plistName: "dev.k15r.workdash.agent.plist")
+            let service = SMAppService.agent(plistName: "dev.k15r.workdash.spike-agent.plist")
             do { try service.unregister(); print("UNREGISTERED status=\(service.status.rawValue)") }
             catch { print("UNREGISTER ERROR \(error)") }
             exit(0)
@@ -22,7 +22,7 @@ struct WorkDashSpikeApp: App {
 struct ContentView: View {
     @State private var status = "–"
     @State private var reply = "–"
-    let service = SMAppService.agent(plistName: "dev.k15r.workdash.agent.plist")
+    let service = SMAppService.agent(plistName: "dev.k15r.workdash.spike-agent.plist")
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

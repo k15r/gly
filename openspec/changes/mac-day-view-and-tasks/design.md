@@ -47,7 +47,7 @@ scripts/build.sh               xcodegen generate && xcodebuild ... (one entry po
 ```
 
 - `WorkDashCore` is a local Swift package so its tests run with plain `swift test`, fast and without signing. App and agent link it.
-- Bundle IDs: `dev.k15r.workdash` (app) and `dev.k15r.workdash.agent` (agent). The Mach name is `DB33H6YGK7.dev.k15r.workdash.agent`.
+- Bundle IDs: `dev.k15r.workdash` (app) and `dev.k15r.workdash.agent` (agent). Launch agent label `dev.k15r.workdash.store-agent`, Mach name `DB33H6YGK7.dev.k15r.workdash.store-agent`. *(Changed during implementation: the MCP spike had registered the label `dev.k15r.workdash.agent`, and its stale login-item entry blocked reuse.)*
 - macOS 14+ deployment target (EventKit full-access API, `SMAppService`).
 - *Alternative:* everything in the Xcode project without a package. Rejected because Core tests would need the full signed build.
 
@@ -65,7 +65,8 @@ scripts/build.sh               xcodegen generate && xcodebuild ... (one entry po
                                   (app group container)
 ```
 
-- **Decides D5's open point:** the app reads the database with a **read-only `DatabasePool`** and `ValueObservation`, made cross-process aware by an `ExternalChangeWatcher` on the `-wal` file (spike: ~70–115 ms latency). This keeps reactive lists simple and avoids an XPC read API now.
+- **Decides D5's open point:** the app reads the database with a **query-only `DatabasePool`** and `ValueObservation`, made cross-process aware by an `ExternalChangeWatcher` on the `-wal` file (spike: ~70–115 ms latency). This keeps reactive lists simple and avoids an XPC read API now.
+  - *Found during implementation (task 2.4):* GRDB ignores `notifyChanges` on `Configuration.readonly` pools, and it resets `PRAGMA query_only` on the writer connection. So the app opens a normal pool that is wrapped in **`ReadOnlyStore`**, which exposes only `read` and `observe`. "The app never writes" is enforced by having no write API (compile time), not by SQLite. Observation of external writes is tested.
 - **All writes go through XPC to the agent**, which is the only process opening the database read-write. Later MCP writes reuse the same command handler.
 - **EventKit is read in the app process** in this change. Nothing about appointments is persisted yet, so the agent doesn't need calendar access. The agent gets EventKit with the MCP change (`get_schedule`) and annotations. *Trade-off:* calendar permission is then requested twice, once per process. Acceptable, and decided again in the MCP change.
 - On launch, the app registers the agent (`SMAppService.agent`). If the agent isn't enabled or can't be reached, the app shows a banner ("Writing disabled: WorkDash agent not enabled → Open Login Items") and stays readable. The store is created by the agent: if the database doesn't exist yet when the app starts, the app sends a `ping`, which makes the agent create and migrate it, then opens it read-only.
@@ -91,7 +92,7 @@ Writes are **Codable commands** sent as JSON `Data` over one XPC method (`perfor
 `createTask`, `updateTask(id, fields)`, `setStatus(id, status, snoozedUntil?)`, `deleteTask(id)`, `setTags(id, [names])`, `undo`, `redo`, `reconcileSnoozes(today)`, `ping`.
 
 - The agent validates (non-empty title, enum values, tag name rules) and returns `Result { ok(ids/changes) | error(code, message) }`. The app shows errors inline.
-- Each command runs in **one transaction and one change-log batch**. Every changed field is logged with old and new value. `modified_by` and `change_log.writer` come from the `writer` argument, which the app sets to `user@<host name>`. The agent only accepts peers signed by our team (`setCodeSigningRequirement`), so the writer string is trusted for now.
+- Each command runs in **one transaction and one change-log batch**. Every changed field is logged with old and new value. `modified_by` and `change_log.writer` come from the `writer` argument, which the app sets to `user@<device id>`. *(Changed during implementation: a random device ID such as `mac-3f2a9c`, created once, instead of the host name, which can contain personal data.)* The agent only accepts peers signed by our team (`setCodeSigningRequirement`), so the writer string is trusted for now.
 - **Soft delete** tombstones the item and its `item_tags` in the same batch.
 - `setTags` diffs the current assignments: it tombstones removed `item_tags` rows, inserts new ones, and creates missing tags. Re-adding a previously removed tag inserts a new assignment row (the history stays intact).
 
@@ -108,6 +109,8 @@ Writes are **Codable commands** sent as JSON `Data` over one XPC method (`perfor
 - **Redo** re-applies the most recently undone batch of that writer, if no new change by that writer happened since (a new change clears the redo chain, like standard undo semantics). It is recorded with `redo_of`.
 - Undo of a create tombstones the row (never a hard delete).
 - **App integration:** the Edit menu's Undo/Redo (`CommandGroup(replacing: .undoRedo)`) send `undo`/`redo` to the agent. **While a text field has focus**, the standard text undo applies instead, so typing isn't undone through the store.
+- **One save = one step:** the editor sends a single `updateTask` whose patch may also carry `tags` and `status`/`snoozedUntil`, so a save is one batch. (Found in manual check E1: separate commands made one save up to three undo steps.)
+- **Feedback:** the store derives a label from a batch's change-log entries (`Create “…”`, `Delete “…”`, `Complete/Snooze/Drop/Reopen “…”`, `Edit “…” (title, due date, tags)`), using the item's current title. Undo/redo return it as `message`. The app shows it in a short centered overlay with a rewind/forward arrow, and the Edit menu items read "Undo <label>" / "Redo <label>" (observed from the store).
 
 ### L7: Calendar (app process)
 
@@ -124,7 +127,8 @@ Writes are **Codable commands** sent as JSON `Data` over one XPC method (`perfor
 - Pure functions in Core build the view model: `DayModel(day, now, appointments, tasks)` → all-day list, timed list with `past/current/upcoming` state, task list (due that day, plus overdue if `day == today`, sorted per L3). They're unit-tested with fixed `now` values, including DST and midnight-spanning cases.
 - **Time-based state** (past/current) refreshes via SwiftUI `TimelineView(.everyMinute)`. Crossing midnight while "today" is shown advances the view to the new day.
 - **Keyboard:** ⌘← previous day, ⌘→ next day, ⌘T today, ⌘N new task (due on the displayed day when invoked from the day view).
-- **Snoozed tasks:** queries treat `status = 'snoozed' AND snoozed_until <= today` as open, so the view is correct immediately. The app also sends `reconcileSnoozes(today)` on launch and at midnight to persist the transition (writer `system@<host>`).
+- **Snoozed tasks:** queries treat `status = 'snoozed' AND snoozed_until <= today` as open, so the view is correct immediately. The app also sends `reconcileSnoozes(today)` on launch and at midnight to persist the transition (writer `system@<device id>`).
+- **Back from snooze** *(added after manual check D7)*: a task appears in the day view on its snooze day regardless of its due date. `reconcileSnoozes` therefore sets `status = open` but **keeps `snoozed_until`** as a "returned on" marker. Explicit status changes (complete, reopen, drop) clear it.
 
 ### L9: Testing strategy
 

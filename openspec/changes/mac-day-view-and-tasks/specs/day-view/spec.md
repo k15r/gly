@@ -54,7 +54,7 @@ The system SHALL let the user move to the previous day, the next day and back to
 - **THEN** the view returns to the current date
 
 ### Requirement: Tasks for the day
-The day view SHALL show the open tasks due on the displayed day. When the displayed day is today, it SHALL also show overdue open tasks, marked as overdue. Tasks SHALL be sorted by priority (urgent first), then by due time. Snoozed tasks SHALL appear only from their snooze date.
+The day view SHALL show the open tasks due on the displayed day. When the displayed day is today, it SHALL also show overdue open tasks, marked as overdue. A snoozed task SHALL appear on its snooze day regardless of its due date, marked "back from snooze", and not before. Tasks SHALL be sorted by priority (urgent first), then by due time.
 
 #### Scenario: Due and overdue tasks today
 - **WHEN** today has an urgent task due today, a normal task due today, and a normal task due yesterday that is still open
@@ -63,6 +63,10 @@ The day view SHALL show the open tasks due on the displayed day. When the displa
 #### Scenario: Future day
 - **WHEN** the user views tomorrow
 - **THEN** only tasks due tomorrow appear, and no overdue tasks
+
+#### Scenario: Snoozed until tomorrow
+- **WHEN** a task due today is snoozed until tomorrow and the user views tomorrow
+- **THEN** the task appears there marked "back from snooze", and it no longer appears today
 
 ### Requirement: Act on tasks from the day view
 The system SHALL let the user complete a task, open it for editing, and create a new task due on the displayed day directly from the day view.

@@ -6,7 +6,7 @@ Project: `spikes/mcp-spike` (XcodeGen `project.yml` → `xcodebuild`), signed wi
 
 ```
 Claude Code --stdio--> wd-mcp (shim, not sandboxed, stateless)
-                          |  NSXPCConnection(machServiceName: "DB33H6YGK7.dev.k15r.workdash.agent")
+                          |  NSXPCConnection(machServiceName: "DB33H6YGK7.dev.k15r.workdash.spike-agent")
                           v
                        WorkDashAgent (launch agent in the app bundle, sandboxed)
                           owns the SQLite store in the app group container

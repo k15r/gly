@@ -1,0 +1,67 @@
+# WorkDash Mac app. Generate with `xcodegen generate` (the .xcodeproj is git-ignored) or use scripts/build.sh.
+name: WorkDash
+options:
+  bundleIdPrefix: dev.k15r
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    DEVELOPMENT_TEAM: DB33H6YGK7
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  WorkDashCore:
+    path: Packages/WorkDashCore
+targets:
+  WorkDash:
+    type: application
+    platform: macOS
+    sources: [Apps/Mac/App]
+    dependencies:
+      - package: WorkDashCore
+      - target: WorkDashAgent
+        embed: true
+        copy: {destination: executables}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash
+        PRODUCT_NAME: WorkDash
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: WorkDash
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: WorkDash shows the appointments of all your calendars in its day view.
+        INFOPLIST_KEY_NSCalendarsUsageDescription: WorkDash shows the appointments of all your calendars in its day view.
+    entitlements:
+      path: Apps/Mac/App/WorkDash.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
+        com.apple.security.personal-information.calendars: true
+    postCompileScripts:
+      - name: Copy launch agent plist
+        script: |
+          mkdir -p "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents"
+          cp "${SRCROOT}/Apps/Mac/LaunchAgents/dev.k15r.workdash.store-agent.plist" "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents/"
+        inputFiles: [$(SRCROOT)/Apps/Mac/LaunchAgents/dev.k15r.workdash.store-agent.plist]
+        outputFiles: [$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchAgents/dev.k15r.workdash.store-agent.plist]
+  WorkDashAgent:
+    type: tool
+    platform: macOS
+    sources: [Apps/Mac/Agent]
+    dependencies:
+      - package: WorkDashCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.agent
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        SKIP_INSTALL: YES
+    entitlements:
+      path: Apps/Mac/Agent/WorkDashAgent.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]

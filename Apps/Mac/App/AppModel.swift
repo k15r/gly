@@ -1,0 +1,122 @@
+import Foundation
+import Observation
+import ServiceManagement
+import WorkDashCore
+
+struct UndoNotice: Equatable {
+    let id = UUID()
+    let redo: Bool
+    let label: String
+    let changed: Bool
+}
+
+/// App-wide state: the agent connection, the read-only store and the writer identity (design L2).
+@MainActor
+@Observable
+final class AppModel {
+    enum AgentState: Equatable {
+        case unknown
+        case ready
+        case requiresApproval
+        case unavailable(String)
+    }
+
+    private(set) var agentState: AgentState = .unknown
+    private(set) var store: ReadOnlyStore?
+    /// Last error from a command, shown as a dismissible message.
+    var lastError: String?
+    /// Short overlay after a store undo/redo, saying what was reverted.
+    private(set) var undoNotice: UndoNotice?
+
+    let writer: String
+    let systemWriter: String
+    private let client = AgentClient()
+    private let service = SMAppService.agent(plistName: WorkDashIDs.agentPlistName)
+
+    init() {
+        let id = AppModel.deviceID()
+        writer = "user@\(id)"
+        systemWriter = "system@\(id)"
+    }
+
+    /// Stable random device id; deliberately not the host name (which can contain personal data).
+    static func deviceID() -> String {
+        let key = "deviceID"
+        if let id = UserDefaults.standard.string(forKey: key) { return id }
+        let id = "mac-" + UUID().uuidString.prefix(6).lowercased()
+        UserDefaults.standard.set(id, forKey: key)
+        return id
+    }
+
+    var canWrite: Bool { agentState == .ready }
+
+    /// Registers the agent, pings it (which makes it create the database) and opens the store.
+    func start() async {
+        do {
+            if service.status != .enabled { try service.register() }
+        } catch {
+            // Registration can fail while approval is pending; the status below tells which.
+        }
+        await refreshAgentState()
+        if case .unavailable = agentState, service.status == .enabled {
+            // Stale registration (e.g. the app moved, or an old build is registered): re-register once.
+            try? await service.unregister()
+            try? service.register()
+            await refreshAgentState()
+        }
+    }
+
+    func refreshAgentState() async {
+        switch service.status {
+        case .requiresApproval:
+            agentState = .requiresApproval
+            return
+        case .notFound:
+            agentState = .unavailable("The agent is missing from the app bundle.")
+            return
+        default: break
+        }
+        switch await client.perform(.ping, writer: writer) {
+        case .ok(let r) where r.message == "pong":
+            agentState = .ready
+            openStoreIfNeeded()
+        case .ok:
+            agentState = .unavailable("Unexpected agent answer.")
+        case .failure(let f):
+            agentState = .unavailable(f.message)
+            openStoreIfNeeded()      // an existing database can still be read
+        }
+    }
+
+    private func openStoreIfNeeded() {
+        guard store == nil, let url = try? StoreFactory.defaultDatabaseURL() else { return }
+        store = try? ReadOnlyStore(url: url)
+    }
+
+    /// Sends a command to the agent as the user. Returns the result; failures are also put into `lastError`.
+    @discardableResult
+    func send(_ command: Command, asSystem: Bool = false) async -> CommandResult {
+        let result = await client.perform(command, writer: asSystem ? systemWriter : writer)
+        if case .failure(let f) = result {
+            if f.code == .unavailable { await refreshAgentState() }
+            if !asSystem { lastError = f.message }
+        }
+        return result
+    }
+
+    /// Undo/redo through the agent, then show what happened in the overlay.
+    func undoRedo(_ command: Command) async {
+        guard case .ok(let r) = await send(command) else { return }
+        let notice = UndoNotice(redo: command == .redo, label: r.message ?? "", changed: r.changed)
+        undoNotice = notice
+        try? await Task.sleep(for: .seconds(1.6))
+        if undoNotice == notice { undoNotice = nil }
+    }
+
+    func openLoginItems() { SMAppService.openSystemSettingsLoginItems() }
+
+    func unregisterAgent() async {
+        try? await service.unregister()
+        agentState = .unavailable("Agent unregistered (Developer menu).")
+    }
+}
