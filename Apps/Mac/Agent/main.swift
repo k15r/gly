@@ -69,7 +69,11 @@ do {
     let settings = SharedSettings.shared()
     let calendar = EventKitSource()
     let tools = WorkDashTools(writer: pool, calendar: calendar,
-                              hiddenCalendarIDs: { settings.hiddenCalendarIDs }, deviceID: settings.deviceID)
+                              hiddenCalendarIDs: { settings.hiddenCalendarIDs }, deviceID: settings.deviceID,
+                              planning: { (settings.workingHours, settings.effortSizes, settings.horizonDays) })
+    // Keeps appointment annotations attached after calendar changes (planning-day-view design Q4).
+    let reconciler = AnnotationReconciler(writer: pool, calendar: calendar, writerName: "system@\(settings.deviceID)")
+    reconciler.start()
     let mcp = MCPHost()
     let http = HTTPController(settings: settings, mcp: mcp)
     Task { await http.apply() }

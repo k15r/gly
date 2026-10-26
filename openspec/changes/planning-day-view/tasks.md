@@ -20,8 +20,8 @@
 
 ## 4. Agent and MCP
 
-- [ ] 4.1 Run `AnnotationMatcher` in the agent after calendar changes (debounced), at launch and at midnight, written as `system@<device>`; verify with an integration test using `FakeEventSource.change` that a moved occurrence keeps its override
-- [ ] 4.2 Extend `get_schedule` (per appointment `counts_as`/`reason`, `free_minutes`, today's `work_on` with states) and the task tools with `effort`; verify with MCP tests for "Planning data", "Agent estimates a task", and that existing fields are unchanged
+- [x] 4.1 Run `AnnotationMatcher` in the agent after calendar changes (debounced), at launch and at midnight, written as `system@<device>`; verify with an integration test using `FakeEventSource.change` that a moved occurrence keeps its override
+- [x] 4.2 Extend `get_schedule` (per appointment `counts_as`/`reason`, `free_minutes`, today's `work_on` with states) and the task tools with `effort`; verify with MCP tests for "Planning data", "Agent estimates a task", and that existing fields are unchanged
 
 ## 5. App
 

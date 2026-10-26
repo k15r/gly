@@ -24,13 +24,15 @@ public enum ToolDefinitions {
         "description": "Hierarchical tag names like \"project/atlas\" or \"person/alex\" (segments separated by /, none empty). Prefer existing tags (see list_tags).",
     ])
 
-    static let taskShape = "A task is {id, title, notes, status, priority, due: {day, time?} or null, snoozed_until, tags, created_at, modified_at, modified_by}."
+    static let taskShape = "A task is {id, title, notes, status, priority, due: {day, time?} or null, snoozed_until, effort (XS/S/M/L/XL or null), tags, created_at, modified_at, modified_by}."
+    static let effortSchema: Value = .object(["type": .array(["string", "null"]), "enum": ["XS", "S", "M", "L", "XL", .null],
+                                              "description": "How much work the task is: XS ≈ 30 min, S ≈ 2 h, M ≈ half a day, L ≈ a day, XL ≈ several days (the user can tune these). null removes it."])
     static let linkNote = "Markdown may link to pages, tasks and tags: write [[Exact Title]] (resolved if exactly one page, task or tag has that title or name) or reuse the canonical form [label](workdash://item/<id>) or [label](workdash://tag/<id>) returned by tools. Unresolved [[…]] links stay as 'missing page' links and are listed in `unresolved`. Ordinary web links ([text](https://…)) are fine too."
     static let pageShape = "A page is {id, title, text, tags, created_at, modified_at, modified_by, links: [{id, kind, title, state}], backlinks: [{id, kind, title, excerpt}]}; kind is page, task or tag; state is live, deleted or missing."
 
     public static let all: [Tool] = [
         Tool(name: "get_schedule",
-             description: "The user's schedule for one day: appointments from all visible calendars (in start order; all-day ones flagged) and the tasks the WorkDash day view shows (due that day; for today also overdue ones, flagged). If calendar access is missing, tasks are still returned and appointments_unavailable explains why. \(dateNote) \(taskShape)",
+             description: "The user's schedule for one day: appointments from all visible calendars (in start order; all-day ones flagged; counts_as = blocks/maybe/free for the user's free time, with reason) and the tasks the WorkDash day view shows (due that day; for today also overdue ones, flagged), plus free_minutes (free working time that day, for today from now on). For today also work_on: tasks due within the planning horizon with effort and state (late, tight, start_today, ok, no_estimate) comparing effort with the free time until each due date. If calendar access is missing, tasks are still returned and appointments_unavailable explains why. \(dateNote) \(taskShape)",
              inputSchema: object(["date": string("Day to show (YYYY-MM-DD). Default: today.")]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "list_tasks",
@@ -57,6 +59,7 @@ public enum ToolDefinitions {
                 "due_date": string("Due day (YYYY-MM-DD)."),
                 "due_time": string("Due time (HH:mm); needs due_date. Omit for a whole-day due date."),
                 "tags": tagsSchema,
+                "effort": effortSchema,
              ], required: ["title"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
         Tool(name: "update_task",
@@ -70,6 +73,7 @@ public enum ToolDefinitions {
                 "due_time": string("Due time (HH:mm); only together with due_date. Omit for whole day."),
                 "tags": tagsSchema,
                 "status": string("New status.", enum: statusValues),
+                "effort": effortSchema,
                 "snoozed_until": string("Day the task comes back (YYYY-MM-DD); required with status snoozed."),
              ], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),

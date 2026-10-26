@@ -65,7 +65,7 @@ final class ToolTests: XCTestCase {
         for key in ["created_at", "modified_at"] {
             json = json.replacingOccurrences(of: #""\#(key)":"[^"]*""#, with: #""\#(key)":"T""#, options: .regularExpression)
         }
-        XCTAssertEqual(json, #"{"backlinks":[],"created_at":"T","due":{"day":"2026-10-29","time":"14:00"},"id":"\#(id)","links":[],"modified_at":"T","modified_by":"user@mac","notes":"","priority":"high","snoozed_until":null,"status":"open","tags":["project/atlas"],"title":"Send report"}"#)
+        XCTAssertEqual(json, #"{"backlinks":[],"created_at":"T","due":{"day":"2026-10-29","time":"14:00"},"effort":null,"id":"\#(id)","links":[],"modified_at":"T","modified_by":"user@mac","notes":"","priority":"high","snoozed_until":null,"status":"open","tags":["project/atlas"],"title":"Send report"}"#)
     }
 
     // MARK: 3.3 read tools

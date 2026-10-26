@@ -12,15 +12,19 @@ public final class WorkDashTools: @unchecked Sendable {
     let hiddenCalendarIDs: () -> Set<String>
     let deviceID: String
     let now: () -> Date
+    /// Working hours, effort sizes and horizon (shared settings).
+    let planning: () -> (WorkingHours, EffortSizes, Int)
 
     public init(writer: DatabaseWriter, calendar: EventSource, hiddenCalendarIDs: @escaping () -> Set<String>,
-                deviceID: String, now: @escaping () -> Date = Date.init) {
+                deviceID: String, now: @escaping () -> Date = Date.init,
+                planning: @escaping () -> (WorkingHours, EffortSizes, Int) = { (WorkingHours(), .defaults(for: WorkingHours()), 5) }) {
         self.reader = writer
         self.handler = CommandHandler(writer: writer)
         self.calendar = calendar
         self.hiddenCalendarIDs = hiddenCalendarIDs
         self.deviceID = deviceID
         self.now = now
+        self.planning = planning
     }
 
     var today: LocalDay { LocalDay(date: now()) }
@@ -82,12 +86,37 @@ public final class WorkDashTools: @unchecked Sendable {
         let tasks = try await reader.read { try TaskQueries.tasksForDay($0, day: day, today: today) }
         var result: [String: Value] = ["date": .string(day.description)]
         if calendar.authorization == .notDetermined { _ = await calendar.requestAccess() }
+        let (hours, sizes, horizon) = planning()
+        let overrides = try await reader.read { try AnnotationQueries.overrides($0) }
         if calendar.authorization.canRead {
             let calendars = calendar.calendars()
             let visible = Set(calendars.map(\.id)).subtracting(hiddenCalendarIDs())
             let model = DayModel(day: day, now: now(), appointments: calendar.appointments(overlapping: day.interval(), calendarIDs: visible),
                                  calendars: calendars, tasks: tasks)
-            result["appointments"] = .array((model.allDay + model.timed).map(encode))
+            result["appointments"] = .array((model.allDay + model.timed).map { entry in
+                guard case .object(var o) = encode(entry) else { return .null }
+                let (weight, reason) = overrides.classify(entry.appointment)
+                o["counts_as"] = .string(weight.rawValue)
+                o["reason"] = .string(Self.reasonText(reason))
+                return .object(o)
+            })
+            let dayStart = day == today ? now() : day.interval().start
+            result["free_minutes"] = .int(Int(FreeTime.minutes(from: dayStart, to: day.interval().end,
+                                                               busy: overrides.busy(model.allDay.map(\.appointment) + model.timed.map(\.appointment)),
+                                                               hours: hours).rounded()))
+            if day == today {
+                let range = DateInterval(start: today.interval().start, end: today.adding(days: horizon).interval().end)
+                let upcoming = try await reader.read { try TaskQueries.upcoming($0, today: today, horizon: horizon) }
+                let busy = overrides.busy(calendar.appointments(overlapping: range, calendarIDs: visible))
+                let items = Planning.evaluate(tasks.map(\.task) + upcoming, now: now(), sizes: sizes, hours: hours, busy: busy)
+                result["work_on"] = .array(items.map { item in
+                    guard case .object(var o) = encode(item.task) else { return .null }
+                    o["state"] = .string(item.state.rawValue)
+                    o["effort_minutes"] = item.effortMinutes.map { .int($0) } ?? .null
+                    o["free_until_due_minutes"] = .int(Int(item.freeMinutes.rounded()))
+                    return .object(o)
+                })
+            }
         } else {
             result["appointments"] = .array([])
             result["appointments_unavailable"] = "WorkDash has no calendar access (System Settings → Privacy & Security → Calendars)."
@@ -98,6 +127,10 @@ public final class WorkDashTools: @unchecked Sendable {
             return .object(o)
         })
         return .object(result)
+    }
+
+    static func reasonText(_ r: BlockingReason) -> String {
+        switch r { case .automatic: "automatic"; case .occurrenceOverride: "override (this occurrence)"; case .seriesOverride: "override (series)" }
     }
 
     func listTasks(_ args: Arguments) throws -> Value {
@@ -137,7 +170,8 @@ public final class WorkDashTools: @unchecked Sendable {
                               body: try args.string("notes") ?? "",
                               priority: try args.priority("priority") ?? .none,
                               due: try args.due(),
-                              tags: try args.strings("tags") ?? [])
+                              tags: try args.strings("tags") ?? [],
+                              effort: try args.effort("effort") ?? nil)
         let ok = try performOK(.createTask(draft), writer: writer)
         return withUnresolved(encode(try task(ok.id ?? "")), ok.unresolved)
     }
@@ -151,6 +185,7 @@ public final class WorkDashTools: @unchecked Sendable {
         if args.has("due_date") { patch.due = .some(try args.due()) }
         else if args.has("due_time") { throw ToolError("due_time needs due_date.") }
         patch.tags = try args.strings("tags")
+        if args.has("effort") { patch.effort = .some(try args.effort("effort") ?? nil) }
         if let s = try args.string("status") {
             guard let status = TaskStatus(rawValue: s) else { throw ToolError("Unknown status “\(s)” (use open, snoozed, done or dropped).") }
             if status == .snoozed && !args.has("snoozed_until") { throw ToolError("A snooze date (snoozed_until) is required to snooze a task.") }
@@ -336,6 +371,7 @@ public final class WorkDashTools: @unchecked Sendable {
             o["due"] = .null
         }
         o["snoozed_until"] = t.snoozedUntil.map { .string($0) } ?? .null
+        o["effort"] = t.effort.map { .string($0.rawValue) } ?? .null
         return .object(o)
     }
 
@@ -411,6 +447,14 @@ struct Arguments {
         guard let s = try string(key) else { return nil }
         guard let d = LocalDay(s) else { throw ToolError("\(key) “\(s)” is not a date (YYYY-MM-DD).") }
         return d
+    }
+
+    /// nil = absent; .some(nil) = explicitly null (remove).
+    func effort(_ key: String) throws -> Effort?? {
+        guard has(key) else { return nil }
+        guard let s = try string(key) else { return .some(nil) }
+        guard let e = Effort(rawValue: s.uppercased()) else { throw ToolError("Unknown effort “\(s)” (use XS, S, M, L or XL).") }
+        return .some(e)
     }
 
     func priority(_ key: String) throws -> Priority? {
