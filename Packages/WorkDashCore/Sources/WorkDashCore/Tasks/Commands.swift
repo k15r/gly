@@ -128,6 +128,8 @@ public enum Command: Codable, Equatable {
     case reconcileAnnotations(from: Date, to: Date, appointments: [ObservedAppointment])
     /// The user picked the appointment an ambiguous annotation belongs to.
     case resolveAnnotation(id: String, to: AppointmentSnapshot)
+    /// Pins a typed `[[typed]]` link in an item's or tag page's text to a chosen target (link-disambiguation K5).
+    case resolveLink(sourceTable: String, sourceID: String, typed: String, target: LinkCandidate)
 }
 
 public enum CommandResult: Codable, Equatable {
@@ -354,6 +356,21 @@ public struct CommandHandler {
             }
             try batch.update("items", id: id, Self.snapshotFields(snap, state: "active"))
             return CommandOK(id: id)
+
+        case .resolveLink(let table, let sourceID, let typed, let target):
+            guard ["items", "tags"].contains(table) else { throw CommandFailure(.validation, "Unknown source \(table).") }
+            let column = table == "tags" ? "page_body" : "body"
+            guard let text = try String.fetchOne(db, sql: "SELECT \(column) FROM \(table) WHERE id = ? AND deleted_at IS NULL", arguments: [sourceID]) else {
+                throw CommandFailure(.notFound, "Source \(sourceID) not found.")
+            }
+            guard let link = LinkParser.links(in: text).first(where: { $0.target == .missing(typed) }) else {
+                return CommandOK(id: sourceID, changed: false)
+            }
+            let canonical = target.kind == .tag ? LinkParser.canonical(label: target.title, tag: target.id)
+                                                : LinkParser.canonical(label: target.title, item: target.id)
+            let updated = (text as NSString).replacingCharacters(in: link.range, with: canonical)
+            let changed = try batch.update(table, id: sourceID, [column: updated])
+            return CommandOK(id: sourceID, changed: !changed.isEmpty)
 
         case .reconcileSnoozes(let today):
             try Validate.day(today)

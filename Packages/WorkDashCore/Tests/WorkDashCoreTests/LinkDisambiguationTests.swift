@@ -67,3 +67,24 @@ final class LinkDisambiguationTests: XCTestCase {
         XCTAssertEqual(try body(t), "[Goals](workdash://item/\(page))")
     }
 }
+
+extension LinkDisambiguationTests {
+    func testPickACandidate() throws {
+        let alex = ok(.createPage(PageDraft(title: "Goals", tags: ["person/alex"]))).id!
+        ok(.createPage(PageDraft(title: "Goals", tags: ["person/sam"])))
+        let t = ok(.createTask(TaskDraft(title: "T", body: "first [[Goals]] then [[Goals]]")))
+        let candidates = try db.read { try LinkResolver.candidates($0, typed: "Goals") }
+        let chosen = candidates.first { $0.id == alex }!
+        ok(.resolveLink(sourceTable: "items", sourceID: t.id!, typed: "Goals", target: chosen))
+        XCTAssertEqual(try body(t.id!), "first [Goals](workdash://item/\(alex)) then [[Goals]]", "only the chosen occurrence is pinned")
+        ok(.undo)
+        XCTAssertEqual(try body(t.id!), "first [[Goals]] then [[Goals]]", "one undo step")
+    }
+
+    func testSearchHitsCarryTagsAndModified() throws {
+        ok(.createPage(PageDraft(title: "Goals", tags: ["person/alex"])))
+        let hit = try db.read { try SearchQueries.search($0, "goals") }.pages.first
+        XCTAssertEqual(hit?.tags, ["person/alex"])
+        XCTAssertNotNil(hit?.modifiedAt)
+    }
+}

@@ -3,8 +3,8 @@
 ## 1. Core
 
 - [x] 1.1 Extend `LinkResolver` with kind prefixes and tag-path matching, returning `UnresolvedLink` candidates for ambiguous links; add `CommandOK.unresolvedLinks`; keep missing-link resolution on page creation working with the new forms; verify with tests for "Unique title", "Ambiguous or unknown title", "Tag path", "Kind prefix", "Resolved once", a title containing `/`, and a page created later resolving `[[person/alex/Goals]]`
-- [ ] 1.2 Implement `Disambiguation.qualifiers` and `DisplayNames.display` (same-kind same-title groups, deepest unique tag, creation-date fallback); verify with tests for "Qualifier appears with a duplicate", "Qualifier follows tag changes", "Same tags", tasks vs pages scoped separately, and a unique title without qualifier
-- [ ] 1.3 Add `Command.resolveLink(source, typed:, target:)` that rewrites one typed link in a page, task or tag page text to a canonical link (one undo step) and `LinkResolver.candidates(db, typed:)` (read-only); extend `SearchHit` with tags and modified time; verify with tests for "Pick a candidate" and the search fields
+- [x] 1.2 Implement `Disambiguation.qualifiers` and `DisplayNames.display` (same-kind same-title groups, deepest unique tag, creation-date fallback); verify with tests for "Qualifier appears with a duplicate", "Qualifier follows tag changes", "Same tags", tasks vs pages scoped separately, and a unique title without qualifier
+- [x] 1.3 Add `Command.resolveLink(source, typed:, target:)` that rewrites one typed link in a page, task or tag page text to a canonical link (one undo step) and `LinkResolver.candidates(db, typed:)` (read-only); extend `SearchHit` with tags and modified time; verify with tests for "Pick a candidate" and the search fields
 
 ## 2. MCP
 

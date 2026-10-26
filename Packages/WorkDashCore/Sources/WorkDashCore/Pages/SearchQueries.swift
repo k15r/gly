@@ -7,6 +7,8 @@ public struct SearchHit: Equatable, Identifiable {
     public let ref: LinkRef
     /// Text around the match; empty when only the title matched.
     public let excerpt: String
+    public var tags: [String] = []
+    public var modifiedAt: Date?
 }
 
 /// Results grouped by kind; each group ordered by relevance (bm25 is not comparable across kinds).
@@ -54,6 +56,19 @@ public enum SearchQueries {
             case .task: results.tasks = hits
             case .tag: results.tags = hits
             }
+        }
+        // Tags and last change for the second line of results (link-disambiguation K4).
+        let ids = results.all.map(\.ref.id)
+        if !ids.isEmpty {
+            let tags = try TaskQueries.tagsByItem(db, ids: ids)
+            let marks = ids.map { _ in "?" }.joined(separator: ",")
+            var modified: [String: Date] = [:]
+            for r in try Row.fetchAll(db, sql: "SELECT id, modified_at FROM items WHERE id IN (\(marks)) UNION ALL SELECT id, modified_at FROM tags WHERE id IN (\(marks))",
+                                      arguments: StatementArguments(ids + ids)) { modified[r["id"]] = r["modified_at"] }
+            func enrich(_ hits: [SearchHit]) -> [SearchHit] {
+                hits.map { var h = $0; h.tags = tags[h.ref.id] ?? []; h.modifiedAt = modified[h.ref.id]; return h }
+            }
+            results.pages = enrich(results.pages); results.tasks = enrich(results.tasks); results.tags = enrich(results.tags)
         }
         return results
     }
