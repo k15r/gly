@@ -16,10 +16,10 @@ Neutral test data only (no real names).
 
 ## C. Day view (task 5.3)
 
-- [ ] C1 The header shows "free Xh Ym" and a bar; on a busy day the bar is short. Viewing tomorrow shows tomorrow's free time.
-- [ ] C2 "Today" lists overdue tasks, tasks due today and tasks that need work today ("today ≥ …"); tasks that can't be finished are first, marked "can't fit". The header shows "needs … · free …" and "… short" when overbooked; tasks without estimate are counted separately.
-- [ ] C3 "Coming up" lists the other tasks due in the next 5 days with "start by <day>"; the picker switches to 3/7/14 days and the choice is kept; tasks without estimate are last.
-- [ ] C4 Decline a meeting in Outlook (or Apple Calendar) → once it reaches the calendar, free time and "today ≥ …" update by themselves.
+- [x] C1 The header shows "free Xh Ym" and a bar; on a busy day the bar is short. Viewing tomorrow shows tomorrow's free time.
+- [x] C2 "Today" lists overdue tasks, tasks due today and tasks that need work today ("today ≥ …"); tasks that can't be finished are first, marked "can't fit". The header shows "needs … · free …" and "… short" when overbooked; tasks without estimate are counted separately.
+- [x] C3 "Coming up" lists the other tasks due in the next 5 days with "start by <day>"; the picker switches to 3/7/14 days and the choice is kept; tasks without estimate are last.
+- [x] C4 Decline a meeting in Outlook (or Apple Calendar) → once it reaches the calendar, free time and "today ≥ …" update by themselves.
 
 ## D. Appointment overrides (task 5.4)
 
@@ -31,13 +31,18 @@ Neutral test data only (no real names).
 
 ## E. End to end (task 6.1)
 
-- [ ] E1 A real week with Exchange meetings: ignore one occurrence and make one series optional; check free time per day looks right.
-- [ ] E2 Move an overridden meeting in Outlook → after it syncs, the override (circle) is on the moved meeting.
-- [ ] E3 Set efforts on a few tasks due this week → the states match your own judgement.
-- [ ] E4 Ask Claude Code to create a task "Prepare offsite" due in 3 days with effort M and then read today's schedule → the answer includes free time and the task in today / coming up with needed-today or start-by.
+- [x] E1 A real week with Exchange meetings: ignore one occurrence and make one series optional; check free time per day looks right.
+- [x] E2 Move an overridden meeting in Outlook → after it syncs, the override (circle) is on the moved meeting.
+- [x] E3 Set efforts on a few tasks due this week → the states match your own judgement.
+- [x] E4 Ask Claude Code to create a task "Prepare offsite" due in 3 days with effort M and then read today's schedule → the answer includes free time and the task in today / coming up with needed-today or start-by.
 
 ## Results
 
 | Date | Checked by | Result | Notes |
 |---|---|---|---|
+| 2026-10-26 | owner | A ✅ | Probe: Exchange availability reliable (busy/tentative); "unknown" response is common → treated as no information (design Q1); probe removed |
+| 2026-10-26 | owner | B ✅ | Planning settings and effort; changed: sizes entered as days/hours/minutes in a table, "Reset" only for customized sizes |
+| 2026-10-26 | owner | C ✅ | Day view; changed after testing: per-task states replaced by one Today list (overdue, due today, "today ≥ …", can't fit, load header) and Coming up with "start by"; account refresh times moved into the ↻ tooltip |
+| 2026-10-26 | owner | D ✅ | Appointment overrides; fixed: current choice wasn't visible (an occurrence "Ignore" hid a series "Blocks") → native checkmarks per section |
+| 2026-10-26 | owner | E ✅ | End to end on the SAP Mac with real meetings and Claude Code |
 | | | | |

@@ -25,14 +25,14 @@
 
 ## 5. App
 
-- [ ] 5.1 Add the Settings "Planning" tab (working hours, sizes with derived defaults, horizon); verify manually that changes update the day view at once
-- [ ] 5.2 Add effort to task rows (chip), the task page field row (control) and the task context menu; verify manually "Effort" and "Set effort on the task page" including one ⌘Z
-- [ ] 5.3 Add the planning model to the day view: capacity header with bar, the Today list with load header, Coming up with horizon picker; verify manually "Busy day", "Overbooked day", "Switch the horizon", and that the lists update when a meeting is declined ("Meeting declined in Outlook")
-- [ ] 5.4 Add the appointment menu (Automatic/Blocks/Optional/Ignore × occurrence/series), the weight icon on rows, and the ambiguity banner; verify manually "Skip one meeting", "Optional series", "Back to automatic", and that free time updates immediately
+- [x] 5.1 Add the Settings "Planning" tab (working hours, sizes with derived defaults, horizon); verify manually that changes update the day view at once
+- [x] 5.2 Add effort to task rows (chip), the task page field row (control) and the task context menu; verify manually "Effort" and "Set effort on the task page" including one ⌘Z
+- [x] 5.3 Add the planning model to the day view: capacity header with bar, the Today list with load header, Coming up with horizon picker; verify manually "Busy day", "Overbooked day", "Switch the horizon", and that the lists update when a meeting is declined ("Meeting declined in Outlook")
+- [x] 5.4 Add the appointment menu (Automatic/Blocks/Optional/Ignore × occurrence/series), the weight icon on rows, and the ambiguity banner; verify manually "Skip one meeting", "Optional series", "Back to automatic", and that free time updates immediately
 
 ## 6. End to end
 
-- [ ] 6.1 Manual checks in `docs/manual-checks-planning.md` on the SAP Mac: real week with Exchange meetings; ignore one occurrence and make a series optional; move an overridden meeting in Outlook and see the override follow; set efforts on a few tasks due this week and compare states with your own judgement; an agent creates an estimated task and reads `get_schedule`; neutral test data only
+- [x] 6.1 Manual checks in `docs/manual-checks-planning.md` on the SAP Mac: real week with Exchange meetings; ignore one occurrence and make a series optional; move an overridden meeting in Outlook and see the override follow; set efforts on a few tasks due this week and compare states with your own judgement; an agent creates an estimated task and reads `get_schedule`; neutral test data only
 
 ## Workflow follow-up
 
