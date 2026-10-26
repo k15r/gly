@@ -19,7 +19,7 @@
 ## 4. End to end
 
 - [x] 4.1 Manual checks in `docs/manual-checks-links.md`: two "Goals" pages under two person tags, links showing qualifiers that update when retagging, typed `[[person/alex/Goals]]` and `[[task:…]]`, an ambiguous `[[Goals]]` resolved via the menu, and Claude Code writing `[[Goals]]` (gets candidates) then retrying with the tag path; neutral test data only
-- [ ] 4.2 Manual checks for what was added during testing (`docs/manual-checks-links.md` section E): missing-link menu with new page/task and tag path, tag paths in the picker, New Subtag, excerpts in the tree, dragging from the lists onto tags
+- [x] 4.2 Manual checks for what was added during testing (`docs/manual-checks-links.md` section E): missing-link menu with new page/task and tag path, tag paths in the picker, New Subtag, excerpts in the tree, dragging from the lists onto tags
 
 ## Workflow follow-up
 

@@ -33,9 +33,9 @@ Neutral test data only (no real names). Setup: tags `person/alex` and `person/sa
 ## E. Added during testing
 
 - [x] E1 Click a missing link in read mode → a native menu at the pointer (candidates, New page, New task); Esc closes it without changes.
-- [ ] E2 ⌘-click `[[person/alex/Call]]` in edit mode → "New task “Call” in person/alex" → the task opens, tagged `person/alex`; the link now points to it.
-- [ ] E3 Type `[[person/alex/` → the picker lists the pages and open tasks under `person/alex`, then its subtags; typing "go" narrows to titles starting with "go". `[[person/al` still offers the tag `person/alex` ("Link to a tag").
-- [ ] E7 Type `[[call` (no such item) → the picker offers "New page “call”" and "New task “call”"; New task inserts `[[task:call]]`, and clicking it offers only "New task".
-- [ ] E4 Right-click `person/alex` in the tree → New Subtag… "goals" → `person/alex/goals` appears below `alex` (count 0) and its tag page opens; the same from the tag page's "New Subtag" button; ⌘Z removes it.
-- [ ] E5 The tree shows the start of each item's text below its title; two same-titled pages under one tag can be told apart.
-- [ ] E6 Drag a task from the task list and a page from the pages list onto a tag in the tree → the tag is added, the other tags stay; ⌘Z undoes it.
+- [x] E2 ⌘-click `[[person/alex/Call]]` in edit mode → "New task “Call” in person/alex" → the task opens, tagged `person/alex`; the link now points to it.
+- [x] E3 Type `[[person/alex/` → the picker lists the pages and open tasks under `person/alex`, then its subtags; typing "go" narrows to titles starting with "go". `[[person/al` still offers the tag `person/alex` ("Link to a tag").
+- [x] E7 Type `[[call` (no such item) → the picker offers "New page “call”" and "New task “call”"; New task inserts `[[task:call]]`, and clicking it offers only "New task".
+- [x] E4 Right-click `person/alex` in the tree → New Subtag… "goals" → `person/alex/goals` appears below `alex` (count 0) and its tag page opens; the same from the tag page's "New Subtag" button; ⌘Z removes it.
+- [x] E5 The tree shows the start of each item's text below its title; two same-titled pages under one tag can be told apart.
+- [x] E6 Drag a task from the task list and a page from the pages list onto a tag in the tree → the tag is added, the other tags stay; ⌘Z undoes it.
