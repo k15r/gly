@@ -54,6 +54,7 @@ struct WorkDashApp: App {
             CommandMenu("Developer") {
                 Button("Re-check Agent") { Task { await app.refreshAgentState() } }
                 Button("Unregister Agent") { Task { await app.unregisterAgent() } }
+                Button("Probe Attendance Data") { app.lastError = AttendanceProbe.run() }
             }
         }
 

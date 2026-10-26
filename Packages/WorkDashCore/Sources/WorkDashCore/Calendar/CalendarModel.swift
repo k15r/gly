@@ -25,14 +25,60 @@ public struct Appointment: Identifiable, Hashable {
     public let organizer: String?
     public let attendees: [String]
     public let lastModified: Date?
+    /// Stable identity across moves and single-occurrence edits (foundation-spikes D4).
+    public let identity: AppointmentIdentity
+    public let availability: Availability
+    /// My own response, from the attendee marked as current user; `.none` without attendees.
+    public let myStatus: ParticipationStatus
+    public let isOrganizer: Bool
 
     public init(id: String, calendarID: String, title: String, start: Date, end: Date, isAllDay: Bool = false,
                 isCancelled: Bool = false, location: String? = nil, organizer: String? = nil, attendees: [String] = [],
-                lastModified: Date? = nil) {
+                lastModified: Date? = nil, identity: AppointmentIdentity? = nil, availability: Availability = .unknown,
+                myStatus: ParticipationStatus = .none, isOrganizer: Bool = false) {
         self.id = id; self.calendarID = calendarID; self.title = title; self.start = start; self.end = end
         self.isAllDay = isAllDay; self.isCancelled = isCancelled; self.location = location; self.organizer = organizer
         self.attendees = attendees; self.lastModified = lastModified
+        self.identity = identity ?? AppointmentIdentity(calendarID: calendarID, baseID: id, originalStart: start)
+        self.availability = availability; self.myStatus = myStatus; self.isOrganizer = isOrganizer
     }
+
+    public var interval: DateInterval { DateInterval(start: start, end: max(start, end)) }
+}
+
+/// What the calendar says about how an appointment uses my time.
+public enum Availability: String, Codable, Hashable { case busy, free, tentative, unavailable, unknown }
+
+/// My response to an invitation.
+public enum ParticipationStatus: String, Codable, Hashable { case accepted, declined, tentative, pending, none }
+
+/// Identity of one occurrence: calendar + series id (external id without `/RID=…`) + original start (D4).
+public struct AppointmentIdentity: Hashable, Codable {
+    public let calendarID: String
+    public let baseID: String
+    public let originalStart: Date
+    public init(calendarID: String, baseID: String, originalStart: Date) {
+        self.calendarID = calendarID; self.baseID = baseID; self.originalStart = originalStart
+    }
+
+    /// From EventKit's `calendarItemExternalIdentifier` and `occurrenceDate`: a `/RID=<seconds since 2001>` suffix
+    /// marks a detached occurrence and carries its original start.
+    public static func from(externalID: String, occurrenceDate: Date, calendarID: String) -> AppointmentIdentity {
+        if let range = externalID.range(of: "/RID=") {
+            let base = String(externalID[..<range.lowerBound])
+            let rid = externalID[range.upperBound...].prefix { $0.isNumber || $0 == "." || $0 == "-" }
+            if let seconds = Double(rid) {
+                return AppointmentIdentity(calendarID: calendarID, baseID: base, originalStart: Date(timeIntervalSinceReferenceDate: seconds))
+            }
+            return AppointmentIdentity(calendarID: calendarID, baseID: base, originalStart: occurrenceDate)
+        }
+        return AppointmentIdentity(calendarID: calendarID, baseID: externalID, originalStart: occurrenceDate)
+    }
+
+    /// Key of this occurrence: `calendar/baseId@originalStart` (whole seconds since 2001).
+    public var occurrenceKey: String { "\(calendarID)/\(baseID)@\(Int(originalStart.timeIntervalSinceReferenceDate.rounded()))" }
+    /// Key of the series this occurrence belongs to.
+    public var seriesKey: String { "\(calendarID)/\(baseID)" }
 }
 
 public enum CalendarAuthorization: Equatable {

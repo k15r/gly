@@ -116,6 +116,7 @@ extension Database {
             let verb = ["done": "Complete", "snoozed": "Snooze", "dropped": "Drop", "open": "Reopen"][status] ?? "Status of"
             return "\(verb) \(quoted)"
         }
+        if fields == ["effort"] { return "Effort of \(quoted)" }
         var changed: [String] = []
         for f in Database.fieldLabels where fields.contains(f.column) {
             let label = isPage && f.column == "body" ? "text" : f.label

@@ -103,7 +103,8 @@ public enum TaskQueries {
                 due: dueDay.map { Due(day: $0, time: r["due_time"]) },
                 snoozedUntil: r["snoozed_until"], tags: tagsByItem[r["id"]] ?? [],
                 createdAt: r["created_at"], modifiedAt: r["modified_at"], modifiedBy: r["modified_by"],
-                completedAt: r["completed_at"])
+                completedAt: r["completed_at"],
+                effort: (r["effort"] as String?).flatMap(Effort.init(rawValue:)))
         }
     }
 }

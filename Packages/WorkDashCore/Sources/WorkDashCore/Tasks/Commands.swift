@@ -8,8 +8,9 @@ public struct TaskDraft: Codable, Equatable {
     public var priority: Priority = .none
     public var due: Due?
     public var tags: [String] = []
-    public init(title: String, body: String = "", priority: Priority = .none, due: Due? = nil, tags: [String] = []) {
-        self.title = title; self.body = body; self.priority = priority; self.due = due; self.tags = tags
+    public var effort: Effort?
+    public init(title: String, body: String = "", priority: Priority = .none, due: Due? = nil, tags: [String] = [], effort: Effort? = nil) {
+        self.title = title; self.body = body; self.priority = priority; self.due = due; self.tags = tags; self.effort = effort
     }
 }
 
@@ -46,14 +47,17 @@ public struct TaskPatch: Codable, Equatable {
     public var snoozedUntil: String?
     /// Edit session of the notes field (design P6).
     public var session: String?
+    /// `.some(nil)` removes the effort.
+    public var effort: Effort??
     public init(title: String? = nil, body: String? = nil, priority: Priority? = nil, due: Due?? = nil,
-                tags: [String]? = nil, status: TaskStatus? = nil, snoozedUntil: String? = nil, session: String? = nil) {
+                tags: [String]? = nil, status: TaskStatus? = nil, snoozedUntil: String? = nil, session: String? = nil,
+                effort: Effort?? = nil) {
         self.title = title; self.body = body; self.priority = priority; self.due = due
-        self.tags = tags; self.status = status; self.snoozedUntil = snoozedUntil; self.session = session
+        self.tags = tags; self.status = status; self.snoozedUntil = snoozedUntil; self.session = session; self.effort = effort
     }
 
-    // `Due??` needs explicit coding: JSON can't tell "unchanged" from "clear" otherwise.
-    private enum CodingKeys: String, CodingKey { case title, body, priority, due, clearDue, tags, status, snoozedUntil, session }
+    // `Due??` / `Effort??` need explicit coding: JSON can't tell "unchanged" from "clear" otherwise.
+    private enum CodingKeys: String, CodingKey { case title, body, priority, due, clearDue, tags, status, snoozedUntil, session, effort, clearEffort }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -64,6 +68,9 @@ public struct TaskPatch: Codable, Equatable {
         status = try c.decodeIfPresent(TaskStatus.self, forKey: .status)
         snoozedUntil = try c.decodeIfPresent(String.self, forKey: .snoozedUntil)
         session = try c.decodeIfPresent(String.self, forKey: .session)
+        if try c.decodeIfPresent(Bool.self, forKey: .clearEffort) == true { effort = .some(nil) }
+        else if let e = try c.decodeIfPresent(Effort.self, forKey: .effort) { effort = .some(e) }
+        else { effort = nil }
         if try c.decodeIfPresent(Bool.self, forKey: .clearDue) == true {
             due = .some(nil)
         } else if let d = try c.decodeIfPresent(Due.self, forKey: .due) {
@@ -82,6 +89,11 @@ public struct TaskPatch: Codable, Equatable {
         try c.encodeIfPresent(status, forKey: .status)
         try c.encodeIfPresent(snoozedUntil, forKey: .snoozedUntil)
         try c.encodeIfPresent(session, forKey: .session)
+        switch effort {
+        case .none: break
+        case .some(.none): try c.encode(true, forKey: .clearEffort)
+        case .some(.some(let e)): try c.encode(e, forKey: .effort)
+        }
         switch due {
         case .none: break
         case .some(.none): try c.encode(true, forKey: .clearDue)
@@ -177,6 +189,7 @@ public struct CommandHandler {
             let id = try batch.insert("items", [
                 "kind": "task", "title": title, "body": body, "status": TaskStatus.open.rawValue,
                 "priority": draft.priority.rawValue, "due_day": draft.due?.day, "due_time": draft.due?.time,
+                "effort": draft.effort?.rawValue,
             ])
             try replaceTags(of: id, with: names, batch: batch)
             return CommandOK(id: id, unresolved: unresolved)
@@ -188,6 +201,7 @@ public struct CommandHandler {
             if let t = patch.title { fields["title"] = try Validate.title(t) }
             if let b = patch.body { let r = try LinkResolver.resolve(b, db: db); fields["body"] = r.text; unresolved = r.unresolved }
             if let p = patch.priority { fields["priority"] = p.rawValue }
+            if let effort = patch.effort { fields.updateValue(effort?.rawValue, forKey: "effort") }
             if let due = patch.due {
                 if let due { try Validate.due(due) }
                 fields.updateValue(due?.day, forKey: "due_day")

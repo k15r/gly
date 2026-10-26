@@ -4,6 +4,13 @@ public enum TaskStatus: String, Codable, CaseIterable {
     case open, snoozed, done, dropped
 }
 
+/// How much work a task is (specs/daily-planning "Effort sizes").
+public enum Effort: String, Codable, CaseIterable, Comparable {
+    case xs = "XS", s = "S", m = "M", l = "L", xl = "XL"
+    var rank: Int { Effort.allCases.firstIndex(of: self)! }
+    public static func < (a: Effort, b: Effort) -> Bool { a.rank < b.rank }
+}
+
 public enum Priority: String, Codable, CaseIterable, Comparable {
     case none, low, normal, high, urgent
 
@@ -44,6 +51,7 @@ public struct TaskItem: Equatable, Identifiable {
     public var modifiedAt: Date
     public var modifiedBy: String
     public var completedAt: Date?
+    public var effort: Effort? = nil
 }
 
 extension Due {

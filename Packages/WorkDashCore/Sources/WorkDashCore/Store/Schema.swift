@@ -4,7 +4,10 @@ import GRDB
 /// (sync-ready conventions, foundation-spikes D2/D3a).
 public enum Schema {
     /// Tables that will be synced later; every one carries the sync columns.
-    public static let syncedTables = ["items", "tags", "item_tags"]
+    public static let syncedTables = ["items", "tags", "item_tags", "series_rules"]
+    public static let efforts = ["XS", "S", "M", "L", "XL"]
+    public static let eventStates = ["active", "cancelled", "gone", "ambiguous"]
+    public static let blockingValues = ["blocks", "optional", "ignore"]
 
     public static let itemKinds = ["info", "task", "event_note", "local_event"]
     public static let taskStatuses = ["open", "snoozed", "done", "dropped"]
@@ -21,6 +24,9 @@ public enum Schema {
         // Re-derive the search text once after LinkParser.plainText started stripping web-link markup.
         migrator.registerMigration("v3-rebuild-derived") { db in
             try DerivedIndex.rebuild(db)
+        }
+        migrator.registerMigration("v4") { db in
+            try createV4(db)
         }
         return migrator
     }
@@ -91,9 +97,38 @@ public enum Schema {
         try db.create(index: "change_log_batch", on: "change_log", columns: ["batch"])
         try db.create(index: "change_log_writer", on: "change_log", columns: ["writer", "seq"])
 
-        for table in syncedTables {
+        // Frozen list: tables added later create their own views in their migration.
+        for table in ["items", "tags", "item_tags"] {
             try db.execute(sql: "CREATE VIEW live_\(table) AS SELECT * FROM \(table) WHERE deleted_at IS NULL")
         }
+    }
+
+    /// Planning (planning-day-view design Q3): task effort, appointment annotations, series rules.
+    private static func createV4(_ db: Database) throws {
+        try db.alter(table: "items") { t in
+            t.add(column: "effort", .text).check { $0 == nil || efforts.contains($0) }
+            // Appointment annotations (kind = 'event_note'): key, snapshot, life-cycle state, blocking override.
+            t.add(column: "event_key", .text)
+            t.add(column: "event_series", .text)
+            t.add(column: "event_calendar", .text)
+            t.add(column: "event_start", .datetime)
+            t.add(column: "event_end", .datetime)
+            t.add(column: "event_organizer", .text)
+            t.add(column: "event_state", .text).check { $0 == nil || eventStates.contains($0) }
+            t.add(column: "blocking", .text).check { $0 == nil || blockingValues.contains($0) }
+        }
+        try db.create(index: "items_event_key", on: "items", columns: ["event_key"])
+        try db.create(index: "items_event_start", on: "items", columns: ["event_start"])
+
+        try db.create(table: "series_rules") { t in
+            syncColumns(t)
+            t.column("calendar_id", .text).notNull()
+            t.column("title", .text).notNull()
+            t.column("organizer", .text)
+            t.column("base_ids", .text).notNull().defaults(to: "[]")   // JSON array; grows when a series is split
+            t.column("blocking", .text).check { $0 == nil || blockingValues.contains($0) }
+        }
+        try db.execute(sql: "CREATE VIEW live_series_rules AS SELECT * FROM series_rules WHERE deleted_at IS NULL")
     }
 
     /// Pages and links (info-pages-and-links design P2, P6). Local-only, derived tables; not in `syncedTables`.

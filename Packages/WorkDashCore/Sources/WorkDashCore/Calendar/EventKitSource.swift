@@ -65,12 +65,40 @@ public final class EventKitSource: EventSource {
         return store.events(matching: predicate).map { e in
             let (title, cancelled) = CancellationRule.apply(title: e.title ?? "", statusCancelled: e.status == .canceled)
             let occurrence = e.occurrenceDate ?? e.startDate!
+            let calendarID = e.calendar.calendarIdentifier
+            let identity = AppointmentIdentity.from(externalID: e.calendarItemExternalIdentifier ?? e.eventIdentifier ?? UUID().uuidString,
+                                                    occurrenceDate: occurrence, calendarID: calendarID)
             return Appointment(
-                id: "\(e.calendar.calendarIdentifier)|\(e.eventIdentifier ?? UUID().uuidString)|\(occurrence.timeIntervalSinceReferenceDate)",
-                calendarID: e.calendar.calendarIdentifier, title: title, start: e.startDate, end: e.endDate,
+                id: "\(calendarID)|\(e.eventIdentifier ?? UUID().uuidString)|\(occurrence.timeIntervalSinceReferenceDate)",
+                calendarID: calendarID, title: title, start: e.startDate, end: e.endDate,
                 isAllDay: e.isAllDay, isCancelled: cancelled, location: e.location,
                 organizer: e.organizer?.name, attendees: (e.attendees ?? []).compactMap(\.name),
-                lastModified: e.lastModifiedDate)
+                lastModified: e.lastModifiedDate, identity: identity,
+                availability: Self.availability(e.availability), myStatus: Self.myStatus(e.attendees),
+                isOrganizer: e.organizer?.isCurrentUser ?? false)
+        }
+    }
+
+    static func availability(_ a: EKEventAvailability) -> Availability {
+        switch a {
+        case .busy: return .busy
+        case .free: return .free
+        case .tentative: return .tentative
+        case .unavailable: return .unavailable
+        case .notSupported: return .unknown
+        @unknown default: return .unknown
+        }
+    }
+
+    static func myStatus(_ attendees: [EKParticipant]?) -> ParticipationStatus {
+        guard let attendees, !attendees.isEmpty else { return .none }
+        guard let me = attendees.first(where: \.isCurrentUser) else { return .none }
+        switch me.participantStatus {
+        case .accepted, .completed, .inProcess: return .accepted
+        case .declined: return .declined
+        case .tentative, .delegated: return .tentative
+        case .pending, .unknown: return .pending
+        @unknown default: return .pending
         }
     }
 
