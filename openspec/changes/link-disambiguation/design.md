@@ -61,7 +61,7 @@ The stored text must stay `[Goals](workdash://item/…)`. So the icon and the qu
 
   Kerning adds space without adding characters.
 - `WDTextView` overrides `drawBackground(in:)` / `draw(_:)`. For every chip range it gets the glyph rectangles from the layout (TextKit 2 `textLayoutManager` enumerate) and draws the SF Symbol in the reserved space before the label and the qualifier in secondary color after it.
-- **Web links** get a globe the same way; **missing links** get a "+" doc icon.
+- **Web links** written as `[text](url)` get a globe the same way. **Missing links** get no icon; their red style already sets them apart.
 
 **Fallback,** if drawing proves fragile (caret, selection, scrolling): the icon only, with the qualifier in the chip's tooltip. That's a one-line change in the styler, and the spec is still met by the read view and lists.
 
@@ -74,10 +74,20 @@ The stored text must stay `[Goals](workdash://item/…)`. So the icon and the qu
 - **Titles** everywhere use `DisplayNames`.
 - **`LinkSuggestion`** already has `symbol`, `title` and `subtitle`; only the content changes.
 
-### K5: Choosing a candidate
+### K5: The missing-link menu
 
-- **Editor:** ⌘-click on a missing link calls `onOpenLink(workdash://missing/<text>)` as today. The app first asks Core for candidates (`LinkResolver.candidates(db, typed:)`, read-only). With candidates, it shows an `NSMenu` at the click: one entry per candidate (icon, display name, tags), then "Create page "…"". Choosing a candidate replaces the typed range with the canonical link through the editor's `replace`, so it gets undo and a session save. Without candidates, the behavior is unchanged: create the page.
-- **Read view:** a click on a missing link with candidates opens the same choices as a SwiftUI menu or popover. Choosing one writes the text through `updatePage`, `updateTask` or `updateTagPage` (the typed range is rewritten in Core: `Command.resolveLink(source, typed:, target:)`).
+One native `NSMenu` (`MissingLinkMenu`) serves both views; Esc or a click outside dismisses it. A first version used a SwiftUI `confirmationDialog` in the read view, which macOS shows as a sheet without Cancel; it was replaced.
+- **Entries:** the candidates of an ambiguous link (`LinkResolver.candidates(db, typed:)`, read-only; icon, display name, tags in the tooltip), then "New page …" and "New task …" (K7). The menu always opens, also without candidates, so the user picks page or task.
+- **Editor:** ⌘-click opens it at the link. A candidate replaces the typed range through the editor's `replace` (undo, session save).
+- **Read view:** a click opens it at the pointer. A candidate rewrites the text in the view (`MarkdownBlocks.pin`) and saves it through `updatePage`, `updateTask` or `updateTagPage`, one undo step.
+- **`Command.resolveLink`** does the same rewrite in Core. The app doesn't use it; it stays for agents and other clients that hold no text.
+- **Creating:** the menu opens `workdash://missing/<text>?create=page|task`. The whole text is percent-encoded, `/` included; an earlier version kept `/` and lost the tag path.
+
+### K7: Tag paths in the picker and new items from typed links
+
+- **Picker:** the `[[` query is parsed like a typed link (prefix, tag path). Exact candidates come first, then title search on the part after the last `/`, kept to the allowed kinds and to items carrying the path's tag or one below it. Right after a `/`, `SearchQueries.underTag` lists the pages and open tasks under the tag (most recently changed first), then its subtags.
+- **New item:** `LinkResolver.newItem(for:kind:)` turns `person/alex/Goals` into the title "Goals" with the tag `person/alex`, drops a matching prefix, and gives nil for the other kind's prefix or an empty title. So a link created from a tag path can't carry `/` in its title; the New Page sheet still allows that.
+- **Waiting links:** creating a task now resolves waiting links (`resolveMissing`), like creating a page; the tags are set first, so tag paths match.
 
 ### K6: MCP
 

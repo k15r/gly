@@ -12,13 +12,14 @@
 
 ## 3. Editor and app
 
-- [ ] 3.1 Extend `LinkAppearance` with kind and qualifier; draw icons (page/task/tag/web/missing) and qualifiers for chips in `WDTextView` using kerning-reserved space; add icon and qualifier to the read view; verify manually "Task link", "Qualifier appears with a duplicate" in editor and read view, and that caret, selection and scrolling around chips still behave (else switch to the documented fallback)
-- [ ] 3.2 Use display names and the second line (kind · tags · edited) in the `[[` picker, ⌘K, search results, backlinks and tag page lists, and show duplicates in the pages list as "Title · tag"; verify manually "Pick between same-titled pages" and "Profile pages per person"
-- [ ] 3.3 Offer candidates for ambiguous links: an `NSMenu` on ⌘-click in the editor and a menu on click in the read view (candidates, then "Create page …"); verify manually "Pick a candidate" in both modes and one ⌘Z
+- [x] 3.1 Extend `LinkAppearance` with kind and qualifier; draw icons (page/task/tag/web/missing) and qualifiers for chips in `WDTextView` using kerning-reserved space; add icon and qualifier to the read view; verify manually "Task link", "Qualifier appears with a duplicate" in editor and read view, and that caret, selection and scrolling around chips still behave (else switch to the documented fallback)
+- [x] 3.2 Use display names and the second line (kind · tags · edited) in the `[[` picker, ⌘K, search results, backlinks and tag page lists, and show duplicates in the pages list as "Title · tag"; verify manually "Pick between same-titled pages" and "Profile pages per person"
+- [x] 3.3 Offer candidates for ambiguous links: an `NSMenu` on ⌘-click in the editor and a menu on click in the read view (candidates, then "Create page …"); verify manually "Pick a candidate" in both modes and one ⌘Z
 
 ## 4. End to end
 
-- [ ] 4.1 Manual checks in `docs/manual-checks-links.md`: two "Goals" pages under two person tags, links showing qualifiers that update when retagging, typed `[[person/alex/Goals]]` and `[[task:…]]`, an ambiguous `[[Goals]]` resolved via the menu, and Claude Code writing `[[Goals]]` (gets candidates) then retrying with the tag path; neutral test data only
+- [x] 4.1 Manual checks in `docs/manual-checks-links.md`: two "Goals" pages under two person tags, links showing qualifiers that update when retagging, typed `[[person/alex/Goals]]` and `[[task:…]]`, an ambiguous `[[Goals]]` resolved via the menu, and Claude Code writing `[[Goals]]` (gets candidates) then retrying with the tag path; neutral test data only
+- [ ] 4.2 Manual checks for what was added during testing (`docs/manual-checks-links.md` section E): missing-link menu with new page/task and tag path, tag paths in the picker, New Subtag, excerpts in the tree, dragging from the lists onto tags
 
 ## Workflow follow-up
 

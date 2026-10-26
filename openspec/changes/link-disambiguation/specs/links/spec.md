@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Insert a link
-In any markdown text (page text, task notes, tag page description), typing `[[` SHALL open a picker that searches pages, tasks and tags by title or name as the user types. Each entry SHALL show its kind (icon), its title with the duplicate qualifier when needed, and a second line with its tags and last change. Choosing an entry SHALL insert a link to it. The picker SHALL also offer to link a page that doesn't exist yet under the typed title.
+In any markdown text (page text, task notes, tag page description), typing `[[` SHALL open a picker that searches pages, tasks and tags by title or name as the user types, understanding the `page:`/`task:`/`tag:` prefixes and tag paths as typed links do. Each entry SHALL show its kind (icon), its title with the duplicate qualifier when needed, and a second line with its tags and last change. Choosing an entry SHALL insert a link to it. The picker SHALL also offer to link a page that doesn't exist yet.
 
 #### Scenario: Link to an existing page
 - **WHEN** the user types `[[atl` in a task's notes and picks the page "Atlas architecture"
@@ -16,6 +16,10 @@ In any markdown text (page text, task notes, tag page description), typing `[[` 
 #### Scenario: Pick between same-titled pages
 - **WHEN** pages "Goals" exist under `person/alex` and `person/sam` and the user types `[[goals`
 - **THEN** the picker shows "Goals · person/alex" and "Goals · person/sam" with a page icon each, and the chosen one is linked
+
+#### Scenario: Browse a tag path
+- **WHEN** the user types `[[person/alex/`
+- **THEN** the picker lists the pages and open tasks tagged `person/alex` or a tag below it, then the tags below it; typing on narrows the list by title
 
 ### Requirement: Links typed as text
 A `[[…]]` typed or pasted as text (also by agents) SHALL be resolved when the text is saved. The text MAY start with `page:`, `task:` or `tag:` to restrict the kind. It SHALL match an item or tag whose title or name equals it (case-insensitive); if none does and the text contains `/`, it SHALL also match a page or task whose title equals the part after the last `/` and that carries the tag before it (or a tag below it). Exactly one match SHALL become a link to it; otherwise the text SHALL stay a "missing page" link.
@@ -39,6 +43,21 @@ A `[[…]]` typed or pasted as text (also by agents) SHALL be resolved when the 
 #### Scenario: Resolved once
 - **WHEN** a link was written as `[[person/alex/Goals]]` and the page later loses the tag `person/alex`
 - **THEN** the link still points to the same page
+
+### Requirement: Missing pages
+A missing-page link SHALL be visibly different from a working link. Clicking it (⌘-click while editing) SHALL open a menu offering the candidates of an ambiguous link, then a new page and a new task. For a typed tag path (`person/alex/Goals`) the new item SHALL be titled after the last `/` and carry the tag before it. The new item SHALL be opened, and every link waiting for it SHALL then point to it.
+
+#### Scenario: Create from a missing link
+- **WHEN** the user clicks the missing-page link "Retro notes" and chooses "New page"
+- **THEN** a page "Retro notes" is created and opened, and the link now points to it
+
+#### Scenario: Create a task under a tag path
+- **WHEN** the user clicks the missing link `[[person/alex/Call]]` and chooses "New task “Call” in person/alex"
+- **THEN** a task "Call" tagged `person/alex` is created and opened, and the link now points to it
+
+#### Scenario: Dismiss the menu
+- **WHEN** the menu of a missing link is open and the user presses Esc or clicks elsewhere
+- **THEN** the menu closes and nothing is created or changed
 
 ## ADDED Requirements
 

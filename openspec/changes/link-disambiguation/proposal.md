@@ -7,7 +7,7 @@ Pages may share a title: every person has a "Profile" and a "Goals" page, filed 
 ## What Changes
 
 - **Duplicate titles are allowed explicitly,** for pages and for tasks. Nothing is blocked or renamed.
-- **Type icons on links:** in editor chips, the read view and the `[[` picker: a page icon, a task icon, a tag icon, a globe for web links, and a missing-page marker.
+- **Type icons on links:** in editor chips, the read view and the `[[` picker: a page icon, a task icon, a tag icon, and a globe for web links; missing links keep their red style.
 - **A live qualifier for duplicates:** where a title isn't unique among its kind, it's shown with the most specific tag that the other same-titled items don't have ("Goals · person/alex"), or the creation date if the tags don't differ. It's computed at display time from the current tags, never stored, and appears on chips, in the picker, ⌘K and search, backlinks and the tag page lists.
 - **Picker entries get a second line:** kind, tags, last change.
 - **Typed links get more precise:**
@@ -16,6 +16,10 @@ Pages may share a title: every person has a "Profile" and a "Goals" page, filed 
   - Combined forms like `[[page:person/alex/Goals]]` work too.
   - After resolution the link is a plain id link, so later tag changes don't matter.
 - **Ambiguous typed links:** a `[[Goals]]` with several matches stays unresolved. The editor offers the candidates to pick one, and that pins the link to its id.
+- **Added during testing:**
+  - The missing-link menu also offers a new page or a new task, using the tag path (`[[person/alex/Call]]` → task "Call" tagged `person/alex`). A new task links up waiting links like a new page does.
+  - The `[[` picker understands prefixes and tag paths, and lists what lives under a tag after `[[person/alex/`.
+  - The tag tree shows empty tags and an excerpt under each item, offers "New Subtag…" (also on tag pages), and accepts tasks and pages dragged from the lists.
 - **MCP:**
   - Unresolved links in responses list their candidates (id, kind, tags).
   - Links and backlinks in responses carry `display` (with the qualifier) and `tags`.
@@ -34,6 +38,7 @@ None.
 
 - `links`: how typed links resolve (prefixes, tag path, candidates for ambiguity), picker entries with kind and context, type icons and duplicate qualifiers on links.
 - `info-pages`: page titles don't have to be unique.
+- `tags`: empty tags and excerpts in the tag list, dragging from the lists onto tags, new subtags.
 - `agent-access`: agents get candidates for ambiguous links and `display` and `tags` on links; the syntax is documented in the tools.
 
 ## Impact
