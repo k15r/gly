@@ -30,8 +30,9 @@
 - [ ] 5.1 Replace `Navigation` with a destination stack (day, tasks, pages, calendars, page, tag) with ⌘[ / ⌘] and sidebar integration; task links open the task editor sheet; verify manually "Follow and go back" and that sidebar selection still works
 - [ ] 5.2 Add the Pages list (most recent first, tag filter, New Page ⌘N / ⌘⇧N) and `PageView` (title, tags, editor/read toggle ⌘E, backlinks, delete); verify manually page create/edit/delete/undo and that an agent's edit appears unless the user is typing
 - [ ] 5.3 Add `TagPageView` (description editor, three groups, "Show in Tasks", backlinks) and route sidebar tags and tag chips to it; verify manually "Project tag page", "Group tag", "From a chip", "Select a tag"
-- [ ] 5.4 Add quick open (⌘K: grouped live results, keyboard navigation, Return opens, "Create page …"); verify manually "Open a page" and "Create from quick open"
-- [ ] 5.5 Switch the task editor's notes to `MarkdownEditor` with session saving; verify manually "Task notes" and "Notes link to a page"
+- [ ] 5.4 Extend the sidebar tag tree with page leaves (exact-tag pages after child tags, "also in …" hint, "Untagged" node) and drag & drop (plain = move, ⌥ = alias, onto Untagged = remove tag; one `updatePage` each); verify with a query test for "Pages as leaves of the tree", "Page with two tags", "Untagged pages", and manually "Move a page" and "Alias a page" including one ⌘Z each
+- [ ] 5.5 Add quick open (⌘K: grouped live results, keyboard navigation, Return opens, "Create page …"); verify manually "Open a page" and "Create from quick open"
+- [ ] 5.6 Switch the task editor's notes to `MarkdownEditor` with session saving; verify manually "Task notes" and "Notes link to a page"
 
 ## 6. End to end
 

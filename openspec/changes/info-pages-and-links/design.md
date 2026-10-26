@@ -140,6 +140,13 @@ This is acceptable for a single-user tool. Both versions stay in the change log.
 - **`Navigation`** becomes a destination stack with back and forward. Destinations: `.day`, `.tasks`, `.pages`, `.calendars`, `.page(id)`, `.tag(name)`. ⌘[ and ⌘] move through it, and sidebar selection pushes onto it.
 - **Task links** open the existing `TaskEditor` sheet rather than a destination, so they don't enter the history.
 - **Sidebar:** Day, Tasks, Pages, Calendars, then Tags. Tag rows open `.tag(name)`.
+- **The tag tree is the page tree** (decided while planning; no separate page hierarchy).
+  - Each tag node lists, after its child tags, the live pages tagged with **exactly** that tag. Pages with several tags appear under each of them, with an "also in …" hint.
+  - Pages without tags appear under "Untagged" at the end.
+  - The tag page of a node still lists everything below it.
+  - Data comes from one query over `item_tags` for pages (`TagQueries.tagTree` returns pages per node), so no new storage is needed.
+  - **Drag and drop:** dropping a page onto a tag node sends one `updatePage(tags:)`, so it's one undo step. Plain = replace the source tag (move), ⌥ = add (alias), "Untagged" = remove the source tag.
+  - **Alternative considered and rejected:** a parent/child page tree. It would be a second hierarchy next to tags, and it contradicts the "no folders" principle of the requirements.
 - **`PageView`:**
   - title field
   - tag field (reused `TagField`)
