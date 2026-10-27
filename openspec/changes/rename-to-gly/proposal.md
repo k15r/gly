@@ -16,7 +16,7 @@ The app gets its real name: **gly** (all lowercase). An app icon already exists;
   - CLI bridge `gly-mcp`
 - **Data comes along:** on first start, gly copies the WorkDash database and shared settings (working hours, effort sizes, hidden calendars, HTTP access and token) into its own container, and rewrites `workdash://` links in all texts to `gly://`. The WorkDash files stay untouched as a fallback.
 - **Old links keep working:** `workdash://` links, pasted or found anywhere later, are read as `gly://`.
-- **The old app is retired:** gly never writes WorkDash's store. While WorkDash's agent still answers, gly shows a notice to quit WorkDash and delete WorkDash.app. A sandboxed app can't unregister another app's agent, but deleting the app stops it for good.
+- **The old app is retired by hand, once:** before gly's first start, the user stops the WorkDash agent (`launchctl bootout`), removes its login item and later deletes WorkDash.app. gly never writes WorkDash's store.
 - **Code and docs:** the Swift package and modules become `GlyCore`, `GlyMCP` and `GlyEditor`, types like `WorkDashIDs` become `GlyIDs`, and the Xcode project and targets are renamed. Scripts, docs and the specs' prose are renamed too.
 - **BREAKING for the setup** (once, by hand):
   - grant calendar access again (it's tied to the bundle id)

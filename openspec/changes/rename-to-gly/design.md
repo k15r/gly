@@ -50,7 +50,7 @@ Motivation is in `proposal.md`, behavior in `specs/app-identity/spec.md`.
 | MCP server name | `workdash` | `gly` |
 | log subsystem | `dev.k15r.workdash…` | `dev.k15r.gly…` |
 
-`GlyIDs.Legacy` keeps the three old values the migration and the notice need: app group, Mach service and database file name.
+`GlyIDs.Legacy` keeps the old values the migration needs: app group and database file name.
 
 ### R2: Takeover on first start (`LegacyMigration`, in the agent)
 
@@ -62,17 +62,19 @@ It runs in the agent before `StoreFactory.openReadWrite`:
 5. **Copy shared settings:** every key of `UserDefaults(suiteName: Legacy.appGroup)` into the new suite, if the new suite has no `http…`/`working…` keys yet. Then synchronize.
 6. **Log** a notice with counts: items, tags, rewritten texts.
 
-**Entitlements:** app and agent both list the new and the old app group. The old one is only read, during the takeover and for the notice (R3). The old group can be dropped from the entitlements in a later release.
+**Entitlements:** app and agent both list the new and the old app group. The old one is only read, during the takeover. The old group can be dropped from the entitlements in a later release.
 
 **Alternative considered:** moving the old file. Rejected: copying keeps WorkDash's data as a fallback until the user deletes it.
 
-### R3: Retiring WorkDash (notice, not force)
+### R3: Retiring WorkDash (manual, once)
 
-A sandboxed app can't unregister or kill another app's launch agent (`SMAppService` only covers its own bundle, and `launchctl` isn't allowed). So:
-- **Detection:** `AppModel` pings `Legacy.machService` with the existing XPC `.ping` command, once at start and then every 5 minutes, with a 1-second timeout.
-- **While it answers:** a banner in the main window says "WorkDash is still running – quit it and delete WorkDash.app", with a button that opens the Applications folder in Finder.
-- **Once it no longer answers:** the banner disappears. Deleting WorkDash.app stops launchd from starting the old agent again, because its program is gone.
-- **Safety:** gly never opens the WorkDash store for writing. The takeover reads it once.
+A sandboxed app can't unregister or stop another app's launch agent: `SMAppService` only covers its own bundle, and `launchctl` isn't available in the sandbox. As a one-time switch-over, the user does it by hand before gly's first start:
+1. Quit WorkDash.
+2. `launchctl bootout gui/$(id -u)/dev.k15r.workdash.store-agent`
+3. Remove "WorkDash" under System Settings → General → Login Items → Allow in the Background.
+4. Delete WorkDash.app after the checks.
+
+gly never opens the WorkDash store for writing; the takeover reads it once. There's no in-app notice: it would be code for a one-time event.
 
 ### R4: Link scheme
 
@@ -111,19 +113,19 @@ A sandboxed app can't unregister or kill another app's launch agent (`SMAppServi
 - **Joule:** the HTTP endpoint keeps port and token through the settings copy. Only the server name it sees changes.
 - **Calendar access:** gly's agent asks again on its first calendar read (new bundle id).
 - **Open at login:** re-enable in Settings → Capture if wanted.
-- **WorkDash.app:** delete it from `build/…` after checking gly. The R3 notice reminds.
+- **WorkDash.app:** stop its agent before gly's first start, and delete it from `build/…` after checking gly (R3).
 
 ## Risks / Trade-offs
 
 - **[A missed occurrence of "workdash"]** → A final `grep -ri workdash` over `Apps`, `Packages`, `scripts`, `docs` and `project.yml`, expected to find only `GlyIDs.Legacy`, the scheme alias and the migration code. It's part of the tasks.
-- **[The takeover runs while WorkDash keeps writing]** → The backup is consistent at its point in time. Writes to WorkDash after that are not carried over, which is why the notice tells the user to quit WorkDash. Agents still pointed at wd-mcp would write to WorkDash until reconfigured (R6).
+- **[The takeover runs while WorkDash keeps writing]** → The backup is consistent at its point in time. Writes to WorkDash after that are not carried over, which is why WorkDash's agent is stopped first (R3). Agents still pointed at wd-mcp would write to WorkDash until reconfigured (R6).
 - **[Git history across the package rename]** → Done with `git mv`, so file history stays traceable.
 - **[A free provisioning team and a new app group]** → `-allowProvisioningUpdates` registers the new group. The first build may need Xcode to refresh the profile; that's a manual check.
 
 ## Migration Plan
 
 1. Build gly next to WorkDash.
-2. Quit WorkDash.
+2. Quit WorkDash and stop its agent (R3).
 3. Start gly: the takeover copies the data, and the agent asks for calendar access.
 4. Check the data in gly, with the manual checks.
 5. Update the Claude Code config (R6).

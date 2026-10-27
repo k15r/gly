@@ -36,12 +36,8 @@ Links between pages, tasks, tags and meetings SHALL keep pointing to the same ta
 - **THEN** it is shown and followed like a link to that item
 
 ### Requirement: One store writer
-gly SHALL never write to the WorkDash store. While a WorkDash background agent is still reachable, gly SHALL show a notice asking the user to quit WorkDash and delete WorkDash.app, and SHALL hide the notice once the WorkDash agent is gone. gly SHALL work normally without WorkDash being present.
+gly SHALL never write to the WorkDash store, and SHALL work normally without WorkDash being present. Stopping the WorkDash agent is a one-time manual step of the switch-over, done before gly's first start.
 
-#### Scenario: WorkDash still installed
-- **WHEN** gly starts and the WorkDash agent still answers
-- **THEN** gly works with its own data and shows "WorkDash is still running – quit it and delete WorkDash.app"
-
-#### Scenario: WorkDash removed
-- **WHEN** WorkDash.app has been deleted and its agent no longer answers
-- **THEN** gly shows no notice
+#### Scenario: WorkDash stopped before the switch
+- **WHEN** the WorkDash agent was stopped and gly starts for the first time
+- **THEN** gly takes over the data, works with its own store, and WorkDash's store stays as it was
