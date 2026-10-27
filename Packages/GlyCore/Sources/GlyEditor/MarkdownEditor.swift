@@ -50,14 +50,14 @@ public struct MarkdownEditor: NSViewRepresentable {
     public func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     public func makeNSView(context: Context) -> NSScrollView {
-        let scroll = WDTextView.scrollableTextView()
-        let textView: WDTextView
-        if let own = scroll.documentView as? WDTextView {
+        let scroll = GlyTextView.scrollableTextView()
+        let textView: GlyTextView
+        if let own = scroll.documentView as? GlyTextView {
             textView = own
         } else {
             // swiftlint:disable:next force_cast
             let tv = scroll.documentView as! NSTextView     // scrollableTextView() always holds an NSTextView
-            textView = WDTextView(frame: tv.frame, textContainer: tv.textContainer)
+            textView = GlyTextView(frame: tv.frame, textContainer: tv.textContainer)
             scroll.documentView = textView
         }
         textView.coordinator = context.coordinator
@@ -100,7 +100,7 @@ public struct MarkdownEditor: NSViewRepresentable {
     @MainActor
     public final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: MarkdownEditor
-        weak var textView: WDTextView?
+        weak var textView: GlyTextView?
         private var dirty = false
         private var session = UUID().uuidString
         private var timer: Timer?
@@ -321,7 +321,7 @@ final class CandidateAction: NSObject {
 
 /// Text view that routes clicks on checkboxes and ⌘-clicks on links to the coordinator,
 /// and draws link icons and qualifiers into kerning-reserved space (link-disambiguation K3).
-public final class WDTextView: NSTextView {
+public final class GlyTextView: NSTextView {
     weak var coordinator: MarkdownEditor.Coordinator?
 
     public override func draw(_ dirtyRect: NSRect) {

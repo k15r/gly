@@ -110,7 +110,7 @@ struct TrashView: View {
                     if !e.tags.isEmpty { HStack(spacing: 4) { ForEach(e.tags, id: \.self) { TagChip(name: $0) } } }
                     Text(deletedLine(e)).font(.caption).foregroundStyle(.secondary)
                     Divider()
-                    WDMarkdownReadView(text: body)          // no onChange: read-only
+                    GlyMarkdownReadView(text: body)          // no onChange: read-only
                 }
                 .padding()
             }

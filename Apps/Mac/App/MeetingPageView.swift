@@ -81,7 +81,7 @@ struct MeetingPageView: View {
             Divider().padding(.top, 8)
             if editing == true {
                 let (text, caret) = editorText(data)
-                WDMarkdownEditor(text: text, onCommit: { new, session in save(data, body: new, tags: nil, session: session) },
+                GlyMarkdownEditor(text: text, onCommit: { new, session in save(data, body: new, tags: nil, session: session) },
                                  initialCaret: caret)
                     .id(ref)
                     .frame(maxHeight: .infinity)
@@ -93,7 +93,7 @@ struct MeetingPageView: View {
                         if data.body.isEmpty {
                             Text("No notes yet – switch to Edit (⌘E) to write.").foregroundStyle(.secondary)
                         } else {
-                            WDMarkdownReadView(text: data.body) { new in save(data, body: new, tags: nil, session: nil) }
+                            GlyMarkdownReadView(text: data.body) { new in save(data, body: new, tags: nil, session: nil) }
                         }
                         Divider()
                         BacklinksView(backlinks: data.backlinks)

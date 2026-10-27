@@ -13,7 +13,7 @@ public extension NSAttributedString.Key {
     static let wdDecoration = NSAttributedString.Key("wdDecoration")
 }
 
-/// What `WDTextView` draws around a link label, in space reserved by kerning (never part of the text).
+/// What `GlyTextView` draws around a link label, in space reserved by kerning (never part of the text).
 public final class LinkDecoration: NSObject {
     public let symbol: String
     public let qualifier: String?

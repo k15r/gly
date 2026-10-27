@@ -6,7 +6,7 @@ import GlyEditor
 // MARK: - Shared pieces
 
 /// The markdown editor wired to gly: link appearance, `[[` suggestions and link opening (design P8).
-struct WDMarkdownEditor: View {
+struct GlyMarkdownEditor: View {
     @Environment(WikiModel.self) private var wiki
     @Environment(\.linkOpener) private var opener
     let text: String
@@ -26,7 +26,7 @@ struct WDMarkdownEditor: View {
 }
 
 /// Rendered markdown with gly link appearance.
-struct WDMarkdownReadView: View {
+struct GlyMarkdownReadView: View {
     @Environment(WikiModel.self) private var wiki
     let text: String
     /// Saves a checkbox toggle (one undo step each).
@@ -228,7 +228,7 @@ struct PageView: View {
                 }
             Divider().padding(.top, 8)
             if editing == true {
-                WDMarkdownEditor(text: page.body, onCommit: { text, session in
+                GlyMarkdownEditor(text: page.body, onCommit: { text, session in
                     Task { await app.send(.updatePage(id: page.id, PagePatch(body: text, session: session))) }
                 }, initialCaret: focusText ? (page.body as NSString).length : nil)
                 .frame(maxHeight: .infinity)
@@ -240,7 +240,7 @@ struct PageView: View {
                         if page.body.isEmpty {
                             Text("Empty page – switch to Edit (⌘E) to write.").foregroundStyle(.secondary)
                         } else {
-                            WDMarkdownReadView(text: page.body) { new in
+                            GlyMarkdownReadView(text: page.body) { new in
                                 Task { await app.send(.updatePage(id: page.id, PagePatch(body: new))) }
                             }
                         }
@@ -330,7 +330,7 @@ struct TagPageView: View {
                 .modifier(NewSubtagPrompt(parent: data.name, isPresented: $newSubtag))
                 .modifier(TagManagementPrompts(name: data.name, renaming: $renaming, deleting: $deleting))
                 if editing {
-                    WDMarkdownEditor(text: data.body, onCommit: { text, session in
+                    GlyMarkdownEditor(text: data.body, onCommit: { text, session in
                         Task { await app.send(.updateTagPage(name: data.name, body: text, session: session)) }
                     })
                     .frame(minHeight: 160)
@@ -338,7 +338,7 @@ struct TagPageView: View {
                 } else if data.body.isEmpty {
                     Text("No description – click Edit to describe this \(data.name.contains("/") ? "tag" : "group").").foregroundStyle(.secondary)
                 } else {
-                    WDMarkdownReadView(text: data.body) { new in
+                    GlyMarkdownReadView(text: data.body) { new in
                         Task { await app.send(.updateTagPage(name: data.name, body: new)) }
                     }
                 }

@@ -90,7 +90,7 @@ struct TaskPageView: View {
             Divider().padding(.top, 8)
 
             if editing == true {
-                WDMarkdownEditor(text: task.body, onCommit: { text, session in
+                GlyMarkdownEditor(text: task.body, onCommit: { text, session in
                     send(.updateTask(id: task.id, TaskPatch(body: text, session: session)))
                 }, initialCaret: focusText ? (task.body as NSString).length : nil)
                 .frame(maxHeight: .infinity)
@@ -102,7 +102,7 @@ struct TaskPageView: View {
                         if task.body.isEmpty {
                             Text("No notes – switch to Edit (⌘E) to write.").foregroundStyle(.secondary)
                         } else {
-                            WDMarkdownReadView(text: task.body) { new in
+                            GlyMarkdownReadView(text: task.body) { new in
                                 send(.updateTask(id: task.id, TaskPatch(body: new)))
                             }
                         }

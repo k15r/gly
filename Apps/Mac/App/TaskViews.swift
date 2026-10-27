@@ -268,7 +268,7 @@ struct TaskEditor: View {
                 TagField(tags: $tagNames, input: $pendingTag)
                 LabeledContent("Notes") {
                     // Markdown with links; saved with the form (explicit confirm, specs/tasks "Edit a task").
-                    WDMarkdownEditor(text: notes, onChange: { notes = $0 }).frame(minHeight: 140)
+                    GlyMarkdownEditor(text: notes, onChange: { notes = $0 }).frame(minHeight: 140)
                         .overlay(RoundedRectangle(cornerRadius: 4).stroke(.secondary.opacity(0.3)))
                 }
             }

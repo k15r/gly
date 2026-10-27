@@ -21,7 +21,7 @@ final class GlobalHotKey {
                 return noErr
             }, 1, &spec, nil, &handler)
         }
-        let id = EventHotKeyID(signature: OSType(0x5744_4351), id: 1)   // 'WDCQ'
+        let id = EventHotKeyID(signature: OSType(0x474C_5943), id: 1)   // 'GLYC'
         return RegisterEventHotKey(shortcut.keyCode, shortcut.carbonModifiers, id, GetApplicationEventTarget(), 0, &hotKey) == noErr
     }
 
