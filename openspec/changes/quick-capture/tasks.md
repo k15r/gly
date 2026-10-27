@@ -2,7 +2,7 @@
 
 ## 1. Core
 
-- [ ] 1.1 Add `CaptureParser` and `CaptureDraft` (Q1: tags, priority, due forms with the last-position rule, title, preview string, mapping to `TaskDraft`/`PageDraft`); verify with tests for "Task with tag, due date and priority", "Words that only look like dates", each due form incl. weekday = today → next week and a past `3 Nov` → next year, `!`/`!!`, invalid `#`, page kind ignoring dates and priority, and empty title
+- [x] 1.1 Add `CaptureParser` and `CaptureDraft` (Q1: tags, priority, due forms with the last-position rule, title, preview string, mapping to `TaskDraft`/`PageDraft`); verify with tests for "Task with tag, due date and priority", "Words that only look like dates", each due form incl. weekday = today → next week and a past `3 Nov` → next year, `!`/`!!`, invalid `#`, page kind ignoring dates and priority, and empty title
 
 ## 2. App
 
