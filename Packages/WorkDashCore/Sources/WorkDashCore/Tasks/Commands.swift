@@ -220,6 +220,8 @@ public struct CommandHandler {
 
     // MARK: - Commands
 
+    // One switch over every command is the point of this function (each case is short); not split for the linter.
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     func apply(_ command: Command, db: Database, writer: String, now: Date) throws -> CommandOK {
         var batch = Batch(db: db, writer: writer, id: try coalescedBatch(command, db: db, writer: writer) ?? UUID().uuidString, at: now)
         batch.session = Self.session(of: command)

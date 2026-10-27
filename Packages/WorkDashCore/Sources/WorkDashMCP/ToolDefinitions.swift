@@ -1,3 +1,5 @@
+// Tool and server descriptions are prose for agents, kept as one string each; wrapping them would only hurt editing.
+// swiftlint:disable line_length
 import MCP
 import WorkDashCore
 

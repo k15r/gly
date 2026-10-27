@@ -55,7 +55,8 @@ public struct MarkdownEditor: NSViewRepresentable {
         if let own = scroll.documentView as? WDTextView {
             textView = own
         } else {
-            let tv = scroll.documentView as! NSTextView
+            // swiftlint:disable:next force_cast
+            let tv = scroll.documentView as! NSTextView     // scrollableTextView() always holds an NSTextView
             textView = WDTextView(frame: tv.frame, textContainer: tv.textContainer)
             scroll.documentView = textView
         }

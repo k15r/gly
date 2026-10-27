@@ -1,0 +1,46 @@
+# SwiftLint for WorkDashCore (run on every build by SwiftLintBuildToolPlugin).
+# Tuned to this code base's conventions; everything else uses SwiftLint's defaults.
+
+excluded:
+  - .build
+
+disabled_rules:
+  - trailing_comma            # multi-line literals end with a comma (house style)
+  - shorthand_operator        # SwiftUI `Text` concatenation (`t = t + Text(…)`) has no `+=`
+
+identifier_name:
+  min_length: 1               # db, r, a, id … are the idiom in queries and closures
+  max_length: 60
+
+line_length:
+  warning: 160
+  error: 300
+  ignores_comments: true
+  ignores_urls: true
+
+type_body_length:             # CommandHandler is the single place every write goes through
+  warning: 500
+  error: 900
+
+file_length:
+  warning: 800
+  error: 1500
+
+function_body_length:
+  warning: 80
+  error: 200
+
+cyclomatic_complexity:
+  warning: 20
+  error: 40
+
+large_tuple:
+  warning: 4
+  error: 6
+
+function_parameter_count:
+  warning: 7
+  error: 10
+
+force_try:
+  severity: warning           # used for regex patterns that are constants in the source
