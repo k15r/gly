@@ -386,7 +386,10 @@ struct TagTreeNode: View {
             Spacer()
             if node.openCount > 0 { Text("\(node.openCount)").foregroundStyle(.secondary).monospacedDigit() }
         }
-        .treeRow(group: .tag(node.path), state: drop, onTap: { nav.go(.tag(node.path)) }) { items in
+        .treeRow(group: .tag(node.path), state: drop, onTap: {
+            nav.go(.tag(node.path))
+            if !node.children.isEmpty || !node.items.isEmpty { withAnimation { expanded = true } }   // opening a tag shows its contents too
+        }) { items in
             ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks)
         }
         .contextMenu {

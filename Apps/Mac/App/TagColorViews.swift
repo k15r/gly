@@ -67,7 +67,8 @@ struct TagColorMenuItems: View {
 
     var body: some View {
         let own = tagColors.colors.own[TagName.key(for: name)]
-        Toggle("Automatic", isOn: Binding(get: { own == nil }, set: { _ in set(nil) }))
+        // "No own color" means inheriting when a tag above has one; only otherwise is it automatic.
+        Toggle(Self.noOwnColorTitle(name, colors: tagColors.colors), isOn: Binding(get: { own == nil }, set: { _ in set(nil) }))
         Divider()
         ForEach(TagColor.allCases, id: \.self) { color in
             Toggle(isOn: Binding(get: { own == color }, set: { _ in set(color) })) {
@@ -78,6 +79,19 @@ struct TagColorMenuItems: View {
 
     private func set(_ color: TagColor?) {
         Task { await app.send(.setTagColor(name: name, color: color)) }
+    }
+
+    /// "Inherit from shubi (Blue)" when a tag above has a color, else "Automatic".
+    static func noOwnColorTitle(_ name: String, colors: TagColors) -> String {
+        let segments = name.split(separator: "/").map(String.init)
+        guard segments.count > 1 else { return "Automatic" }
+        let parent = segments.dropLast().joined(separator: "/")
+        let inherited = colors.effective(parent)
+        switch inherited.source {
+        case .own: return "Inherit from \(parent) (\(inherited.color.label))"
+        case .inherited(let from): return "Inherit from \(from) (\(inherited.color.label))"
+        case .automatic: return "Automatic"
+        }
     }
 }
 
