@@ -489,13 +489,14 @@ public struct CommandHandler {
 
         case .reconcileSnoozes(let today):
             try Validate.day(today)
-            let due = try String.fetchAll(db, sql: """
-                SELECT id FROM live_items WHERE kind = 'task' AND status = 'snoozed' AND snoozed_until <= ?
+            let due = try Row.fetchAll(db, sql: """
+                SELECT id, snoozed_until FROM live_items WHERE kind = 'task' AND status = 'snoozed' AND snoozed_until <= ?
                 """, arguments: [today])
-            for id in due {
-                var fields: Fields = ["status": TaskStatus.open.rawValue]
+            for row in due {
+                // Remember the scheduled return day for the "back from snooze" mark (F3).
+                var fields: Fields = ["status": TaskStatus.open.rawValue, "snooze_ended_on": row["snoozed_until"] as String]
                 fields.updateValue(nil, forKey: "snoozed_until")
-                try batch.update("items", id: id, fields)
+                try batch.update("items", id: row["id"], fields)
             }
             return CommandOK(changed: !due.isEmpty, message: "\(due.count) snoozed task(s) reopened")
         }
@@ -558,6 +559,7 @@ public struct CommandHandler {
     /// Item fields for a status change (status, snoozed_until, completed_at).
     private func statusFields(_ status: TaskStatus, snoozedUntil: String?, now: Date) throws -> Fields {
         var fields: Fields = ["status": status.rawValue]
+        fields.updateValue(nil, forKey: "snooze_ended_on")      // a user status change ends the "back from snooze" mark
         switch status {
         case .snoozed:
             guard let day = snoozedUntil else { throw CommandFailure(.validation, "Snoozing needs a date.") }

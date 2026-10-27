@@ -42,6 +42,10 @@ public enum Schema {
             try db.alter(table: "items") { t in t.add(column: "series_rule", .text) }
             try db.create(index: "items_series_rule", on: "items", columns: ["series_rule"])
         }
+        // The day a task came back from a snooze, for the "back from snooze" mark (future-day-planning F3).
+        migrator.registerMigration("v6") { db in
+            try db.alter(table: "items") { t in t.add(column: "snooze_ended_on", .text) }    // YYYY-MM-DD
+        }
         return migrator
     }
 

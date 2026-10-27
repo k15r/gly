@@ -142,4 +142,24 @@ final class TaskQueryTests: XCTestCase {
             XCTAssertEqual(try TaskQueries.tasksForDay(db, day: LocalDay("2026-10-29")!, today: today).map(\.task.title), ["snoozed"])
         }
     }
+
+    func testSeeSnoozedTasks() throws {
+        // specs/daily-planning "See snoozed tasks": still snoozed on the viewed day, ordered by snooze date.
+        try db.write { db in
+            try addTask(db, "next friday", status: "snoozed", dueDay: "2026-11-10", snoozedUntil: "2026-11-06")
+            try addTask(db, "next monday", status: "snoozed", dueDay: "2026-11-04", snoozedUntil: "2026-11-02")
+            try addTask(db, "open", dueDay: "2026-10-28")
+            let list = try TaskQueries.snoozed(db, after: today)
+            XCTAssertEqual(list.map(\.title), ["next monday", "next friday"])
+        }
+    }
+
+    func testSnoozedUntilTheViewedDayIsNotCounted() throws {
+        // specs/daily-planning "Snoozed until the viewed day": back that day, so not in the summary there.
+        try db.write { db in
+            try addTask(db, "wednesday", status: "snoozed", dueDay: "2026-10-30", snoozedUntil: "2026-10-28")
+            XCTAssertEqual(try TaskQueries.snoozed(db, after: today).map(\.title), ["wednesday"])
+            XCTAssertTrue(try TaskQueries.snoozed(db, after: LocalDay("2026-10-28")!).isEmpty)
+        }
+    }
 }

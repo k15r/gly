@@ -107,7 +107,8 @@ public enum TaskQueries {
                 snoozedUntil: r["snoozed_until"], tags: tagsByItem[r["id"]] ?? [],
                 createdAt: r["created_at"], modifiedAt: r["modified_at"], modifiedBy: r["modified_by"],
                 completedAt: r["completed_at"],
-                effort: (r["effort"] as String?).flatMap(Effort.init(rawValue:)))
+                effort: (r["effort"] as String?).flatMap(Effort.init(rawValue:)),
+                snoozeEndedOn: r["snooze_ended_on"])
         }
     }
 }

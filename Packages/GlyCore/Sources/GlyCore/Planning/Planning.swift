@@ -129,4 +129,14 @@ extension TaskQueries {
             ORDER BY \(openOrderSQL)
             """, arguments: ["today": today.description, "last": today.adding(days: max(0, horizon)).description])
     }
+
+    /// Tasks still snoozed on `day` (snooze date after it), by snooze date: the "N snoozed" summary (future-day-planning F5).
+    /// A task snoozed until `day` itself is back that day and appears in that day's lists instead.
+    public static func snoozed(_ db: Database, after day: LocalDay) throws -> [TaskItem] {
+        try fetchTasks(db, sql: """
+            SELECT i.* FROM live_items i
+            WHERE i.kind = 'task' AND i.status = 'snoozed' AND i.snoozed_until > :day
+            ORDER BY i.snoozed_until, \(openOrderSQL)
+            """, arguments: ["day": day.description])
+    }
 }

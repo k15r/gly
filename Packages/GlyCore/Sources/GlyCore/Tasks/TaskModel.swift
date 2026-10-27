@@ -36,6 +36,14 @@ public extension TaskItem {
     func isSnoozed(today: LocalDay) -> Bool {
         status == .snoozed && (snoozedUntil.flatMap(LocalDay.init).map { $0 > today } ?? false)
     }
+
+    /// Comes back from a snooze on `day`: woken that day, or still snoozed until it (not woken yet, or a forecast) — F3.
+    func isBackFromSnooze(on day: LocalDay) -> Bool {
+        snoozeEndedOn == day.description || (status == .snoozed && snoozedUntil == day.description)
+    }
+
+    /// The snooze date shown with the "back from snooze" mark.
+    var snoozeReturnDay: String? { status == .snoozed ? snoozedUntil : snoozeEndedOn }
 }
 
 public struct TaskItem: Equatable, Identifiable {
@@ -52,6 +60,8 @@ public struct TaskItem: Equatable, Identifiable {
     public var modifiedBy: String
     public var completedAt: Date?
     public var effort: Effort?
+    /// The day the task last came back from a snooze (set when the snooze ends, cleared by the next status change).
+    public var snoozeEndedOn: String? = nil
 }
 
 extension Due {
