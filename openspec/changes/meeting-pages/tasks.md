@@ -7,7 +7,7 @@
 
 ## 2. Core
 
-- [ ] 2.1 Migration `v5` (`items.series_rule` + index), `NotesSections` (N3: heading format, parse, insert newest-on-top, same-day append) and the resolver `MeetingNotes.document(for:)` (N2); verify with tests for "Weekly 1:1" (same document for two occurrences), "Series split", "Write today's notes", "Open an earlier meeting" (section lookup), an occurrence fallback, and the migration on a v4 store
+- [x] 2.1 Migration `v5` (`items.series_rule` + index), `NotesSections` (N3: heading format, parse, insert newest-on-top, same-day append) and the resolver `MeetingNotes.document(for:)` (N2); verify with tests for "Weekly 1:1" (same document for two occurrences), "Series split", "Write today's notes", "Open an earlier meeting" (section lookup), an occurrence fallback, and the migration on a v4 store
 - [ ] 2.2 Commands `saveMeetingNotes` / `appendMeetingNotes` / `deleteMeetingNotes` (N4) with on-demand rows, session coalescing, links, tags, undo labels; "has notes" = non-empty body; search kind `meeting`, `TreeLeaf`/`LinkRef` kind `meeting`, tag tree and tag page queries including meetings; verify with tests for "Nothing written", "Link from notes" (backlink on the page), "Meeting deleted in the calendar" (still found), "Delete and restore notes", a one-off with a blocking override keeping it, "Find a meeting by its notes", "Tagged meeting in the tree", "Person's meetings"
 
 ## 3. MCP

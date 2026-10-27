@@ -45,7 +45,7 @@ Returns `(kind: .series(ruleID?) | .occurrence(key), itemID?, sectionDate)`:
 
 ### N3: Dated sections (pure `NotesSections`)
 
-- A section heading is `## <EEE d MMM>` in the user's locale, plus the year when it's not the current year.
+- A section heading is `## <EEE d MMM>` in a fixed English format (`## Tue 3 Nov`), plus the year when it's not the current year. A fixed format keeps parsing independent of the system language. A heading without a year belongs to the current year, or to the year before when that would put it more than six months in the future.
 - **Parsing:** headings that parse as a date in that format form sections. Other headings are ordinary markdown inside a section.
 - **`insert(text, for date, into body)`:** if a section for the date exists, append to it. Otherwise insert a new section above the first older section (newest on top), or at the top.
 - **The page** doesn't insert the heading on open. The editor opens scrolled to the section, or at the top with a placeholder "Notes for Tue 3 Nov". The first keystroke into the empty placeholder inserts the heading in the same edit (one undo step).
@@ -83,7 +83,8 @@ Dropped after a first look. Opening one exact event needs an undocumented `ical:
 ### N8: MCP
 
 - **`get_schedule`:** `has_notes` per appointment.
-- **`get_meeting_notes(calendar, base_id, original_start)`:** uses the identity fields `get_schedule` already returns. Returns `{title, kind: series|occurrence, text, section, tags, links, backlinks}`.
+- **`get_schedule`** also gains the identity fields per appointment: `calendar_id`, `base_id`, `original_start`. It didn't return them before; this was found while implementing.
+- **`get_meeting_notes(calendar_id, base_id, original_start)`:** takes those fields. Returns `{title, kind: series|occurrence, text, section, tags, links, backlinks}`.
 - **`update_meeting_notes(... , text, mode: append|replace, tags?)`:** append inserts into that occurrence's dated section (N3).
 
 ## Risks / Trade-offs

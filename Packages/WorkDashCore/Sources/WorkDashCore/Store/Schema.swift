@@ -37,6 +37,11 @@ public enum Schema {
         migrator.registerMigration("v4") { db in
             try createV4(db)
         }
+        // Series notes (meeting-pages N1): the series rule a series notes document belongs to.
+        migrator.registerMigration("v5") { db in
+            try db.alter(table: "items") { t in t.add(column: "series_rule", .text) }
+            try db.create(index: "items_series_rule", on: "items", columns: ["series_rule"])
+        }
         return migrator
     }
 
