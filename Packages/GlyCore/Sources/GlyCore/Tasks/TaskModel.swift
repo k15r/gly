@@ -61,7 +61,7 @@ public struct TaskItem: Equatable, Identifiable {
     public var completedAt: Date?
     public var effort: Effort?
     /// The day the task last came back from a snooze (set when the snooze ends, cleared by the next status change).
-    public var snoozeEndedOn: String? = nil
+    public var snoozeEndedOn: String?
 }
 
 extension Due {
