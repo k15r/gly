@@ -197,4 +197,15 @@ final class MeetingNotesTests: XCTestCase {
         XCTAssertEqual(try db.read { try TaskQueries.tagsByItem($0, ids: [id])[id] }, ["person/alex"])
         XCTAssertEqual(try db.read { try $0.undoLabel(writer: me) }, "Edit notes “1:1 Alex”")
     }
+
+    func testUntaggedMeetingNotesAreListedUnderUntagged() throws {
+        let id = ok(.saveMeetingNotes(MeetingTarget(appt("S1", day: "2026-11-03")), body: "notes")).id!
+        let oneOff = appt("W", title: "Standup", day: "2026-11-04", recurring: false)
+        ok(.setBlocking(AppointmentSnapshot(oneOff), scope: .occurrence, value: .ignore))     // no notes: not listed
+        let untagged = try db.read { try TagQueries.untaggedItems($0) }
+        XCTAssertEqual(untagged.map(\.itemID), [id])
+        XCTAssertEqual(untagged.first?.kind, .meeting)
+        ok(.updateMeetingNotes(id: id, body: nil, tags: ["person/alex"]))
+        XCTAssertEqual(try db.read { try TagQueries.untaggedItems($0) }, [])
+    }
 }

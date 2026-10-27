@@ -137,11 +137,11 @@ public enum TagQueries {
         return result
     }
 
-    /// Open tasks and live pages without any tag (the "Untagged" node): tasks first.
+    /// Open tasks, live pages and meetings with notes without any tag (the "Untagged" node): tasks first.
     public static func untaggedItems(_ db: Database) throws -> [TreeLeaf] {
         try Row.fetchAll(db, sql: """
             SELECT i.id, i.kind, i.title, i.status, i.body FROM live_items i
-            WHERE ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info')
+            WHERE ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info' OR (i.kind = 'event_note' AND i.body != ''))
               AND i.id NOT IN (SELECT item_id FROM live_item_tags)
             ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL)
             """).map { r in

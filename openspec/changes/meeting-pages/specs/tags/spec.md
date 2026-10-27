@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Tag list
-The system SHALL show all tags as a hierarchy, including tags with no open items, with the number of open tasks per tag (including descendants); selecting a tag SHALL open its tag page and expand it. Each tag node SHALL list the open tasks, pages and meetings with notes tagged exactly with it as leaves, each with the start of its text and a context menu to open or delete it; open tasks and pages without tags SHALL be listed under "Untagged".
+The system SHALL show all tags as a hierarchy, including tags with no open items, with the number of open tasks per tag (including descendants); selecting a tag SHALL open its tag page and expand it. Each tag node SHALL list the open tasks, pages and meetings with notes tagged exactly with it as leaves, each with the start of its text and a context menu to open or delete it; open tasks, pages and meetings with notes without tags SHALL be listed under "Untagged".
 
 #### Scenario: Tag hierarchy with counts
 - **WHEN** two open tasks are tagged `person/alex` and one `person/sam`
