@@ -12,13 +12,16 @@ struct WDMarkdownEditor: View {
     let text: String
     var onChange: ((String) -> Void)?
     var onCommit: ((String, String) -> Void)?
+    /// Where the caret starts (meeting pages open at the meeting's section).
+    var initialCaret: Int? = nil
 
     var body: some View {
         MarkdownEditor(text: text, onChange: onChange, onCommit: onCommit,
                        appearance: { wiki.appearance($0) },
                        onOpenLink: { opener?.open($0) },
                        suggestions: { wiki.suggestions($0) },
-                       linkMenu: { wiki.linkMenu($0) })
+                       linkMenu: { wiki.linkMenu($0) },
+                       initialCaret: initialCaret)
     }
 }
 
@@ -78,7 +81,7 @@ struct BacklinksView: View {
         case .page: nav.go(.page(ref.id))
         case .task: nav.go(.task(ref.id))
         case .tag: nav.go(.tag(ref.title))
-        case .meeting: nav.go(.meeting(ref.id))
+        case .meeting: nav.go(.meeting(.notes(ref.id)))
         }
     }
 }
@@ -457,7 +460,7 @@ struct QuickOpenView: View {
             case .page: nav.go(.page(hit.ref.id))
             case .task: nav.go(.task(hit.ref.id))
             case .tag: nav.go(.tag(hit.ref.title))
-            case .meeting: nav.go(.meeting(hit.ref.id))
+            case .meeting: nav.go(.meeting(.notes(hit.ref.id)))
             }
         case .create(let title):
             Task { await opener?.createPage(title: title) }

@@ -189,4 +189,12 @@ final class MeetingNotesTests: XCTestCase {
         let tagPage = try db.read { try TagPageQueries.page($0, name: try TagName("person"), today: self.today) }
         XCTAssertEqual(tagPage.meetings.map(\.id), [id], "Person's meetings (incl. tags below)")
     }
+
+    func testUpdateExistingNotesByID() throws {
+        let id = ok(.saveMeetingNotes(MeetingTarget(appt("S1", day: "2026-11-03")), body: "a")).id!
+        ok(.updateMeetingNotes(id: id, body: "b", tags: ["person/alex"]))
+        XCTAssertEqual(try body(id), "b")
+        XCTAssertEqual(try db.read { try TaskQueries.tagsByItem($0, ids: [id])[id] }, ["person/alex"])
+        XCTAssertEqual(try db.read { try $0.undoLabel(writer: me) }, "Edit notes “1:1 Alex”")
+    }
 }

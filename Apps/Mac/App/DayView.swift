@@ -246,6 +246,7 @@ struct AmbiguityBanner: View {
 /// One appointment line: time, color, title, calendar; cancelled struck through; past dimmed; current highlighted.
 struct AppointmentRow: View {
     @Environment(PlanningModel.self) private var planning
+    @Environment(MeetingMarksModel.self) private var marks
     @Environment(AppModel.self) private var app
     let entry: DayAppointment
     let allDay: Bool
@@ -264,6 +265,9 @@ struct AppointmentRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(a.title).strikethrough(a.isCancelled).fontWeight(entry.state == .current ? .semibold : .regular)
+                    if marks.marks.hasNotes(a) {
+                        Image(systemName: "note.text").font(.caption).foregroundStyle(.secondary).help("Has notes")
+                    }
                     if a.isCancelled { Text("Cancelled").font(.caption).padding(.horizontal, 4).background(.red.opacity(0.15)).clipShape(Capsule()) }
                     if entry.state == .current { Text("Now").font(.caption.bold()).foregroundStyle(.white).padding(.horizontal, 5).background(.blue).clipShape(Capsule()) }
                 }
@@ -285,7 +289,7 @@ struct AppointmentRow: View {
             clickPoint = size.width > 0 && size.height > 0 ? UnitPoint(x: p.x / size.width, y: p.y / size.height) : .center
             showingDetails = true
         }
-        .popover(isPresented: $showingDetails, attachmentAnchor: .point(clickPoint), arrowEdge: .bottom) { AppointmentDetails(entry: entry) }
+        .popover(isPresented: $showingDetails, attachmentAnchor: .point(clickPoint), arrowEdge: .bottom) { AppointmentDetails(entry: entry, dismiss: { showingDetails = false }) }
         .onChange(of: showingDetails) { _, open in if !open { AppointmentPopover.lastClosed = Date() } }
     }
 
@@ -346,7 +350,11 @@ enum AppointmentPopover {
 
 /// Read-only appointment details (specs/calendar-sources "Appointment details are not editable").
 struct AppointmentDetails: View {
+    @Environment(Navigation.self) private var nav
+    @Environment(MeetingMarksModel.self) private var marks
     let entry: DayAppointment
+    /// Closes the popover before navigating.
+    var dismiss: () -> Void = {}
 
     var body: some View {
         let a = entry.appointment
@@ -383,6 +391,10 @@ struct AppointmentDetails: View {
                 .font(.caption)
             }
             HStack {
+                Button {
+                    dismiss()
+                    nav.go(.meeting(.appointment(a)))
+                } label: { Label(marks.marks.hasNotes(a) ? "Notes" : "Add Notes", systemImage: "note.text") }
                 if let join = d.joinURL {
                     Button { NSWorkspace.shared.open(join) } label: { Label("Join \(d.service ?? "")", systemImage: "video") }
                         .buttonStyle(.borderedProminent)

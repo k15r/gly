@@ -12,18 +12,19 @@ struct WorkDashApp: App {
     @State private var wiki = WikiModel()
     @State private var planning = PlanningModel()
     @State private var tagColors = TagColorModel()
+    @State private var meetingMarks = MeetingMarksModel()
 
     var body: some Scene {
         WindowGroup("WorkDash") {
             let opener = LinkOpener(app: app, wiki: wiki, nav: nav)
             ContentView()
                 .environment(app).environment(calendars).environment(tasks).environment(clock).environment(nav).environment(wiki).environment(planning)
-                .environment(tagColors)
+                .environment(tagColors).environment(meetingMarks)
                 .environment(\.linkOpener, opener)
                 .environment(\.openURL, OpenURLAction { url in opener.open(url); return .handled })
                 .frame(minWidth: 960, minHeight: 580)
                 .task { await startUp() }
-                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store); tagColors.attach(app.store) }
+                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store); tagColors.attach(app.store); meetingMarks.attach(app.store) }
                 .onChange(of: nav.day) { syncDay() }
                 .onChange(of: clock.today) { syncDay() }
         }
@@ -82,6 +83,7 @@ struct WorkDashApp: App {
         wiki.attach(app.store)
         planning.attach(app.store)
         tagColors.attach(app.store)
+        meetingMarks.attach(app.store)
         if app.canWrite { await app.send(.reconcileSnoozes(today: clock.today.description), asSystem: true) }
         await calendars.start()
         syncDay()
@@ -160,7 +162,7 @@ struct ContentView: View {
                 case .page(let id): PageView(id: id)
                 case .task(let id): TaskPageView(id: id)
                 case .tag(let name): TagPageView(name: name)
-                case .meeting(let id): MeetingPageView(itemID: id)
+                case .meeting(let ref): MeetingPageView(ref: ref)
                 }
             }
         }
@@ -450,7 +452,7 @@ struct TreeLeafRow: View {
         switch leaf.kind {
         case .page: nav.go(.page(leaf.itemID))
         case .task: nav.go(.task(leaf.itemID))
-        case .meeting: nav.go(.meeting(leaf.itemID))
+        case .meeting: nav.go(.meeting(.notes(leaf.itemID)))
         case .tag: break
         }
     }
@@ -464,7 +466,7 @@ struct TreeLeafRow: View {
             case .meeting: await app.send(.deleteMeetingNotes(id: id))
             case .tag: return
             }
-            if nav.current == .page(id) || nav.current == .task(id) || nav.current == .meeting(id) { nav.back() }
+            if nav.current == .page(id) || nav.current == .task(id) || nav.current == .meeting(.notes(id)) { nav.back() }
         }
     }
 }

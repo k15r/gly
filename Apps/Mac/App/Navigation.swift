@@ -2,6 +2,12 @@ import AppKit
 import SwiftUI
 import WorkDashCore
 
+/// A meeting page: stored notes (from search, tags, backlinks) or an appointment from the day view (notes or not).
+enum MeetingRef: Hashable {
+    case notes(String)
+    case appointment(Appointment)
+}
+
 /// Where the main area is, with back/forward history (info-pages-and-links design P9).
 @MainActor
 @Observable
@@ -11,7 +17,7 @@ final class Navigation {
         case page(String)       // page id
         case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
-        case meeting(String)    // meeting notes item id (meeting-pages N7)
+        case meeting(MeetingRef)    // meeting-pages N7
     }
 
     private(set) var current: Destination = .day

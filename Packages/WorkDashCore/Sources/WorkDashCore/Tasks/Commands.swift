@@ -138,6 +138,8 @@ public enum Command: Codable, Equatable {
     case saveMeetingNotes(MeetingTarget, body: String, tags: [String]? = nil, session: String? = nil)
     /// Adds markdown to the dated section of `day` (YYYY-MM-DD) in the meeting's notes (agents).
     case appendMeetingNotes(MeetingTarget, day: String, markdown: String)
+    /// Changes existing meeting notes by id (the meeting page opened from search, tags or backlinks).
+    case updateMeetingNotes(id: String, body: String?, tags: [String]? = nil, session: String? = nil)
     /// Deletes a meeting's notes (Trash); a one-off row that also carries a blocking override is only emptied.
     case deleteMeetingNotes(id: String)
     /// Sets or clears (nil) a tag's own color; creates the tag row for a group name (tag-colors C3).
@@ -336,6 +338,19 @@ public struct CommandHandler {
             } ?? ""
             let body = NotesSections.insert(markdown, for: day, into: current, today: LocalDay(date: now))
             return try saveMeetingNotes(target, body: body, tags: nil, batch: batch)
+
+        case .updateMeetingNotes(let id, let body, let tags, _):
+            guard try Bool.fetchOne(db, sql: "SELECT 1 FROM live_items WHERE id = ? AND kind = 'event_note'", arguments: [id]) == true else {
+                throw CommandFailure(.notFound, "Meeting notes \(id) not found.")
+            }
+            var changed = false
+            var unresolved: [UnresolvedLink]?
+            if let body {
+                let r = try LinkResolver.resolve(body, db: db); unresolved = r.unresolved
+                changed = !(try batch.update("items", id: id, ["body": r.text])).isEmpty
+            }
+            if let tags { changed = try replaceTags(of: id, with: try tags.map(TagName.init), batch: batch) || changed }
+            return CommandOK(id: id, changed: changed, unresolved: unresolved)
 
         case .deleteMeetingNotes(let id):
             guard let row = try Row.fetchOne(db, sql: "SELECT event_key, blocking FROM live_items WHERE id = ? AND kind = 'event_note'", arguments: [id]) else {
@@ -569,6 +584,7 @@ public struct CommandHandler {
         case .updatePage(_, let p): return p.session
         case .updateTagPage(_, _, let s): return s
         case .saveMeetingNotes(_, _, _, let s): return s
+        case .updateMeetingNotes(_, _, _, let s): return s
         default: return nil
         }
     }
@@ -581,6 +597,7 @@ public struct CommandHandler {
         case .updateTask(let id, _), .updatePage(let id, _): rowID = id
         case .updateTagPage(let name, _, _): rowID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [TagName.key(for: name)])
         case .saveMeetingNotes(let target, _, _, _): rowID = try Self.meetingNotesRow(target, db: db)
+        case .updateMeetingNotes(let id, _, _, _): rowID = id
         default: rowID = nil
         }
         guard let rowID,

@@ -31,6 +31,8 @@ public struct MarkdownEditor: NSViewRepresentable {
     /// The menu a link without live target opens on ⌘-click (missing: candidates, new page/task; deleted: restore,
     /// same-titled items, show in trash; trash-bin T5); nil = open the link.
     public var linkMenu: (ParsedLink.Target) -> LinkMenuModel?
+    /// Where the caret goes when the editor appears (UTF-16 offset), scrolled into view and focused; nil = start.
+    public var initialCaret: Int?
 
     public init(text: String,
                 onChange: ((String) -> Void)? = nil,
@@ -38,9 +40,11 @@ public struct MarkdownEditor: NSViewRepresentable {
                 appearance: @escaping (ParsedLink.Target) -> LinkAppearance,
                 onOpenLink: @escaping (URL) -> Void,
                 suggestions: @escaping (String) -> [LinkSuggestion],
-                linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard) {
+                linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard,
+                initialCaret: Int? = nil) {
         self.text = text; self.onChange = onChange; self.onCommit = onCommit
         self.appearance = appearance; self.onOpenLink = onOpenLink; self.suggestions = suggestions; self.linkMenu = linkMenu
+        self.initialCaret = initialCaret
     }
 
     public func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -70,6 +74,14 @@ public struct MarkdownEditor: NSViewRepresentable {
         textView.drawsBackground = false
         context.coordinator.textView = textView
         context.coordinator.setText(text)
+        if let caret = initialCaret {
+            DispatchQueue.main.async {
+                let range = NSRange(location: min(caret, (textView.string as NSString).length), length: 0)
+                textView.setSelectedRange(range)
+                textView.scrollRangeToVisible(range)
+                textView.window?.makeFirstResponder(textView)
+            }
+        }
         return scroll
     }
 
