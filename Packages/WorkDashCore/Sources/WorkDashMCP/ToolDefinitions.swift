@@ -33,7 +33,7 @@ public enum ToolDefinitions {
 
     public static let all: [Tool] = [
         Tool(name: "get_schedule",
-             description: "The user's schedule for one day: appointments from all visible calendars (in start order; all-day ones flagged; counts_as = blocks/maybe/free for the user's free time, with reason) and the tasks the WorkDash day view shows (due that day; for today also overdue ones, flagged), plus free_minutes (free working time that day, for today from now on). For today also: today (tasks overdue, due today, or needing work today; reason = overdue/due_today/needs_work, needed_today_minutes = minimum work today to finish on time, cant_fit when even all free time until the due date isn't enough), needed_today_minutes (sum) and without_estimate, and coming_up (other tasks due within the planning horizon, each with start_by = last day to start). If calendar access is missing, tasks are still returned and appointments_unavailable explains why. \(dateNote) \(taskShape)",
+             description: "The user's schedule for one day: appointments from all visible calendars (in start order; all-day ones flagged; counts_as = blocks/maybe/free for the user's free time, with reason; has_notes when the meeting has notes; calendar_id, base_id and original_start identify it for get_meeting_notes / update_meeting_notes) and the tasks the WorkDash day view shows (due that day; for today also overdue ones, flagged), plus free_minutes (free working time that day, for today from now on). For today also: today (tasks overdue, due today, or needing work today; reason = overdue/due_today/needs_work, needed_today_minutes = minimum work today to finish on time, cant_fit when even all free time until the due date isn't enough), needed_today_minutes (sum) and without_estimate, and coming_up (other tasks due within the planning horizon, each with start_by = last day to start). If calendar access is missing, tasks are still returned and appointments_unavailable explains why. \(dateNote) \(taskShape)",
              inputSchema: object(["date": string("Day to show (YYYY-MM-DD). Default: today.")]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "list_tasks",
@@ -139,6 +139,25 @@ public enum ToolDefinitions {
                                 enum: (TagColor.allCases.map(\.rawValue) + ["automatic"]).map { Value.string($0) }),
              ], required: ["name"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
+        Tool(name: "get_meeting_notes",
+             description: "A meeting's notes. Recurring meetings share one ever-growing document for the whole series, with dated sections (## Tue 3 Nov), newest on top; one-off meetings have their own. Identify the meeting with calendar_id, base_id and original_start exactly as get_schedule returns them. Returns {title, kind (series|occurrence), text (markdown), section (this meeting's heading), has_notes, tags, id}.",
+             inputSchema: object([
+                "calendar_id": string("From get_schedule."),
+                "base_id": string("From get_schedule."),
+                "original_start": string("From get_schedule."),
+             ], required: ["calendar_id", "base_id", "original_start"]),
+             annotations: .init(readOnlyHint: true, openWorldHint: false)),
+        Tool(name: "update_meeting_notes",
+             description: "Write a meeting's notes (e.g. prep notes). mode append (default) adds the markdown to this meeting's dated section, creating it on top if needed; replace sets the whole document. tags replaces the notes' tags. Identify the meeting with the fields from get_schedule. \(linkNote)",
+             inputSchema: object([
+                "calendar_id": string("From get_schedule."),
+                "base_id": string("From get_schedule."),
+                "original_start": string("From get_schedule."),
+                "text": string("Markdown to add (append) or the whole document (replace)."),
+                "mode": string("append (default) or replace.", enum: ["append", "replace"]),
+                "tags": tagsSchema,
+             ], required: ["calendar_id", "base_id", "original_start"]),
+             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
         Tool(name: "list_trash",
              description: "List deleted pages and tasks, most recently deleted first: {items: [{id, kind (page|task), title, tags (as when deleted), excerpt, status (tasks), deleted_at (YYYY-MM-DDTHH:mm, local time), deleted_by}], older_count}. By default the last 30 days; older_count says how many older ones exist (all: true lists everything). Nothing in the trash is ever erased.",
              inputSchema: object([

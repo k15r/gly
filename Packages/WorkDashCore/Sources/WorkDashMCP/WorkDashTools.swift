@@ -63,6 +63,8 @@ public final class WorkDashTools: @unchecked Sendable {
             case "get_tag_page": value = try tagPage(args)
             case "update_tag_page": value = try updateTagPage(args, writer: writer(client: client))
             case "list_trash": value = try listTrash(args)
+            case "get_meeting_notes": value = try await getMeetingNotes(args)
+            case "update_meeting_notes": value = try await updateMeetingNotes(args, writer: writer(client: client))
             case "restore": value = try restore(args, writer: writer(client: client))
             default: throw ToolError("Unknown tool \(name).")
             }
@@ -95,11 +97,21 @@ public final class WorkDashTools: @unchecked Sendable {
             let visible = Set(calendars.map(\.id)).subtracting(hiddenCalendarIDs())
             let model = DayModel(day: day, now: now(), appointments: calendar.appointments(overlapping: day.interval(), calendarIDs: visible),
                                  calendars: calendars, tasks: tasks)
-            result["appointments"] = .array((model.allDay + model.timed).map { entry in
+            let entries = model.allDay + model.timed
+            let withNotes = try await reader.read { db in
+                Set(try entries.filter { try MeetingNotes.document(for: $0.appointment, db: db).hasNotes }.map(\.appointment.id))
+            }
+            result["appointments"] = .array(entries.map { entry in
                 guard case .object(var o) = encode(entry) else { return .null }
                 let (weight, reason) = overrides.classify(entry.appointment)
                 o["counts_as"] = .string(weight.rawValue)
                 o["reason"] = .string(Self.reasonText(reason))
+                // Identity for get_meeting_notes / update_meeting_notes (meeting-pages N8).
+                let id = entry.appointment.identity
+                o["calendar_id"] = .string(id.calendarID)
+                o["base_id"] = .string(id.baseID)
+                o["original_start"] = .string(Self.timestamp.string(from: id.originalStart))
+                o["has_notes"] = .bool(withNotes.contains(entry.appointment.id))
                 return .object(o)
             })
             let dayStart = day == today ? now() : day.interval().start
@@ -337,6 +349,65 @@ public final class WorkDashTools: @unchecked Sendable {
         _ = try page(id)
         try perform(.deletePage(id: id), writer: writer)
         return .object(["deleted": .string(id)])
+    }
+
+    // MARK: Meeting notes (meeting-pages N8)
+
+    /// The live appointment named by the identity fields `get_schedule` returns.
+    func appointment(_ args: Arguments) async throws -> Appointment {
+        let calendarID = try args.requiredString("calendar_id"), baseID = try args.requiredString("base_id")
+        guard let start = Self.timestamp.date(from: try args.requiredString("original_start")) else {
+            throw ToolError("original_start must be the value get_schedule returned (e.g. 2026-11-03T14:00:00+01:00).")
+        }
+        if calendar.authorization == .notDetermined { _ = await calendar.requestAccess() }
+        guard calendar.authorization.canRead else { throw ToolError("Calendar access is missing, so meetings can't be looked up.") }
+        let around = DateInterval(start: start.addingTimeInterval(-86400 * 2), end: start.addingTimeInterval(86400 * 2))
+        let found = calendar.appointments(overlapping: around, calendarIDs: [calendarID]).first {
+            $0.identity.baseID == baseID && abs($0.identity.originalStart.timeIntervalSince(start)) < 1
+        }
+        guard let found else { throw ToolError("No such meeting in the calendar (use the fields from get_schedule).") }
+        return found
+    }
+
+    func getMeetingNotes(_ args: Arguments) async throws -> Value {
+        let a = try await appointment(args)
+        let today = self.today
+        return try await reader.read { db in
+            let ref = try MeetingNotes.document(for: a, db: db)
+            let section = NotesSections.heading(for: LocalDay(date: a.start), today: today)
+            var o: [String: Value] = [
+                "title": .string(a.title), "kind": .string(a.isRecurring ? "series" : "occurrence"),
+                "text": .string(ref.body), "section": .string(section), "has_notes": .bool(ref.hasNotes),
+            ]
+            if let id = ref.itemID {
+                let tags = try TaskQueries.tagsByItem(db, ids: [id])[id] ?? []
+                o["id"] = .string(id)
+                o["tags"] = .array(tags.map { .string($0) })
+            } else {
+                o["tags"] = .array([])
+            }
+            return .object(o)
+        }
+    }
+
+    func updateMeetingNotes(_ args: Arguments, writer: String) async throws -> Value {
+        let a = try await appointment(args)
+        let text = try args.string("text"), tags = try args.strings("tags"), mode = try args.string("mode") ?? "append"
+        guard text != nil || tags != nil else { throw ToolError("Give text, tags, or both.") }
+        let target = MeetingTarget(a)
+        var ok = CommandOK()
+        if let text {
+            switch mode {
+            case "append": ok = try performOK(.appendMeetingNotes(target, day: LocalDay(date: a.start).description, markdown: text), writer: writer)
+            case "replace": ok = try performOK(.saveMeetingNotes(target, body: text, tags: tags), writer: writer)
+            case let m: throw ToolError("Unknown mode “\(m)” (use append or replace).")
+            }
+        }
+        if let tags, text == nil || mode == "append" {
+            let current = try await reader.read { db in try MeetingNotes.document(for: a, db: db).body }
+            _ = try performOK(.saveMeetingNotes(target, body: current, tags: tags), writer: writer)
+        }
+        return withUnresolved(try await getMeetingNotes(args), ok)
     }
 
     /// Not found, pointing to `restore` when the item is in the trash (trash-bin T6).

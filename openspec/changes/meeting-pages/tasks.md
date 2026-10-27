@@ -12,7 +12,7 @@
 
 ## 3. MCP
 
-- [ ] 3.1 `has_notes` in `get_schedule`, `get_meeting_notes` and `update_meeting_notes` (N8) with descriptions; verify with MCP tests for "Agent prepares a meeting" and "Read notes of a meeting"
+- [x] 3.1 `has_notes` in `get_schedule`, `get_meeting_notes` and `update_meeting_notes` (N8) with descriptions; verify with MCP tests for "Agent prepares a meeting" and "Read notes of a meeting"
 
 ## 4. App
 

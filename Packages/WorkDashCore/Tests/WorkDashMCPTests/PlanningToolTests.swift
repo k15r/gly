@@ -69,6 +69,55 @@ final class PlanningToolTests: XCTestCase {
         XCTAssertEqual(appts.map { field($0, "reason") }, [.string("override (this occurrence)"), .string("automatic")])
     }
 
+    // MARK: meeting-pages 3.1 (specs/agent-access "Meeting notes over MCP")
+
+    func weekly(_ dayOffset: Int) -> Appointment {
+        let s = cal.date(byAdding: .day, value: dayOffset, to: cal.date(bySettingHour: 14, minute: 0, second: 0, of: now)!)!
+        return Appointment(id: "w\(dayOffset)", calendarID: "work", title: "1:1 Alex", start: s, end: s.addingTimeInterval(1800),
+                           organizer: "Org", identity: AppointmentIdentity(calendarID: "work", baseID: "SERIES", originalStart: s),
+                           availability: .busy, isRecurring: true)
+    }
+    func identity(_ v: Value?) -> [String: Value] {
+        ["calendar_id": field(v, "calendar_id") ?? .null, "base_id": field(v, "base_id") ?? .null, "original_start": field(v, "original_start") ?? .null]
+    }
+
+    func testAgentPreparesAMeeting() async throws {
+        source.events = [weekly(0), weekly(1)]
+        let tomorrow = LocalDay(date: now).adding(days: 1).description
+        let (before, _, _) = await call("get_schedule", ["date": .string(tomorrow)])
+        let appt = list(before, "appointments").first
+        XCTAssertEqual(field(appt, "has_notes"), .bool(false))
+        XCTAssertEqual(field(appt, "base_id"), "SERIES")
+        var args = identity(appt); args["text"] = "- discuss [[project/atlas/Roadmap]]"
+        _ = await call("create_page", ["title": "Roadmap", "tags": ["project/atlas"]])
+        let (r, isError, text) = await call("update_meeting_notes", args)
+        XCTAssertFalse(isError, text)
+        let heading = NotesSections.heading(for: LocalDay(date: weekly(1).start), today: LocalDay(date: now))
+        guard case .string(let notes)? = field(r, "text") else { return XCTFail("no text") }
+        XCTAssertTrue(notes.hasPrefix(heading + "\n- discuss [Roadmap](workdash://item/"), notes)
+        XCTAssertEqual(field(r, "kind"), "series")
+        let (after, _, _) = await call("get_schedule", ["date": .string(tomorrow)])
+        XCTAssertEqual(field(list(after, "appointments").first, "has_notes"), .bool(true))
+        // The series shares the document: today's occurrence is marked too.
+        let (todayV, _, _) = await call("get_schedule")
+        XCTAssertEqual(field(list(todayV, "appointments").first, "has_notes"), .bool(true))
+    }
+
+    func testReadNotesOfAMeeting() async throws {
+        source.events = [weekly(0)]
+        let (v, _, _) = await call("get_schedule")
+        var args = identity(list(v, "appointments").first)
+        args["text"] = "agenda"; args["tags"] = ["person/alex"]
+        _ = await call("update_meeting_notes", args)
+        let (r, isError, text) = await call("get_meeting_notes", identity(list(v, "appointments").first))
+        XCTAssertFalse(isError, text)
+        XCTAssertEqual(field(r, "has_notes"), .bool(true))
+        XCTAssertEqual(list(r, "tags"), ["person/alex"])
+        XCTAssertEqual(field(r, "section"), .string(NotesSections.heading(for: LocalDay(date: now), today: LocalDay(date: now))))
+        let (missing, missingError, _) = await call("get_meeting_notes", ["calendar_id": "work", "base_id": "NOPE", "original_start": "2026-01-01T10:00:00Z"])
+        XCTAssertTrue(missingError); XCTAssertNil(missing)
+    }
+
     func testAgentEstimatesATask() async throws {
         let (created, _, _) = await call("create_task", ["title": "Estimate me", "effort": "m"])
         XCTAssertEqual(field(created, "effort"), "M")

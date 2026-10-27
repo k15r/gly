@@ -75,7 +75,7 @@ public enum TaskQueries {
     // MARK: - Mapping
 
     /// Live tag names per item, in name order.
-    static func tagsByItem(_ db: Database, ids: [String]) throws -> [String: [String]] {
+    public static func tagsByItem(_ db: Database, ids: [String]) throws -> [String: [String]] {
         var tagsByItem: [String: [String]] = [:]
         // Chunked to stay below SQLite's variable limit.
         for chunk in stride(from: 0, to: ids.count, by: 500).map({ Array(ids[$0..<min($0 + 500, ids.count)]) }) {

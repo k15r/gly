@@ -49,7 +49,7 @@ final class ToolTests: XCTestCase {
     func testToolListHasAllSevenWithSchemas() {
         let names = ToolDefinitions.all.map(\.name)
         XCTAssertEqual(names, ["get_schedule", "list_tasks", "get_task", "create_task", "update_task", "delete_task", "list_tags",
-                               "create_page", "get_page", "update_page", "delete_page", "search", "get_context", "get_tag_page", "update_tag_page", "list_trash", "restore"])
+                               "create_page", "get_page", "update_page", "delete_page", "search", "get_context", "get_tag_page", "update_tag_page", "get_meeting_notes", "update_meeting_notes", "list_trash", "restore"])
         for tool in ToolDefinitions.all {
             XCTAssertFalse(tool.description?.isEmpty ?? true, tool.name)
             guard case .object(let schema) = tool.inputSchema else { return XCTFail("\(tool.name) schema") }
