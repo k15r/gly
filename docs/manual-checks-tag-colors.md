@@ -9,7 +9,7 @@ Neutral test data only (no real names). Setup: tasks or pages tagged `person/ale
 - [ ] A2 Right-click `person` → Color → Green → `person`, `person/alex`, `person/alex/blargh`, `person/sam` are green (dots and chips everywhere, e.g. the task list); "Automatic" is unchecked, Green checked ("Color a group").
 - [ ] A3 `person/alex` → Orange → it and `person/alex/blargh` are orange, `person/sam` stays green ("Override below").
 - [ ] A4 `person/alex` → Automatic → green again; ⌘Z brings orange back ("Back to automatic").
-- [ ] A5 Tag page of `person/alex/blargh`: the header dot shows the color with "inherited from person/alex" (or "own color" / "automatic"); its menu changes the color ("Inherited color shown").
+- [ ] A5 Tag page of `person/alex/blargh`: icon and name are in the tag's color; the small square next to it shows the color, its tooltip says "inherited from person/alex" (or "own color" / "automatic"), and its menu changes the color ("Inherited color shown").
 - [ ] A6 All palette colors readable as chips in light and dark mode (System Settings → Appearance).
 
 ## B. Managing tags (task 3.2)
