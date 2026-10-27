@@ -363,10 +363,47 @@ struct AppointmentDetails: View {
                 if let o = a.organizer, !o.isEmpty { row("Organizer", o) }
                 if !a.attendees.isEmpty { row("Attendees", a.attendees.joined(separator: "\n")) }
             }
+            let d = MeetingDescription.parse(notes: a.notes, location: a.location, url: a.url)
+            if !d.agenda.isEmpty {
+                Divider()
+                Text(Self.linked(d.agenda)).fixedSize(horizontal: false, vertical: true)
+            }
+            if let dial = d.dialIn {
+                DisclosureGroup("\(d.service ?? "Meeting") details") {
+                    Text(Self.linked(dial)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.caption)
+            }
+            HStack {
+                if let join = d.joinURL {
+                    Button { NSWorkspace.shared.open(join) } label: { Label("Join \(d.service ?? "")", systemImage: "video") }
+                        .buttonStyle(.borderedProminent)
+                }
+                // SPIKE (meeting-pages 1.1): which "Open in Calendar" form shows the exact event?
+                Menu("Open in Calendar") {
+                    Button("A · EventKit id") { CalendarOpener.open(.eventIdentifier, a) }
+                    Button("B · external id") { CalendarOpener.open(.externalIdentifier, a) }
+                    Button("C · just activate Calendar") { CalendarOpener.open(.activate, a) }
+                }
+                .fixedSize()
+            }
         }
         .textSelection(.enabled)
         .padding()
         .frame(minWidth: 280, maxWidth: 420, alignment: .leading)
+    }
+
+    /// Plain text with bare URLs as links (the description is shown read-only).
+    static func linked(_ text: String) -> AttributedString {
+        var s = AttributedString(text)
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return s }
+        let ns = text as NSString
+        for m in detector.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            guard let url = m.url, let r = Range(m.range, in: text),
+                  let lower = AttributedString.Index(r.lowerBound, within: s), let upper = AttributedString.Index(r.upperBound, within: s) else { continue }
+            s[lower..<upper].link = url
+        }
+        return s
     }
 
     private func row(_ label: String, _ value: String) -> some View {
