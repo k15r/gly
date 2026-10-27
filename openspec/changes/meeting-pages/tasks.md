@@ -3,7 +3,7 @@
 ## 1. Spike and calendar data
 
 - [ ] 1.1 Spike "Open in Calendar" (N6): try `ical://ekevent/<id>` with an Exchange and an iCloud event, and the AppleScript date fallback in the sandbox; record the result in design N6 and pick the form; verify by opening a real meeting from a throwaway build
-- [ ] 1.2 Read `notes` and `url` in `EventKitSource` into `Appointment` (never into snapshots or the store) and add `MeetingDescription.parse` (N5: agenda, folded dial-in block, join URL for Teams/Zoom/Meet/Webex, bare URLs as links); verify with tests on a Teams body, a Zoom location, a plain description and none
+- [x] 1.2 Read `notes` and `url` in `EventKitSource` into `Appointment` (never into snapshots or the store) and add `MeetingDescription.parse` (N5: agenda, folded dial-in block, join URL for Teams/Zoom/Meet/Webex, bare URLs as links); verify with tests on a Teams body, a Zoom location, a plain description and none
 
 ## 2. Core
 
