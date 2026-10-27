@@ -17,10 +17,6 @@ final class TasksModel {
     private(set) var agentChanges: [AgentChange] = []
     var mode: TaskListMode = .open { didSet { observeList() } }
     var tagFilter: TagName? { didSet { observeList() } }
-    /// "Show unused tags" in the tag tree (tag-colors C6); remembered per Mac.
-    var showUnusedTags = UserDefaults.standard.bool(forKey: "showUnusedTags") {
-        didSet { UserDefaults.standard.set(showUnusedTags, forKey: "showUnusedTags"); observeTags() }
-    }
 
     private(set) var day: LocalDay = LocalDay(date: Date())
     private(set) var today: LocalDay = LocalDay(date: Date())
@@ -84,8 +80,8 @@ final class TasksModel {
 
     private func observeTags() {
         guard let store else { return }
-        let today = self.today.description, unused = showUnusedTags
-        tagObservation = store.observe(ValueObservation.tracking { try TagQueries.tagTree($0, today: today, includeUnused: unused) },
+        let today = self.today.description
+        tagObservation = store.observe(ValueObservation.tracking { try TagQueries.tagTree($0, today: today) },
                                        onError: { print("tag observation: \($0)") },
                                        onChange: { [weak self] in self?.tagTree = $0 })
     }

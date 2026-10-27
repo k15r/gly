@@ -12,7 +12,7 @@ Tag chips are colored since the pages-list polish, but the color is computed fro
 - **Setting a color:**
   - a "Color" menu on the tag page and in the tag tree's context menu: palette entries plus "Automatic", which removes the tag's own color so it inherits again
   - each choice is one undo step
-- **Unused tags become reachable:** a "Show unused tags" toggle in the tag tree also lists tags that only finished tasks use.
+- **All tags in the tree:** the tag tree lists every tag, also those used only by finished tasks, so none is out of reach. Clicking a tag also expands it.
 - **Rename a tag** from the tag tree's context menu or the tag page:
   - subtags are renamed along (`person/alex` → `people/alex` when renaming `person`)
   - links and labels follow
@@ -31,7 +31,7 @@ None.
 
 ### Modified Capabilities
 
-- `tags`: tag colors (own and inherited, the palette, the default) and setting them from the tag tree; the tag tree shows the color; unused tags on demand; renaming, merging and deleting tags.
+- `tags`: tag colors (own and inherited, the palette, the default) and setting them from the tag tree; the tag tree shows the color and lists all tags; renaming, merging and deleting tags.
 - `tag-pages`: the tag page shows the tag's color and lets the user change it, rename the tag and delete it.
 - `agent-access`: tag colors in `list_tags` and `get_tag_page`; setting and clearing them.
 

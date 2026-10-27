@@ -72,7 +72,7 @@ final class TagQueryTests: XCTestCase {
         XCTAssertEqual(TreeLeaf.excerpt(of: ""), "")
     }
 
-    func testEmptyTagShowsButDoneOnlyTagHides() throws {
+    func testEmptyAndDoneOnlyTagsShow() throws {
         try db.write { db in
             try addTask(db, "A", tags: ["person/alex"])
             try addTask(db, "Done", tags: ["person/old"], status: "done")
@@ -81,7 +81,7 @@ final class TagQueryTests: XCTestCase {
         _ = h.perform(.createTag(name: "person/alex/goals"), writer: "me")
         let tree = try db.read { try TagQueries.tagTree($0, today: "2026-10-27") }
         let alex = tree[0].children.first { $0.segment == "alex" }
-        XCTAssertEqual(tree[0].children.map(\.segment), ["alex"], "person/old has only a done task")
+        XCTAssertEqual(tree[0].children.map(\.segment), ["alex", "old"], "every tag is listed, also one only finished tasks use")
         XCTAssertEqual(alex?.children.map { "\($0.segment)=\($0.openCount)" }, ["goals=0"])
         XCTAssertEqual(alex?.children.first?.isTag, true)
         XCTAssertEqual(tree[0].openCount, 1)

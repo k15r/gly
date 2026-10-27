@@ -188,15 +188,13 @@ final class TagColorTests: XCTestCase {
         XCTAssertEqual(failure(.deleteTag(name: "project"))?.code, .notFound, "group name without a row")
     }
 
-    func testTagOfFinishedWork() throws {
+    func testAllTagsAreInTheTree() throws {
         let t = ok(.createTask(TaskDraft(title: "Done", tags: ["person/old"]))).id!
         ok(.setStatus(id: t, .done))
         ok(.createTask(TaskDraft(title: "Open", tags: ["person/alex"])))
-        let hidden = try db.read { try TagQueries.tagTree($0, today: "2026-10-27") }
-        XCTAssertEqual(hidden.first?.children.map(\.segment), ["alex"])
-        let shown = try db.read { try TagQueries.tagTree($0, today: "2026-10-27", includeUnused: true) }
-        let old = shown.first?.children.first { $0.segment == "old" }
-        XCTAssertEqual(old?.unused, true)
-        XCTAssertEqual(shown.first?.children.first { $0.segment == "alex" }?.unused, false)
+        ok(.createTag(name: "person/new"))
+        let tree = try db.read { try TagQueries.tagTree($0, today: "2026-10-27") }
+        XCTAssertEqual(tree.first?.children.map(\.segment), ["alex", "new", "old"], "finished-only and empty tags too")
+        XCTAssertEqual(tree.first?.openCount, 1)
     }
 }

@@ -62,13 +62,13 @@ Creates the tag row if needed (as `updateTagPage` does, for group names), then s
 - **`get_tag_page`:** gains the same two fields.
 - **`update_tag_page`:** `text` becomes optional and `color` is new (a palette name, or `"automatic"` to clear). At least one of the two is required. An unknown name is rejected, with the allowed names listed in the error and in the tool description.
 
-### C6: Unused tags in the tree
+### C6: All tags in the tree
 
-`TagQueries.tagTree(db, today:, includeUnused:)`:
-- With `includeUnused`, the query also takes live tags whose assignments go only to finished tasks.
-- Those nodes get `unused = true`, and the tree renders them in secondary color with "(unused)".
-- Empty tags already show (tag-list change).
-- The toggle is a "Show Unused Tags" item in the context menu of the "Tags" section header and on any tag row, remembered in `UserDefaults` (a per-viewer convenience).
+`TagQueries.tagTree` lists every live tag, including tags with nothing assigned and tags used only by finished tasks. So every tag can be colored, renamed or deleted from the tree.
+
+A "Show unused tags" toggle was built first and removed after trying it: it hid tags you then couldn't find, and its effect was hard to see.
+
+Clicking a tag row also expands it.
 
 ### C7: `Command.renameTag(from:, to:, merge: Bool)`
 
@@ -97,7 +97,7 @@ Creates the tag row if needed (as `updateTagPage` does, for group names), then s
 
 ### C9: UI for rename and delete
 
-- **Context menu of tag rows:** Color ▸, Rename…, Delete…, and Show Unused Tags.
+- **Context menu of tag rows:** New Subtag…, Color ▸, Rename…, Delete….
 - **Tag page header:** a "…" menu with the same items.
 - **Rename** opens an alert with a text field prefilled with the full name. On a `conflict` failure, a second alert says "Merge into “person/alex”?" and offers Merge or Cancel.
 - **Delete** confirms with "Remove “project/old” from 3 items?" (or "Delete unused tag “…”?").

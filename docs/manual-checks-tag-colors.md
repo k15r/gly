@@ -14,7 +14,7 @@ Neutral test data only (no real names). Setup: tasks or pages tagged `person/ale
 
 ## B. Managing tags (task 3.2)
 
-- [ ] B1 Right-click "Tags" (section header) or any tag → Show Unused Tags → `person/old` appears, greyed with "unused"; its menu offers Color, Rename, Delete; the setting survives a restart ("Tag of finished work").
+- [ ] B1 A tag used only by a done task (`person/old`) and an empty tag both appear in the tree; clicking a tag opens its page and expands it ("Empty tag and finished tag", "Select a tag").
 - [ ] B2 Rename `person` to `people` → `people/alex`, `people/alex/blargh`, `people/sam` with all items; the link on "Hub" reads `people/alex`; ⌘Z restores `person` ("Rename a group").
 - [ ] B3 Create a task tagged `person/al`, then rename `person/al` to `person/alex` → "Merge tags?" lists `person/alex`; Merge → the task is under `person/alex`, `person/al` is gone; ⌘Z splits them again ("Merge two spellings").
 - [ ] B4 Same rename, Cancel at the merge question → nothing changes ("Merge declined").
