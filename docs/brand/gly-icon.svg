@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Gly</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A9BEA"/>
+      <stop offset="1" stop-color="#1C5BB0"/>
+    </linearGradient>
+    <!-- faint Bavarian lozenges -->
+    <pattern id="raute" width="120" height="72" patternUnits="userSpaceOnUse" patternTransform="rotate(-24 512 512)">
+      <path d="M60 0 L120 36 L60 72 L0 36 Z" fill="#FFFFFF" fill-opacity="0.09"/>
+    </pattern>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="185"/>
+    </clipPath>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  </g>
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#raute)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#sheen)"/>
+  </g>
+
+  <!-- the "g": bowl is an almost-closed progress ring, the gap holds "the moment" -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M554.7 280.6 A165 165 0 1 1 395.3 323.3"/>
+    <path d="M677 440 L677 610 C677 720 600 770 512 770 C450 770 405 745 380 715"/>
+  </g>
+  <circle cx="469.3" cy="280.6" r="34" fill="#FFC83D"/>
+</svg>

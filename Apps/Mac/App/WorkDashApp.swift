@@ -75,7 +75,7 @@ struct WorkDashApp: App {
             .environment(app).environment(tasks).environment(planning).environment(calendars).environment(nav).environment(tagColors).environment(capture)
         }
         // Menu bar icon (quick-capture Q4): keeps capture and the window one click away; hidden via Settings.
-        MenuBarExtra("WorkDash", systemImage: "checklist", isInserted: $showMenuBarIcon) {
+        MenuBarExtra("WorkDash", image: "MenuBarIcon", isInserted: $showMenuBarIcon) {
             MenuBarContent(capture: capture)
         }
     }

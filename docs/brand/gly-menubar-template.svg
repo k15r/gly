@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="18" height="18">
+  <title>Gly (menu bar template)</title>
+  <g transform="translate(-192 -222)">
+    <g fill="none" stroke="#000" stroke-width="72" stroke-linecap="round">
+      <path d="M554.7 280.6 A165 165 0 1 1 395.3 323.3"/>
+      <path d="M677 440 L677 610 C677 720 600 770 512 770 C450 770 405 745 380 715"/>
+    </g>
+    <circle cx="469.3" cy="280.6" r="36" fill="#000"/>
+  </g>
+</svg>

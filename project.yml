@@ -36,6 +36,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash
         PRODUCT_NAME: WorkDash
         GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: WorkDash
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: WorkDash shows the appointments of all your calendars in its day view.
