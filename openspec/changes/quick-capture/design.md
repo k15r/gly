@@ -25,7 +25,7 @@ Motivation is in `proposal.md`, behavior in `specs/quick-capture/spec.md`.
 
 ### Q1: `CaptureParser` (Core, pure)
 
-`CaptureParser.parse(_ text: String, kind: .task | .page, today: LocalDay) -> CaptureDraft` returns the title, tags, due and priority, plus `consumed` ranges for the preview.
+`CaptureParser.parse(_ text: String, kind: .task | .page, today: LocalDay) -> CaptureDraft` returns the title, tags, due and priority.
 
 Tokens are whitespace-separated and parsed left to right:
 - **Tags:** `#` followed by a valid `TagName`. An invalid one (`#`) stays in the title.
@@ -55,7 +55,7 @@ Tokens are whitespace-separated and parsed left to right:
 - **The window:** an `NSPanel` subclass (`CapturePanel`, `.nonactivatingPanel`, `.titled` hidden, `.floating` level, `canJoinAllSpaces`, `fullScreenAuxiliary`) hosting a SwiftUI `CaptureView` through `NSHostingView`.
   - Non-activating means the panel becomes key, so you can type, without activating WorkDash. On Return the panel closes and the previous app is still in front.
   - It's centered in the upper third of the screen with the mouse, Spotlight-like.
-- **⌘Return:** saves, then `NSApp.activate`, shows the main window, and navigates to the new item via `Navigation`, using the id from `CommandOK`.
+- **⌘Return:** saves, then `NSApp.activate`, shows the main window, and navigates to the new item via `Navigation`, using the id from `CommandOK`. It also sets `Navigation.editRequest` to that id, so the page or task view opens in edit mode with the cursor in its text.
 - **Closing:** Esc, or losing key status (clicking elsewhere), closes the panel. The text is kept until a save, so an accidental click doesn't lose it.
 - **Shared state:** the panel uses the same `AppModel` and `Navigation` instances as the main window, passed in when created.
 
@@ -69,6 +69,8 @@ Tokens are whitespace-separated and parsed left to right:
 ### Q5: Settings
 
 A "Capture" tab: the shortcut recorder (a small view that records the next key combination with at least one of ⌘⌃⌥, Esc to cancel), "Show in menu bar" and "Open at login".
+
+While recording, the button shows the modifiers being held ("⌃⇧…"). If they're released without any key arriving, a hint explains that macOS or another app took the combination first; for example, ⌃⇧Space is reserved by input-source switching when ⌃Space is set.
 
 ## Risks / Trade-offs
 

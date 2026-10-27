@@ -18,7 +18,7 @@ While WorkDash runs, a global keyboard shortcut (default ⌃⌥Space, changeable
 - **THEN** ⌃⇧T opens the panel and ⌃⌥Space no longer does
 
 ### Requirement: Capture panel
-The panel SHALL show one text field and, below it, a preview of what will be created (type, title, tags, due date, priority). Tab SHALL switch between Task and Page. Return SHALL create the item and close the panel without bringing WorkDash to the front; ⌘Return SHALL create it and open it in WorkDash; Esc SHALL close the panel without creating anything. An empty title SHALL NOT create anything.
+The panel SHALL show one text field and, below it, a preview of what will be created (type, title, tags, due date, priority). Tab SHALL switch between Task and Page. Return SHALL create the item and close the panel without bringing WorkDash to the front; ⌘Return SHALL create it and open it in WorkDash in edit mode, with the cursor in its text; Esc SHALL close the panel without creating anything. An empty title SHALL NOT create anything.
 
 #### Scenario: Save and keep working
 - **WHEN** the user types "Call venue" and presses Return
@@ -26,7 +26,7 @@ The panel SHALL show one text field and, below it, a preview of what will be cre
 
 #### Scenario: Save and open
 - **WHEN** the user switches to Page with Tab, types "Offsite ideas" and presses ⌘Return
-- **THEN** a page "Offsite ideas" is created and opened in WorkDash
+- **THEN** a page "Offsite ideas" is created and opened in WorkDash in edit mode, with the cursor in its text
 
 #### Scenario: Cancel
 - **WHEN** the user types something and presses Esc
