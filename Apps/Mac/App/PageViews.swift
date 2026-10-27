@@ -298,6 +298,7 @@ struct TagPageView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Label(data.name, systemImage: "tag").font(.title.bold())
+                    TagColorControl(name: data.name)
                     Spacer()
                     Button("Show in Tasks") {
                         tasks.tagFilter = try? TagName(data.name)

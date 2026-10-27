@@ -11,17 +11,19 @@ struct WorkDashApp: App {
     @State private var nav = Navigation()
     @State private var wiki = WikiModel()
     @State private var planning = PlanningModel()
+    @State private var tagColors = TagColorModel()
 
     var body: some Scene {
         WindowGroup("WorkDash") {
             let opener = LinkOpener(app: app, wiki: wiki, nav: nav)
             ContentView()
                 .environment(app).environment(calendars).environment(tasks).environment(clock).environment(nav).environment(wiki).environment(planning)
+                .environment(tagColors)
                 .environment(\.linkOpener, opener)
                 .environment(\.openURL, OpenURLAction { url in opener.open(url); return .handled })
                 .frame(minWidth: 960, minHeight: 580)
                 .task { await startUp() }
-                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store) }
+                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store); tagColors.attach(app.store) }
                 .onChange(of: nav.day) { syncDay() }
                 .onChange(of: clock.today) { syncDay() }
         }
@@ -65,7 +67,7 @@ struct WorkDashApp: App {
                 CalendarListView().frame(width: 560, height: 560).tabItem { Label("Calendars", systemImage: "calendar.badge.checkmark") }
                 DataSettingsView().tabItem { Label("Data", systemImage: "externaldrive") }
             }
-            .environment(app).environment(tasks).environment(planning).environment(calendars).environment(nav)
+            .environment(app).environment(tasks).environment(planning).environment(calendars).environment(nav).environment(tagColors)
         }
     }
 
@@ -79,6 +81,7 @@ struct WorkDashApp: App {
         tasks.attach(app.store, writer: app.writer)
         wiki.attach(app.store)
         planning.attach(app.store)
+        tagColors.attach(app.store)
         if app.canWrite { await app.send(.reconcileSnoozes(today: clock.today.description), asSystem: true) }
         await calendars.start()
         syncDay()
@@ -345,6 +348,7 @@ struct TagTreeNode: View {
     @Environment(WikiModel.self) private var wiki
     @Environment(TasksModel.self) private var tasks
     @Environment(AppModel.self) private var app
+    @Environment(TagColorModel.self) private var tagColors
     let node: TagNode
     let drop: TreeDropState
     @State private var expanded = false
@@ -363,7 +367,8 @@ struct TagTreeNode: View {
     }
 
     private var row: some View {
-        HStack {
+        HStack(spacing: 6) {
+            Circle().fill(tagColors.color(node.path)).frame(width: 7, height: 7)
             Text(node.segment).fontWeight(nav.current == .tag(node.path) ? .bold : .regular)
             Spacer()
             if node.openCount > 0 { Text("\(node.openCount)").foregroundStyle(.secondary).monospacedDigit() }
@@ -371,7 +376,10 @@ struct TagTreeNode: View {
         .treeRow(group: .tag(node.path), state: drop, onTap: { nav.go(.tag(node.path)) }) { items in
             ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks)
         }
-        .contextMenu { Button("New Subtag…") { newSubtag = true }.disabled(!app.canWrite) }
+        .contextMenu {
+            Button("New Subtag…") { newSubtag = true }.disabled(!app.canWrite)
+            Menu("Color") { TagColorMenuItems(name: node.path) }.disabled(!app.canWrite)
+        }
         .modifier(NewSubtagPrompt(parent: node.path, isPresented: $newSubtag, onCreate: { expanded = true }))
     }
 }
