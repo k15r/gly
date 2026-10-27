@@ -13,13 +13,16 @@ struct WorkDashApp: App {
     @State private var planning = PlanningModel()
     @State private var tagColors = TagColorModel()
     @State private var meetingMarks = MeetingMarksModel()
+    @State private var capture = CaptureController()
+    @AppStorage("showMenuBarIcon") private var showMenuBarIcon = true
 
     var body: some Scene {
-        WindowGroup("WorkDash") {
+        WindowGroup("WorkDash", id: "main") {
             let opener = LinkOpener(app: app, wiki: wiki, nav: nav)
             ContentView()
                 .environment(app).environment(calendars).environment(tasks).environment(clock).environment(nav).environment(wiki).environment(planning)
-                .environment(tagColors).environment(meetingMarks)
+                .environment(tagColors).environment(meetingMarks).environment(capture)
+                .background(OpenWindowHook(capture: capture))
                 .environment(\.linkOpener, opener)
                 .environment(\.openURL, OpenURLAction { url in opener.open(url); return .handled })
                 .frame(minWidth: 960, minHeight: 580)
@@ -66,9 +69,14 @@ struct WorkDashApp: App {
                 AgentsSettingsView().tabItem { Label("Agents", systemImage: "cpu") }
                 PlanningSettingsView().tabItem { Label("Planning", systemImage: "calendar.badge.clock") }
                 CalendarListView().frame(width: 560, height: 560).tabItem { Label("Calendars", systemImage: "calendar.badge.checkmark") }
+                CaptureSettingsView().tabItem { Label("Capture", systemImage: "square.and.pencil") }
                 DataSettingsView().tabItem { Label("Data", systemImage: "externaldrive") }
             }
-            .environment(app).environment(tasks).environment(planning).environment(calendars).environment(nav).environment(tagColors)
+            .environment(app).environment(tasks).environment(planning).environment(calendars).environment(nav).environment(tagColors).environment(capture)
+        }
+        // Menu bar icon (quick-capture Q4): keeps capture and the window one click away; hidden via Settings.
+        MenuBarExtra("WorkDash", systemImage: "checklist", isInserted: $showMenuBarIcon) {
+            MenuBarContent(capture: capture)
         }
     }
 
@@ -84,6 +92,7 @@ struct WorkDashApp: App {
         planning.attach(app.store)
         tagColors.attach(app.store)
         meetingMarks.attach(app.store)
+        capture.start(app: app, nav: nav, environment: { $0 })
         if app.canWrite { await app.send(.reconcileSnoozes(today: clock.today.description), asSystem: true) }
         await calendars.start()
         syncDay()
@@ -175,6 +184,34 @@ struct ContentView: View {
         .alert("WorkDash", isPresented: Binding(get: { app.lastError != nil }, set: { if !$0 { app.lastError = nil } })) {
             Button("OK") { app.lastError = nil }
         } message: { Text(app.lastError ?? "") }
+    }
+}
+
+/// Gives the capture controller a way to open the main window when none is open (⌘↩ in the panel).
+struct OpenWindowHook: View {
+    @Environment(\.openWindow) private var openWindow
+    let capture: CaptureController
+    var body: some View {
+        Color.clear.onAppear { capture.openMainWindow = { openWindow(id: "main") } }
+    }
+}
+
+/// The menu bar icon's menu (quick-capture Q4).
+struct MenuBarContent: View {
+    @Environment(\.openWindow) private var openWindow
+    let capture: CaptureController
+    var body: some View {
+        Button("Quick Capture (\(capture.shortcut.display))") { capture.show() }
+        Button("Open WorkDash") {
+            NSApp.activate(ignoringOtherApps: true)
+            if let window = NSApp.windows.first(where: { !($0 is NSPanel) && $0.canBecomeMain && $0.isVisible }) {
+                window.makeKeyAndOrderFront(nil)
+            } else {
+                openWindow(id: "main")
+            }
+        }
+        Divider()
+        Button("Quit WorkDash") { NSApp.terminate(nil) }.keyboardShortcut("q")
     }
 }
 
