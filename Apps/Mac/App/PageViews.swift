@@ -275,6 +275,8 @@ struct TagPageView: View {
     @State private var editing = false
     @State private var showFinished = false
     @State private var newSubtag = false
+    @State private var renaming = false
+    @State private var deleting = false
 
     var body: some View {
         Group {
@@ -311,8 +313,14 @@ struct TagPageView: View {
                     Button { newSubtag = true } label: { Label("New Subtag", systemImage: "tag") }.disabled(!app.canWrite)
                     Button { nav.showNewPage = true } label: { Label("New Page", systemImage: "plus") }.disabled(!app.canWrite)
                     Toggle("Edit", isOn: $editing).toggleStyle(.button).keyboardShortcut("e")
+                    Menu {
+                        Button("Rename…") { renaming = true }
+                        Button("Delete…") { deleting = true }.disabled(data.tagID == nil)
+                    } label: { Image(systemName: "ellipsis.circle") }
+                    .menuStyle(.borderlessButton).fixedSize().disabled(!app.canWrite)
                 }
                 .modifier(NewSubtagPrompt(parent: data.name, isPresented: $newSubtag))
+                .modifier(TagManagementPrompts(name: data.name, renaming: $renaming, deleting: $deleting))
                 if editing {
                     WDMarkdownEditor(text: data.body, onCommit: { text, session in
                         Task { await app.send(.updateTagPage(name: data.name, body: text, session: session)) }

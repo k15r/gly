@@ -93,11 +93,12 @@ final class AppModel {
 
     /// Sends a command to the agent as the user. Returns the result; failures are also put into `lastError`.
     @discardableResult
-    func send(_ command: Command, asSystem: Bool = false) async -> CommandResult {
+    /// - Parameter quiet: the caller handles failures itself (e.g. a rename conflict that turns into a merge question).
+    func send(_ command: Command, asSystem: Bool = false, quiet: Bool = false) async -> CommandResult {
         let result = await client.perform(command, writer: asSystem ? systemWriter : writer)
         if case .failure(let f) = result {
             if f.code == .unavailable { await refreshAgentState() }
-            if !asSystem { lastError = f.message }
+            if !asSystem && !quiet { lastError = f.message }
         }
         return result
     }

@@ -146,7 +146,7 @@ struct ContentView: View {
                     SidebarCountRow(title: "Tasks", symbol: "checklist", count: SidebarCountRow.openTasks).tag(Navigation.Destination.tasks)
                     SidebarCountRow(title: "Pages", symbol: "doc.text", count: SidebarCountRow.pages).tag(Navigation.Destination.pages)
                     SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
-                    Section("Tags") { TagTreeView() }
+                    Section { TagTreeView() } header: { Text("Tags").contextMenu { ShowUnusedTagsToggle() } }
                 }
                 // The main pane's minimum (600) follows from the window minimum (960) minus the widest sidebar (360).
                 // Setting it on the detail column instead made the split view slide the sidebar out of the window.
@@ -342,6 +342,15 @@ struct NewSubtagPrompt: ViewModifier {
     }
 }
 
+/// "Show Unused Tags": also list tags used only by finished tasks (tag-colors C6).
+struct ShowUnusedTagsToggle: View {
+    @Environment(TasksModel.self) private var tasks
+    var body: some View {
+        @Bindable var tasks = tasks
+        Toggle("Show Unused Tags", isOn: $tasks.showUnusedTags)
+    }
+}
+
 /// One tag node with its child tags, open tasks and pages.
 struct TagTreeNode: View {
     @Environment(Navigation.self) private var nav
@@ -353,6 +362,8 @@ struct TagTreeNode: View {
     let drop: TreeDropState
     @State private var expanded = false
     @State private var newSubtag = false
+    @State private var renaming = false
+    @State private var deleting = false
 
     var body: some View {
         if node.children.isEmpty && node.items.isEmpty {
@@ -370,6 +381,8 @@ struct TagTreeNode: View {
         HStack(spacing: 6) {
             Circle().fill(tagColors.color(node.path)).frame(width: 7, height: 7)
             Text(node.segment).fontWeight(nav.current == .tag(node.path) ? .bold : .regular)
+                .foregroundStyle(node.unused ? .secondary : .primary)
+            if node.unused { Text("unused").font(.caption2).foregroundStyle(.tertiary) }
             Spacer()
             if node.openCount > 0 { Text("\(node.openCount)").foregroundStyle(.secondary).monospacedDigit() }
         }
@@ -379,7 +392,13 @@ struct TagTreeNode: View {
         .contextMenu {
             Button("New Subtag…") { newSubtag = true }.disabled(!app.canWrite)
             Menu("Color") { TagColorMenuItems(name: node.path) }.disabled(!app.canWrite)
+            Divider()
+            Button("Rename…") { renaming = true }.disabled(!app.canWrite)
+            Button("Delete…") { deleting = true }.disabled(!app.canWrite || !node.isTag)
+            Divider()
+            ShowUnusedTagsToggle()
         }
+        .modifier(TagManagementPrompts(name: node.path, renaming: $renaming, deleting: $deleting))
         .modifier(NewSubtagPrompt(parent: node.path, isPresented: $newSubtag, onCreate: { expanded = true }))
     }
 }
