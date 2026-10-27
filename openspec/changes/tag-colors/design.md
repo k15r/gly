@@ -14,8 +14,12 @@ Motivation is in `proposal.md`, behavior in this change's specs.
 - **Store only the user's choice:** colors are stored as palette names. Inheritance and defaults are computed at display time, so retagging and renaming need no repair.
 - **One resolution rule,** in Core, used by app chips, the tree, tag pages and MCP.
 
+- **Rename, merge and delete are single batches,** so undo is the usual change-log revert and there's no new history mechanism.
+
 **Non-Goals:**
 - Free colors (hex), per-item colors, theming.
+- A separate tag-management window. Everything happens in the tag tree and on tag pages.
+- Rename and delete over MCP.
 
 ## Decisions
 
@@ -58,7 +62,51 @@ Creates the tag row if needed (as `updateTagPage` does, for group names), then s
 - **`get_tag_page`:** gains the same two fields.
 - **`update_tag_page`:** `text` becomes optional and `color` is new (a palette name, or `"automatic"` to clear). At least one of the two is required. An unknown name is rejected, with the allowed names listed in the error and in the tool description.
 
+### C6: Unused tags in the tree
+
+`TagQueries.tagTree(db, today:, includeUnused:)`:
+- With `includeUnused`, the query also takes live tags whose assignments go only to finished tasks.
+- Those nodes get `unused = true`, and the tree renders them in secondary color with "(unused)".
+- Empty tags already show (tag-list change).
+- The toggle is a "Show Unused Tags" item in the context menu of the "Tags" section header and on any tag row, remembered in `UserDefaults` (a per-viewer convenience).
+
+### C7: `Command.renameTag(from:, to:, merge: Bool)`
+
+- **Validation:** `to` is a valid `TagName` and differs from `from` (case-only changes allowed: display casing).
+- **Plan:** all live tags whose key equals `from` or starts with `from/` (the subtree), each mapped to the new name by swapping the prefix. A group name without its own row renames just its descendants.
+- **No clashes:** update `name` and `name_key` of each row in one batch. Tag links in texts store the tag id, so they keep working; their labels are refreshed like item labels (`refreshLabels(tag:)`, via `link_index` with `target_kind = 'tag'`).
+- **Clash** (any target key already exists as a live tag):
+  - Without `merge: true`, the command fails with a `conflict` code that lists the clashing names. The app asks, then retries with `merge: true`.
+  - With merge, for each clashing pair:
+    1. Re-point the source's live assignments to the target. An item that already has the target just loses the source assignment.
+    2. Append the source's description to the target's, separated by a blank line, if both have text.
+    3. Rewrite tag links in texts from the source id to the target id, through `link_index` sources and the same rewrite as resolution.
+    4. Keep the target's own color if set, else take the source's.
+    5. Tombstone the source tag.
+- **Undo label:** "Rename tag “person” to “people”" / "Merge tag “person/al” into “person/alex”".
+
+**Alternative considered:** a new tag row per rename with redirects. Rejected: tag ids already make plain renames free, and merge is rare enough to pay for a text rewrite.
+
+### C8: `Command.deleteTag(name:)`
+
+- Tombstones the tag row (`softDelete`, which also tombstones its live `item_tags`). Subtags are untouched.
+- Links to it render as deleted, through the existing appearance for tags.
+- **Group name without a row:** nothing to delete, so the command fails with `notFound`. The UI only offers Delete on rows that are tags.
+- **Count for the confirmation:** `TagQueries.usage(db, name:)` returns the number of live items carrying exactly this tag.
+- **Undo label:** "Delete tag “project/old”".
+
+### C9: UI for rename and delete
+
+- **Context menu of tag rows:** Color ▸, Rename…, Delete…, and Show Unused Tags.
+- **Tag page header:** a "…" menu with the same items.
+- **Rename** opens an alert with a text field prefilled with the full name. On a `conflict` failure, a second alert says "Merge into “person/alex”?" and offers Merge or Cancel.
+- **Delete** confirms with "Remove “project/old” from 3 items?" (or "Delete unused tag “…”?").
+- **Navigation:** after a rename, a visible tag page navigates to the new name. After a delete, a visible tag page goes back.
+
 ## Risks / Trade-offs
+
+- **[Merging touches many rows]** (assignments, texts) → One batch, so one undo restores everything. Text rewrites only touch sources listed in `link_index`.
+- **[A rename into an existing subtree partially clashes]** (`person` → `people` where only `people/sam` exists) → The clash check covers the whole mapped subtree. The confirmation lists every pair that merges.
 
 - **[Automatic colors change for existing roots]** if the hash-to-palette mapping differs from today's SwiftUI-color mapping → The same 8 hues in the same order, so the colors stay the same.
 - **[A user-chosen color makes a chip hard to read]** (yellow on light backgrounds) → System colors at 15% background opacity with text in the color. Yellow and gray get a darker text shade if needed during the manual check.
