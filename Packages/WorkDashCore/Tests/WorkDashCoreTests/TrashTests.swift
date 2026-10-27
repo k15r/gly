@@ -153,4 +153,24 @@ final class TrashTests: XCTestCase {
         ok(.restore(id: id))
         XCTAssertEqual(try trash(), [])
     }
+
+    // MARK: Erase all data (Settings → Data)
+
+    func testEraseAllData() throws {
+        let page = ok(.createPage(PageDraft(title: "Goals", body: "see [[Call]]", tags: ["person/bob"]))).id!
+        let task = ok(.createTask(TaskDraft(title: "Call", tags: ["project/atlas"]))).id!
+        ok(.deletePage(id: page), as: claude)
+        ok(.updateTagPage(name: "person", body: "people"))
+        ok(.eraseAllData)
+        for table in Schema.syncedTables + ["change_log", "link_index", "search_index"] {
+            XCTAssertEqual(try db.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM \(table)") }, 0, table)
+        }
+        XCTAssertEqual(try trash(), [])
+        XCTAssertNil(try db.read { try $0.undoLabel(writer: me) }, "nothing to undo")
+        XCTAssertEqual(failure(.restore(id: task))?.code, .notFound)
+        // WorkDash keeps working on the empty store.
+        let fresh = ok(.createTask(TaskDraft(title: "Fresh", tags: ["x"]))).id!
+        XCTAssertEqual(try liveTags(fresh), ["x"])
+        XCTAssertEqual(try db.read { try SearchQueries.search($0, "fresh") }.tasks.map(\.ref.id), [fresh])
+    }
 }

@@ -18,7 +18,7 @@ The sidebar SHALL offer a Trash, with the number of items deleted in the last 30
 - **THEN** its text is shown read-only, and links in it can be followed
 
 ### Requirement: Deleted items are kept
-Deleted pages and tasks SHALL never be erased. The Trash SHALL show the items deleted in the last 30 days and offer to show older ones, with their number.
+Deleted pages and tasks SHALL never be erased, except by erasing all data ("Erase all data"). The Trash SHALL show the items deleted in the last 30 days and offer to show older ones, with their number.
 
 #### Scenario: Older deletes
 - **WHEN** one task was deleted 40 days ago and one page yesterday
@@ -34,3 +34,14 @@ The user SHALL be able to restore a deleted page or task from the Trash, whoever
 #### Scenario: Undo a restore
 - **WHEN** the user restores a page and then chooses Undo
 - **THEN** the page is deleted again and back in the Trash
+
+### Requirement: Erase all data
+Settings SHALL offer to erase all data after a confirmation: all tasks, pages, tags and tag descriptions, appointment overrides, the trash and the change history are removed for good, and no copy is kept. Settings SHALL stay. Agents SHALL NOT be able to erase all data.
+
+#### Scenario: Erase and start over
+- **WHEN** the user chooses "Erase All Data…" in Settings and confirms
+- **THEN** all lists, the tag tree and the Trash are empty, Undo has nothing to undo, working hours and agent access are unchanged, and new tasks can be created as usual
+
+#### Scenario: Cancel
+- **WHEN** the user chooses "Erase All Data…" and then Cancel
+- **THEN** nothing changes

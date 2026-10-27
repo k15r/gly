@@ -124,6 +124,8 @@ public enum Command: Codable, Equatable {
     case updateTagPage(name: String, body: String, session: String? = nil)
     /// Brings a deleted page or task back as it was when deleted, as a change of the caller (trash-bin T2).
     case restore(id: String)
+    /// Erases all data for good: items, tags, overrides, the trash and the whole history (Settings → Data). Not undoable.
+    case eraseAllData
     /// Creates an (empty) tag, e.g. a new subtag; an existing tag is returned unchanged (case-insensitive).
     case createTag(name: String)
     /// Blocking override for one occurrence or a whole series; nil = automatic (specs/appointment-annotations).
@@ -175,6 +177,13 @@ public struct CommandHandler {
 
     public func perform(_ command: Command, writer name: String, now: Date = Date()) -> CommandResult {
         do {
+            if command == .eraseAllData {
+                // Outside the change log by design, then compacted so the erased data doesn't linger in free pages.
+                try writer.write { db in try Schema.eraseAllData(db) }
+                try? writer.vacuum()        // best effort: the erase itself is done and committed
+
+                return .ok(CommandOK(message: "All data erased."))
+            }
             return .ok(try writer.write { db in try apply(command, db: db, writer: name, now: now) })
         } catch let failure as CommandFailure {
             return .failure(failure)
@@ -277,6 +286,10 @@ public struct CommandHandler {
             }
             let tagID = try batch.insert("tags", ["name": tag.display, "name_key": tag.key, "page_body": text])
             return CommandOK(id: tagID, unresolved: unresolved)
+
+        case .eraseAllData:
+            try Schema.eraseAllData(db)                // normally handled in perform (with VACUUM); kept for completeness
+            return CommandOK(message: "All data erased.")
 
         case .restore(let id):
             guard let entry = try TrashQueries.entry(db, id: id) else {

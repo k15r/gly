@@ -5,6 +5,15 @@ import GRDB
 public enum Schema {
     /// Tables that will be synced later; every one carries the sync columns.
     public static let syncedTables = ["items", "tags", "item_tags", "series_rules"]
+
+    /// Removes every row of user data, the change log and the derived indexes; the schema stays (Settings → Data).
+    /// Dependents first, so references never point at removed rows mid-way.
+    static func eraseAllData(_ db: Database) throws {
+        for table in ["item_tags", "series_rules", "items", "tags", "change_log", "link_index", "search_index"] {
+            try db.execute(sql: "DELETE FROM \(table)")
+        }
+        try db.execute(sql: "DELETE FROM sqlite_sequence WHERE name = 'change_log'")
+    }
     public static let efforts = ["XS", "S", "M", "L", "XL"]
     public static let eventStates = ["active", "cancelled", "gone", "ambiguous"]
     public static let blockingValues = ["blocks", "optional", "ignore"]

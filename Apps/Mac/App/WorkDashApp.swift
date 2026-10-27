@@ -63,8 +63,9 @@ struct WorkDashApp: App {
                 AgentsSettingsView().tabItem { Label("Agents", systemImage: "cpu") }
                 PlanningSettingsView().tabItem { Label("Planning", systemImage: "calendar.badge.clock") }
                 CalendarListView().frame(width: 560, height: 560).tabItem { Label("Calendars", systemImage: "calendar.badge.checkmark") }
+                DataSettingsView().tabItem { Label("Data", systemImage: "externaldrive") }
             }
-            .environment(app).environment(tasks).environment(planning).environment(calendars)
+            .environment(app).environment(tasks).environment(planning).environment(calendars).environment(nav)
         }
     }
 
