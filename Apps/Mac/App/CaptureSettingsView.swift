@@ -7,6 +7,10 @@ struct CaptureSettingsView: View {
     @Environment(CaptureController.self) private var capture
     @AppStorage("showMenuBarIcon") private var showMenuBarIcon = true
     @State private var recording = false
+    /// Modifiers held while recording ("⌃⇧"), and a hint when a combination never arrived (taken by macOS / another app).
+    @State private var held = ""
+    @State private var heldSomething = false
+    @State private var recordHint: String?
     @State private var monitor: Any?
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
@@ -16,12 +20,15 @@ struct CaptureSettingsView: View {
             Section("Quick capture") {
                 LabeledContent("Shortcut") {
                     HStack {
-                        Button(recording ? "Press keys… (esc cancels)" : capture.shortcut.display) { recording ? stop() : record() }
+                        Button(recording ? (held.isEmpty ? "Press keys… (esc cancels)" : held + "…") : capture.shortcut.display) { recording ? stop() : record() }
                             .frame(minWidth: 160)
                         if capture.shortcut != .default {
                             Button("Reset") { capture.setShortcut(.default) }
                         }
                     }
+                }
+                if let recordHint {
+                    Text(recordHint).font(.caption).foregroundStyle(.orange)
                 }
                 if !capture.shortcutAvailable {
                     Text("This shortcut is used by another app or the system – choose a different one.")
@@ -43,12 +50,25 @@ struct CaptureSettingsView: View {
     /// Records the next key combination with at least one of ⌘⌃⌥.
     private func record() {
         recording = true
+        recordHint = nil; held = ""; heldSomething = false
         GlobalHotKey.shared.unregister()     // so the current shortcut can be pressed again
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
+            if event.type == .flagsChanged {
+                let mods = event.modifierFlags.intersection([.command, .control, .option, .shift])
+                held = CaptureShortcut(keyCode: 0, modifiers: mods).display.replacingOccurrences(of: CaptureShortcut.keyName(0), with: "")
+                if !mods.isEmpty { heldSomething = true }
+                // Modifiers released without any key arriving: the system or another app took the combination.
+                if mods.isEmpty, heldSomething {
+                    recordHint = "macOS or another app uses that combination, so it never reached WorkDash – try another (e.g. ⌃⌥⌘Space)."
+                    heldSomething = false
+                }
+                return event
+            }
             if event.keyCode == 53 { stop(); return nil }    // esc
             let mods = event.modifierFlags.intersection([.command, .control, .option, .shift])
             guard !mods.intersection([.command, .control, .option]).isEmpty else { return nil }
             capture.setShortcut(CaptureShortcut(keyCode: UInt32(event.keyCode), modifiers: mods))
+            recordHint = nil
             stop()
             return nil
         }
@@ -59,6 +79,7 @@ struct CaptureSettingsView: View {
         monitor = nil
         if recording { capture.setShortcut(capture.shortcut) }   // re-register after recording
         recording = false
+        held = ""
     }
 
     private func setOpenAtLogin(_ on: Bool) {
