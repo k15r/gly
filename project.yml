@@ -20,6 +20,7 @@ targets:
   gly:
     type: application
     platform: macOS
+    scheme: {}                # shared scheme, so builds never depend on Xcode's per-user scheme state
     sources: [Apps/Mac/App]
     dependencies:
       - package: GlyCore

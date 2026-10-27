@@ -1,7 +1,7 @@
 import Foundation
 
 /// A floating calendar day (YYYY-MM-DD) without time zone, plus helpers to map it to the local calendar.
-public struct LocalDay: Hashable, Comparable, CustomStringConvertible, Codable {
+public struct LocalDay: Hashable, Comparable, CustomStringConvertible, Codable, Sendable {
     public let year: Int, month: Int, day: Int
 
     public init?(_ string: String) {

@@ -41,6 +41,6 @@ final class PlanningSchemaTests: XCTestCase {
         let clear = try JSONDecoder().decode(TaskPatch.self, from: JSONEncoder().encode(TaskPatch(effort: .some(nil))))
         XCTAssertEqual(clear.effort, .some(nil))
         let unchanged = try JSONDecoder().decode(TaskPatch.self, from: JSONEncoder().encode(TaskPatch(title: "x")))
-        XCTAssertNil(unchanged.effort)
+        XCTAssertTrue(unchanged.effort == nil, "absent, not cleared")
     }
 }

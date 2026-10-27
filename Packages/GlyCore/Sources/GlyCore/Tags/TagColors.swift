@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 /// The palette for tag colors (tag-colors C1). Stored by name in `tags.color`; the app maps names to system colors.
-public enum TagColor: String, CaseIterable, Codable {
+public enum TagColor: String, CaseIterable, Codable, Sendable {
     case red, orange, yellow, green, teal, blue, indigo, purple, pink, brown, gray
 
     /// The colors automatic tags cycle through, in the order chips used before colors could be chosen.
@@ -24,7 +24,7 @@ public enum TagColorSource: Equatable {
 }
 
 /// Effective tag colors (tag-colors C2): own → nearest tag above with a color → automatic from the top-level name.
-public struct TagColors: Equatable {
+public struct TagColors: Equatable, Sendable {
     /// Own colors by tag key.
     public let own: [String: TagColor]
     public init(own: [String: TagColor] = [:]) { self.own = own }

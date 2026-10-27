@@ -38,8 +38,10 @@ public enum MarkdownAttributes {
         return [.font: baseFont, .foregroundColor: NSColor.textColor, .paragraphStyle: p]
     }
 
+    // One pass with a case per run kind keeps the attribute order visible in one place; not split for the linter.
     /// Resets `range` to the base style and applies the runs that intersect it.
-    public static func apply(_ runs: [StyleRun], to text: NSMutableAttributedString, in range: NSRange? = nil) {
+    public static func apply(_ runs: [StyleRun], // swiftlint:disable:this cyclomatic_complexity function_body_length
+                             to text: NSMutableAttributedString, in range: NSRange? = nil) {
         let whole = range ?? NSRange(location: 0, length: text.length)
         text.setAttributes(base(), range: whole)
         let size = baseFont.pointSize

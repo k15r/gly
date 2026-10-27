@@ -92,7 +92,7 @@ public enum LegacyMigration {
 
         // 3. Shared settings (also done by the app at launch; whichever runs first copies them).
         result.settingsCopied = takeOverSharedSettings(into: newDefaults, from: legacyDefaults)
-        log.notice("took over WorkDash data: \(result.items) items, \(result.tags) tags, \(result.rewrittenTexts) texts with links rewritten, \(result.settingsCopied) settings in this run")
+        log.notice("took over: \(result.items) items, \(result.tags) tags, \(result.rewrittenTexts) texts relinked, \(result.settingsCopied) settings")
         return result
     }
 }

@@ -18,7 +18,7 @@ struct SidebarCountRow: View {
             if let n = live.value, n > 0 { Text("\(n)").foregroundStyle(.secondary).monospacedDigit() }
         }
         // The sidebar appears before the store is open: start (again) once it is.
-        .task(id: app.store.map(ObjectIdentifier.init)) { live.observe(app.store, count) }
+        .task(id: app.store.map(ObjectIdentifier.init)) { [count] in live.observe(app.store) { try count($0) } }
     }
 
     static let openTasks: @Sendable (Database) throws -> Int = { db in
@@ -110,7 +110,7 @@ struct TrashView: View {
                     if !e.tags.isEmpty { HStack(spacing: 4) { ForEach(e.tags, id: \.self) { TagChip(name: $0) } } }
                     Text(deletedLine(e)).font(.caption).foregroundStyle(.secondary)
                     Divider()
-                    WDMarkdownReadView(text: body ?? "")          // no onChange: read-only
+                    WDMarkdownReadView(text: body)          // no onChange: read-only
                 }
                 .padding()
             }

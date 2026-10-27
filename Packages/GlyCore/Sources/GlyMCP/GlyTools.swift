@@ -3,9 +3,10 @@ import GRDB
 import MCP
 import GlyCore
 
+// All tools on one type, so each tool's handler sits next to its helpers.
 /// Executes the MCP tools against the store and the calendar (design M3). Transport-independent:
 /// `GlyMCPServer` calls it for stdio (via XPC) and HTTP alike.
-public final class GlyTools: @unchecked Sendable {
+public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this type_body_length
     let reader: DatabaseReader
     let handler: CommandHandler
     let calendar: EventSource
@@ -42,6 +43,8 @@ public final class GlyTools: @unchecked Sendable {
 
     // MARK: - Dispatch
 
+    // One case per tool name is the point of the dispatcher (each case is one call); not split for the linter.
+    // swiftlint:disable:next cyclomatic_complexity
     public func call(_ name: String, arguments: [String: Value]?, client: String?) async -> CallTool.Result {
         let args = Arguments(arguments ?? [:])
         do {
@@ -330,7 +333,9 @@ public final class GlyTools: @unchecked Sendable {
             return ids.compactMap { i in names[i].map { (i, $0) } }
         }
         if !same.isEmpty, case .object(var o) = value {
-            o["same_title"] = .array(same.map { .object(["id": .string($0.0), "display": .string($0.1.display), "tags": .array($0.1.tags.map { .string($0) })]) })
+            o["same_title"] = .array(same.map {
+                .object(["id": .string($0.0), "display": .string($0.1.display), "tags": .array($0.1.tags.map { .string($0) })])
+            })
             value = .object(o)
         }
         return value
@@ -570,7 +575,7 @@ public final class GlyTools: @unchecked Sendable {
     static func json(_ value: Value) -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        return (try? encoder.encode(value)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
+        return (try? encoder.encode(value)).flatMap { String(bytes: $0, encoding: .utf8) } ?? "{}"
     }
 }
 

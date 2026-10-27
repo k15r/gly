@@ -30,11 +30,11 @@ public enum LinkParser {
         return s == scheme || legacySchemes.contains(s)
     }
 
-    static let canonical = try! NSRegularExpression(
-        pattern: #"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\((?:gly|workdash)://(item|tag)/([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\)"#)
-    static let missing = try! NSRegularExpression(pattern: #"\[\[([^\[\]\n]+?)\]\]"#)
-    static let fence = try! NSRegularExpression(pattern: #"^[ \t]*(```|~~~).*$"#, options: [.anchorsMatchLines])
-    static let codeSpan = try! NSRegularExpression(pattern: #"(`+)(?:(?!\1).)+?\1"#)
+    static let canonical = NSRegularExpression.constant(
+        #"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\((?:gly|workdash)://(item|tag)/([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\)"#)
+    static let missing = NSRegularExpression.constant(#"\[\[([^\[\]\n]+?)\]\]"#)
+    static let fence = NSRegularExpression.constant(#"^[ \t]*(```|~~~).*$"#, options: [.anchorsMatchLines])
+    static let codeSpan = NSRegularExpression.constant(#"(`+)(?:(?!\1).)+?\1"#)
 
     public static func links(in text: String) -> [ParsedLink] {
         let ns = text as NSString
@@ -76,7 +76,7 @@ public enum LinkParser {
         return ranges
     }
 
-    static let webLink = try! NSRegularExpression(pattern: #"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\((?:https?|mailto|message):[^)\s]+\)"#)
+    static let webLink = NSRegularExpression.constant(#"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\((?:https?|mailto|message):[^)\s]+\)"#)
 
     /// Text for the search index and excerpts: own and web links replaced by their labels, so URLs and ids aren't indexed.
     public static func plainText(_ text: String) -> String {

@@ -1,7 +1,7 @@
 import Foundation
 
 /// The user's override for how an appointment counts for free time (specs/appointment-annotations).
-public enum BlockingOverride: String, Codable, Hashable, CaseIterable {
+public enum BlockingOverride: String, Codable, Hashable, CaseIterable, Sendable {
     case blocks, optional, ignore
 }
 

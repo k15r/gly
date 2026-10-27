@@ -13,7 +13,7 @@ public struct CalendarInfo: Identifiable, Hashable {
 }
 
 /// One occurrence of an appointment, read-only.
-public struct Appointment: Identifiable, Hashable {
+public struct Appointment: Identifiable, Hashable, Sendable {
     public let id: String            // unique per occurrence within this process
     public let calendarID: String
     public let title: String         // display title ("Canceled:" prefix stripped)
@@ -54,13 +54,13 @@ public struct Appointment: Identifiable, Hashable {
 }
 
 /// What the calendar says about how an appointment uses my time.
-public enum Availability: String, Codable, Hashable { case busy, free, tentative, unavailable, unknown }
+public enum Availability: String, Codable, Hashable, Sendable { case busy, free, tentative, unavailable, unknown }
 
 /// My response to an invitation.
-public enum ParticipationStatus: String, Codable, Hashable { case accepted, declined, tentative, pending, none }
+public enum ParticipationStatus: String, Codable, Hashable, Sendable { case accepted, declined, tentative, pending, none }
 
 /// Identity of one occurrence: calendar + series id (external id without `/RID=…`) + original start (D4).
-public struct AppointmentIdentity: Hashable, Codable {
+public struct AppointmentIdentity: Hashable, Codable, Sendable {
     public let calendarID: String
     public let baseID: String
     public let originalStart: Date

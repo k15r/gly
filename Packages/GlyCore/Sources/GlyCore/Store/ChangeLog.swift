@@ -113,7 +113,7 @@ enum ChangeValue {
         case .string(let s): w = Wrapped(s: s)
         case .blob(let data): w = Wrapped(b: data.base64EncodedString())
         }
-        return String(data: try! JSONEncoder().encode(w), encoding: .utf8)
+        return (try? JSONEncoder().encode(w)).flatMap { String(data: $0, encoding: .utf8) }
     }
 
     static func decode(_ text: String?) -> DatabaseValue {

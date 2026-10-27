@@ -597,7 +597,8 @@ public struct CommandHandler {
         let rowID: String?
         switch command {
         case .updateTask(let id, _), .updatePage(let id, _): rowID = id
-        case .updateTagPage(let name, _, _): rowID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [TagName.key(for: name)])
+        case .updateTagPage(let name, _, _):
+            rowID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [TagName.key(for: name)])
         case .saveMeetingNotes(let target, _, _, _): rowID = try Self.meetingNotesRow(target, db: db)
         case .updateMeetingNotes(let id, _, _, _): rowID = id
         default: rowID = nil

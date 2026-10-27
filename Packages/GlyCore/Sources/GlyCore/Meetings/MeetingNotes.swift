@@ -51,7 +51,7 @@ public struct MeetingNotesItem: Equatable {
 }
 
 /// Which meetings have notes, for the day view's icons (one observation for all rows).
-public struct MeetingNotesMarks: Equatable {
+public struct MeetingNotesMarks: Equatable, Sendable {
     public var occurrenceKeys: Set<String> = []
     public var rules: [SeriesRule] = []
     public init() {}
@@ -73,8 +73,9 @@ extension MeetingNotes {
 
     public static func marks(_ db: Database) throws -> MeetingNotesMarks {
         var m = MeetingNotesMarks()
-        m.occurrenceKeys = Set(try String.fetchAll(db, sql: "SELECT event_key FROM live_items WHERE kind = 'event_note' AND body != '' AND event_key IS NOT NULL"))
-        let ruleIDs = Set(try String.fetchAll(db, sql: "SELECT series_rule FROM live_items WHERE kind = 'event_note' AND body != '' AND series_rule IS NOT NULL"))
+        let withNotes = "FROM live_items WHERE kind = 'event_note' AND body != ''"
+        m.occurrenceKeys = Set(try String.fetchAll(db, sql: "SELECT event_key \(withNotes) AND event_key IS NOT NULL"))
+        let ruleIDs = Set(try String.fetchAll(db, sql: "SELECT series_rule \(withNotes) AND series_rule IS NOT NULL"))
         m.rules = try AnnotationQueries.seriesRules(db).filter { ruleIDs.contains($0.id) }
         return m
     }

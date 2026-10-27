@@ -53,7 +53,7 @@ final class MeetingNotesTests: XCTestCase {
 
     func insertSeriesNote(rule: String, body: String) throws {
         try db.write { db in
-            try Batch(db: db, writer: me).insert("items", ["kind": "event_note", "title": "1:1 Alex", "body": body, "series_rule": rule])
+            _ = try Batch(db: db, writer: me).insert("items", ["kind": "event_note", "title": "1:1 Alex", "body": body, "series_rule": rule])
         }
     }
     func insertRule(base: String) throws -> String {

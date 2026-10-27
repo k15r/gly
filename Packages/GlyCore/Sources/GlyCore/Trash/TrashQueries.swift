@@ -49,7 +49,9 @@ public enum TrashQueries {
 
     /// The deleted page or task with this id, or nil when it is live, unknown or another kind.
     public static func entry(_ db: Database, id: String) throws -> TrashEntry? {
-        guard try Bool.fetchOne(db, sql: "SELECT 1 FROM items WHERE id = ? AND (kind IN ('info', 'task') OR (kind = 'event_note' AND body != '')) AND deleted_at IS NOT NULL",
+        guard try Bool.fetchOne(db, sql: """
+            SELECT 1 FROM items WHERE id = ? AND (kind IN ('info', 'task') OR (kind = 'event_note' AND body != '')) AND deleted_at IS NOT NULL
+            """,
                                 arguments: [id]) == true else { return nil }
         return try list(db).first { $0.id == id }
     }

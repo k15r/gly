@@ -1,7 +1,7 @@
 import Foundation
 
 /// A validated, normalized tag name such as `person/alex` or `project/atlas/logs` (specs/tags "Tag names").
-public struct TagName: Hashable, CustomStringConvertible {
+public struct TagName: Hashable, CustomStringConvertible, Sendable {
     /// Display form, casing as entered.
     public let display: String
     /// Case-folded identity used for uniqueness, lookup and filtering.

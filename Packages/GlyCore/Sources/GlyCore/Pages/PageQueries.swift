@@ -104,7 +104,8 @@ public enum LinkQueries {
             guard let r = try Row.fetchOne(db, sql: "SELECT id, name, deleted_at FROM tags WHERE id = ? COLLATE NOCASE", arguments: [id]) else { return nil }
             return (LinkRef(kind: .tag, id: r["id"], title: r["name"]), (r["deleted_at"] as Date?) != nil)
         }
-        guard let r = try Row.fetchOne(db, sql: "SELECT id, kind, title, deleted_at FROM items WHERE id = ? COLLATE NOCASE", arguments: [id]) else { return nil }
+        let sql = "SELECT id, kind, title, deleted_at FROM items WHERE id = ? COLLATE NOCASE"
+        guard let r = try Row.fetchOne(db, sql: sql, arguments: [id]) else { return nil }
         return (LinkRef(kind: LinkRef.Kind(itemKind: r["kind"]), id: r["id"], title: r["title"]), (r["deleted_at"] as Date?) != nil)
     }
 

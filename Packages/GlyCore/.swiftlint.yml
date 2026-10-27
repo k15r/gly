@@ -7,6 +7,8 @@ excluded:
 disabled_rules:
   - trailing_comma            # multi-line literals end with a comma (house style)
   - shorthand_operator        # SwiftUI `Text` concatenation (`t = t + Text(…)`) has no `+=`
+  - statement_position        # short `if … { } ⏎ else if … { }` ladders, one branch per line (house style)
+  - switch_case_alignment     # one-line `switch self { case .a: 1; case .b: 2 }` mappings (house style)
 
 identifier_name:
   min_length: 1               # db, r, a, id … are the idiom in queries and closures

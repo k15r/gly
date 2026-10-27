@@ -80,8 +80,8 @@ public enum Planning {
                                                 cantFit: Double(e) > freeUntil))
                     plan.neededMinutes += needed
                 } else {
-                    plan.comingUp.append(ComingUpItem(task: task, effortMinutes: e,
-                                                      startBy: startBy(effort: e, deadline: deadline, today: today, dueDay: dueDay, now: now, free: free, calendar: calendar)))
+                    let start = startBy(effort: e, deadline: deadline, today: today, dueDay: dueDay, now: now, free: free, calendar: calendar)
+                    plan.comingUp.append(ComingUpItem(task: task, effortMinutes: e, startBy: start))
                 }
             } else if let reason {
                 plan.today.append(TodayItem(task: task, reason: reason, effortMinutes: nil, neededToday: nil, cantFit: false))

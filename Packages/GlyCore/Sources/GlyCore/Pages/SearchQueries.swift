@@ -31,7 +31,8 @@ public enum SearchQueries {
         return words.enumerated().map { i, w in i == words.count - 1 ? "\"\(w)\"*" : "\"\(w)\"" }.joined(separator: " ")
     }
 
-    public static func search(_ db: Database, _ input: String, kinds: Set<LinkRef.Kind> = [.page, .task, .tag, .meeting], limit: Int = 20) throws -> SearchResults {
+    public static func search(_ db: Database, _ input: String, kinds: Set<LinkRef.Kind> = [.page, .task, .tag, .meeting],
+                              limit: Int = 20) throws -> SearchResults {
         guard let match = ftsQuery(input) else { return SearchResults() }
         var results = SearchResults()
         for kind in kinds {
@@ -94,7 +95,8 @@ public enum SearchQueries {
         let tags = try TaskQueries.tagsByItem(db, ids: ids)
         let marks = ids.map { _ in "?" }.joined(separator: ",")
         var modified: [String: Date] = [:]
-        for r in try Row.fetchAll(db, sql: "SELECT id, modified_at FROM items WHERE id IN (\(marks)) UNION ALL SELECT id, modified_at FROM tags WHERE id IN (\(marks))",
+        let sql = "SELECT id, modified_at FROM items WHERE id IN (\(marks)) UNION ALL SELECT id, modified_at FROM tags WHERE id IN (\(marks))"
+        for r in try Row.fetchAll(db, sql: sql,
                                   arguments: StatementArguments(ids + ids)) { modified[r["id"]] = r["modified_at"] }
         return hits.map { var h = $0; h.tags = tags[h.ref.id] ?? []; h.modifiedAt = modified[h.ref.id]; return h }
     }

@@ -88,3 +88,4 @@ public final class GlyMCPServer: @unchecked Sendable {
         return (try? JSONSerialization.data(withJSONObject: object, options: [.withoutEscapingSlashes])) ?? body
     }
 }
+// swiftlint:enable line_length

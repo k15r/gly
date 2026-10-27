@@ -234,7 +234,7 @@ final class ToolTests: XCTestCase {
     func testNoCalendarAccess() async throws {
         addEvents()
         calendar.authorization = .denied
-        try await db.write { try addTask($0, "due today", dueDay: "2026-10-26") }
+        try await db.write { _ = try addTask($0, "due today", dueDay: "2026-10-26") }
         let r = await call("get_schedule")
         XCTAssertFalse(r.isError)
         XCTAssertEqual(titles(r.value), ["due today"])

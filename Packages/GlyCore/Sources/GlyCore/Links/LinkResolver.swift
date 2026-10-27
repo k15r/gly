@@ -146,7 +146,8 @@ public enum LinkResolver {
         for s in sources {
             let table: String = s["source_table"], id: String = s["source_id"]
             let column = table == "tags" ? "page_body" : "body"
-            guard let text = try String.fetchOne(batch.db, sql: "SELECT \(column) FROM \(table) WHERE id = ? AND deleted_at IS NULL", arguments: [id]) else { continue }
+            let sql = "SELECT \(column) FROM \(table) WHERE id = ? AND deleted_at IS NULL"
+            guard let text = try String.fetchOne(batch.db, sql: sql, arguments: [id]) else { continue }
             let resolved = try resolve(text, db: batch.db).text
             if resolved != text { try batch.update(table, id: id, [column: resolved]) }
         }

@@ -51,7 +51,7 @@ public struct TaskItem: Equatable, Identifiable {
     public var modifiedAt: Date
     public var modifiedBy: String
     public var completedAt: Date?
-    public var effort: Effort? = nil
+    public var effort: Effort?
 }
 
 extension Due {

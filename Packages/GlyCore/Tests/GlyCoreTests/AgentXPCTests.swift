@@ -25,9 +25,12 @@ final class AgentXPCTests: XCTestCase {
 
         guard case .ok(let created) = await client.perform(.createTask(TaskDraft(title: "Via XPC", tags: ["person/alex"])), writer: "user@mac"),
               let id = created.id else { return XCTFail("create failed") }
-        let row = try await db.read { try Row.fetchOne($0, sql: "SELECT title, modified_by FROM live_items WHERE id = ?", arguments: [id]) }
-        XCTAssertEqual(row?["title"] as String?, "Via XPC")
-        XCTAssertEqual(row?["modified_by"] as String?, "user@mac", "writer passed through")
+        let (title, writer) = try await db.read { db -> (String?, String?) in
+            let row = try Row.fetchOne(db, sql: "SELECT title, modified_by FROM live_items WHERE id = ?", arguments: [id])
+            return (row?["title"], row?["modified_by"])
+        }
+        XCTAssertEqual(title, "Via XPC")
+        XCTAssertEqual(writer, "user@mac", "writer passed through")
 
         let undo = await client.perform(.undo, writer: "user@mac")
         XCTAssertTrue(undo.isOK)

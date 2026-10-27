@@ -62,11 +62,11 @@ final class LocalHTTPServerTests: XCTestCase {
         // The listener's local endpoint is 127.0.0.1, so other interfaces (and other machines) can't connect.
         let c = NWConnection(host: .ipv6(.loopback), port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
         let refused = await withCheckedContinuation { (k: CheckedContinuation<Bool, Never>) in
-            var done = false
+            let once = Once()
             c.stateUpdateHandler = { s in
                 switch s {
-                case .ready: if !done { done = true; k.resume(returning: false) }
-                case .failed, .waiting: if !done { done = true; k.resume(returning: true) }
+                case .ready: if once.claim() { k.resume(returning: false) }
+                case .failed, .waiting: if once.claim() { k.resume(returning: true) }
                 default: break
                 }
             }
@@ -79,5 +79,17 @@ final class LocalHTTPServerTests: XCTestCase {
     func testRedaction() {
         XCTAssertEqual(LocalHTTPServer.redact("/mcp/secret"), "/mcp/<token>")
         XCTAssertEqual(LocalHTTPServer.redact("/other"), "/other")
+    }
+}
+
+/// Resumes a continuation once, from a handler the connection may call several times on its queue.
+private final class Once: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    func claim() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        if done { return false }
+        done = true
+        return true
     }
 }

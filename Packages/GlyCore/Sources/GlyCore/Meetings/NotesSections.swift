@@ -11,8 +11,9 @@ public enum NotesSections {
         public let contentStart: Int
     }
 
-    static let headingRE = try! NSRegularExpression(pattern: #"^## (Mon|Tue|Wed|Thu|Fri|Sat|Sun) (\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?: (\d{4}))?[ \t]*$"#,
-                                                   options: [.anchorsMatchLines])
+    static let headingRE = NSRegularExpression.constant(
+        #"^## (Mon|Tue|Wed|Thu|Fri|Sat|Sun) (\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?: (\d{4}))?[ \t]*$"#,
+        options: [.anchorsMatchLines])
     static let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
     /// The heading for a day; the year is added when it differs from `today`'s.

@@ -49,7 +49,8 @@ extension TaskQueries {
             for (n, name) in names.enumerated() { arguments["s\(n)"] = name }
         }
         if let tag = filter.tag {
-            conditions.append("i.id IN (SELECT it.item_id FROM live_item_tags it JOIN live_tags t ON t.id = it.tag_id WHERE t.name_key = :tagKey OR t.name_key LIKE :tagPattern ESCAPE '\\')")
+            conditions.append("i.id IN (SELECT it.item_id FROM live_item_tags it JOIN live_tags t ON t.id = it.tag_id "
+                              + "WHERE t.name_key = :tagKey OR t.name_key LIKE :tagPattern ESCAPE '\\')")
             arguments["tagKey"] = tag.key
             arguments["tagPattern"] = TagFilter.descendantPattern(tag)
         }

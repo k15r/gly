@@ -172,3 +172,4 @@ public enum ToolDefinitions {
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
     ]
 }
+// swiftlint:enable line_length

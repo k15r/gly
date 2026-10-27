@@ -28,7 +28,7 @@ public enum MarkdownBlocks {
     /// Splits markdown into blocks (one per line, fenced code as one block, consecutive text lines as one paragraph).
     public static func parse(_ text: String) -> [MarkdownBlock] {
         var blocks: [MarkdownBlock] = []
-        var code: [String]? = nil
+        var code: [String]?
         var paragraph: [String] = []
         func flush() { if !paragraph.isEmpty { blocks.append(.paragraph(paragraph.joined(separator: "\n"))); paragraph = [] } }
         for (lineIndex, raw) in text.components(separatedBy: "\n").enumerated() {

@@ -45,7 +45,7 @@ public struct StyleRun: Equatable {
 
 /// Line-oriented markdown styling (headings, emphasis, code, lists, checklists, quotes, links). Never changes the text.
 public enum MarkdownStyler {
-    static func re(_ p: String, _ o: NSRegularExpression.Options = []) -> NSRegularExpression { try! NSRegularExpression(pattern: p, options: o) }
+    static func re(_ p: String, _ o: NSRegularExpression.Options = []) -> NSRegularExpression { .constant(p, options: o) }
     static let heading = re(#"^(#{1,6})[ \t]+\S.*$"#)
     static let fence = re(#"^[ \t]*(```|~~~)"#)
     static let list = re(#"^([ \t]*)([-*+]|\d{1,3}[.)])[ \t]+"#)
@@ -55,10 +55,15 @@ public enum MarkdownStyler {
     static let italic = re(#"(?<![*_\w])([*_])(?=[^\s*_])(.+?)(?<=[^\s*_])\1(?![*_\w])"#)
     static let codeSpan = re(#"(`+)(?:(?!\1).)+?\1"#)
     static let webLink = re(#"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\(((?:https?|mailto|message):[^)\s]+)\)"#)
-    static let detector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+    static let detector: NSDataDetector = {
+        do { return try NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) } catch {
+            preconditionFailure("link detector unavailable: \(error)")
+        }
+    }()
 
+    // The line-by-line pass carries fence and list state across lines; splitting it would only thread that state around.
     /// - Parameter appearance: current title/state of a gly link target.
-    public static func runs(for text: String, appearance: (ParsedLink.Target) -> LinkAppearance) -> [StyleRun] {
+    public static func runs(for text: String, appearance: (ParsedLink.Target) -> LinkAppearance) -> [StyleRun] { // swiftlint:disable:this function_body_length
         let ns = text as NSString
         var runs: [StyleRun] = []
         var inFence = false

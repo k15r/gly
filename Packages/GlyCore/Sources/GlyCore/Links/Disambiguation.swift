@@ -8,7 +8,9 @@ public enum Disambiguation {
         public let title: String
         public let tags: [String]
         public let createdAt: Date
-        public init(id: String, title: String, tags: [String], createdAt: Date) { self.id = id; self.title = title; self.tags = tags; self.createdAt = createdAt }
+        public init(id: String, title: String, tags: [String], createdAt: Date) {
+            self.id = id; self.title = title; self.tags = tags; self.createdAt = createdAt
+        }
     }
 
     /// For a group of same-kind items with the same (case-folded) title: per item, the deepest tag that none of the

@@ -42,7 +42,7 @@ public struct Annotation: Equatable, Identifiable {
 }
 
 /// A blocking rule for a whole series; follows series splits through `baseIDs`.
-public struct SeriesRule: Equatable, Identifiable {
+public struct SeriesRule: Equatable, Identifiable, Sendable {
     public let id: String
     public let calendarID: String
     public let title: String
@@ -114,6 +114,6 @@ public enum AnnotationQueries {
     }
 
     static func encodeIDs(_ ids: [String]) -> String {
-        String(decoding: (try? JSONEncoder().encode(ids)) ?? Data("[]".utf8), as: UTF8.self)
+        (try? JSONEncoder().encode(ids)).flatMap { String(bytes: $0, encoding: .utf8) } ?? "[]"
     }
 }

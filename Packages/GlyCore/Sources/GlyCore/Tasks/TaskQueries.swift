@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-public enum TaskListMode: String, CaseIterable, Codable {
+public enum TaskListMode: String, CaseIterable, Codable, Sendable {
     case open, done, dropped
 }
 
@@ -45,7 +45,8 @@ public enum TaskQueries {
         var sql = "SELECT i.* FROM live_items i WHERE \(conditions.joined(separator: " AND "))"
         if let tag {
             // Same condition as TagFilter, with named arguments so it combines with :today.
-            sql += " AND i.id IN (SELECT it.item_id FROM live_item_tags it JOIN live_tags t ON t.id = it.tag_id WHERE t.name_key = :tagKey OR t.name_key LIKE :tagPattern ESCAPE '\\')"
+            sql += " AND i.id IN (SELECT it.item_id FROM live_item_tags it JOIN live_tags t ON t.id = it.tag_id"
+                + " WHERE t.name_key = :tagKey OR t.name_key LIKE :tagPattern ESCAPE '\\')"
             arguments["tagKey"] = tag.key
             arguments["tagPattern"] = TagFilter.descendantPattern(tag)
         }
