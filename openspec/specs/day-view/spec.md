@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The main screen of WorkDash: one day at a glance, with all visible appointments and the tasks that matter that day, so it can serve as the single source for the day.
+The main screen of gly: one day at a glance, with all visible appointments and the tasks that matter that day, so it can serve as the single source for the day.
 
 ## Requirements
 
@@ -10,7 +10,7 @@ The main screen of WorkDash: one day at a glance, with all visible appointments 
 The system SHALL open on a day view of the current local date. The view SHALL show the weekday and date.
 
 #### Scenario: Launch
-- **WHEN** the user opens WorkDash on Monday, 27 October 2026
+- **WHEN** the user opens gly on Monday, 27 October 2026
 - **THEN** the day view shows "Mon 27 Oct 2026" with that day's appointments and tasks
 
 ### Requirement: Merged appointment timeline

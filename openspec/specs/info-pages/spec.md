@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets the user keep information in WorkDash as wiki-style pages (project notes, meeting notes, notes on people, knowledge), organized by tags and links instead of folders.
+Lets the user keep information in gly as wiki-style pages (project notes, meeting notes, notes on people, knowledge), organized by tags and links instead of folders.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ The system SHALL let the user create a page, change its title, text and tags, an
 
 #### Scenario: Edit text
 - **WHEN** the user types in a page's text and then switches to another page
-- **THEN** the change is saved and still there after restarting WorkDash
+- **THEN** the change is saved and still there after restarting gly
 
 #### Scenario: Delete a page
 - **WHEN** the user deletes a page

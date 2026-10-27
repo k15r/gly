@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Lets the user add a task or page from anywhere on the Mac with one keyboard shortcut, without switching to WorkDash.
+Lets the user add a task or page from anywhere on the Mac with one keyboard shortcut, without switching to gly.
 
 ## Requirements
 
 ### Requirement: Global capture shortcut
-While WorkDash runs, a global keyboard shortcut (default ⌃⌥Space, changeable in Settings) SHALL open the capture panel on top of whatever app is in front, with the text field focused. Pressing the shortcut while the panel is open SHALL close it. Using it SHALL NOT require Accessibility permission.
+While gly runs, a global keyboard shortcut (default ⌃⌥Space, changeable in Settings) SHALL open the capture panel on top of whatever app is in front, with the text field focused. Pressing the shortcut while the panel is open SHALL close it. Using it SHALL NOT require Accessibility permission.
 
 #### Scenario: Capture from another app
 - **WHEN** the browser is in front and the user presses ⌃⌥Space
@@ -18,7 +18,7 @@ While WorkDash runs, a global keyboard shortcut (default ⌃⌥Space, changeable
 - **THEN** ⌃⇧T opens the panel and ⌃⌥Space no longer does
 
 ### Requirement: Capture panel
-The panel SHALL show one text field and, below it, a preview of what will be created (type, title, tags, due date, priority). Tab SHALL switch between Task and Page. Return SHALL create the item and close the panel without bringing WorkDash to the front; ⌘Return SHALL create it and open it in WorkDash in edit mode, with the cursor in its text; Esc SHALL close the panel without creating anything. An empty title SHALL NOT create anything.
+The panel SHALL show one text field and, below it, a preview of what will be created (type, title, tags, due date, priority). Tab SHALL switch between Task and Page. Return SHALL create the item and close the panel without bringing gly to the front; ⌘Return SHALL create it and open it in gly in edit mode, with the cursor in its text; Esc SHALL close the panel without creating anything. An empty title SHALL NOT create anything.
 
 #### Scenario: Save and keep working
 - **WHEN** the user types "Call venue" and presses Return
@@ -26,7 +26,7 @@ The panel SHALL show one text field and, below it, a preview of what will be cre
 
 #### Scenario: Save and open
 - **WHEN** the user switches to Page with Tab, types "Offsite ideas" and presses ⌘Return
-- **THEN** a page "Offsite ideas" is created and opened in WorkDash in edit mode, with the cursor in its text
+- **THEN** a page "Offsite ideas" is created and opened in gly in edit mode, with the cursor in its text
 
 #### Scenario: Cancel
 - **WHEN** the user types something and presses Esc
@@ -44,8 +44,8 @@ The typed text SHALL be read as: words starting with `#` are tags (`#project/atl
 - **THEN** the page title is "Prepare friday retro" with no due date
 
 ### Requirement: Always reachable
-WorkDash SHALL keep running when its main window is closed, so the shortcut keeps working. A menu bar icon SHALL offer Quick Capture, Open WorkDash and Quit; it can be hidden in Settings. Settings SHALL offer "Open at login".
+gly SHALL keep running when its main window is closed, so the shortcut keeps working. A menu bar icon SHALL offer Quick Capture, Open gly and Quit; it can be hidden in Settings. Settings SHALL offer "Open at login".
 
 #### Scenario: Window closed
 - **WHEN** the user closes the main window and later presses the capture shortcut
-- **THEN** the panel opens and the captured task is in WorkDash when the window is reopened from the menu bar icon
+- **THEN** the panel opens and the captured task is in gly when the window is reopened from the menu bar icon

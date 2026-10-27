@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets AI agents (MCP clients such as Claude Code) read the day's schedule and tasks and create, change and delete tasks in WorkDash, with every agent change attributed and kept separate from the user's own undo.
+Lets AI agents (MCP clients such as Claude Code) read the day's schedule and tasks and create, change and delete tasks in gly, with every agent change attributed and kept separate from the user's own undo.
 
 ## Requirements
 
@@ -70,7 +70,7 @@ The system SHALL provide an MCP tool `create_task` that creates an open task wit
 
 #### Scenario: Task from an email
 - **WHEN** an agent calls `create_task` with title "Send load-test report", priority `high`, due `2026-10-29` and tags `["project/atlas"]`
-- **THEN** the task exists in WorkDash with these values and appears in the app without refresh
+- **THEN** the task exists in gly with these values and appears in the app without refresh
 
 #### Scenario: Invalid input
 - **WHEN** an agent calls `create_task` with an empty title or the tag `project//x`
@@ -127,15 +127,15 @@ Undo and redo in the app SHALL only affect changes made by the user in the app. 
 - **THEN** the user's edit of task A is reverted and the agent's edit of task B stays
 
 ### Requirement: Local command-line access for MCP clients
-The system SHALL provide a command that MCP clients can start to talk MCP over standard input and output, and the app SHALL show the exact command to register it with Claude Code. The command SHALL only work while the WorkDash store agent is available and SHALL report a clear error otherwise.
+The system SHALL provide a command that MCP clients can start to talk MCP over standard input and output, and the app SHALL show the exact command to register it with Claude Code. The command SHALL only work while the gly store agent is available and SHALL report a clear error otherwise.
 
 #### Scenario: Register in Claude Code
 - **WHEN** the user runs the registration command shown in the app
-- **THEN** Claude Code reports the WorkDash MCP server as connected and can call its tools
+- **THEN** Claude Code reports the gly MCP server as connected and can call its tools
 
 #### Scenario: Store agent not available
 - **WHEN** the store agent isn't running or not approved
-- **THEN** tool calls return an error saying WorkDash's agent is unavailable, instead of hanging
+- **THEN** tool calls return an error saying gly's agent is unavailable, instead of hanging
 
 ### Requirement: Local HTTP access
 The system SHALL offer an MCP endpoint over HTTP that is off by default and switched on by the user in the app. When on, it SHALL accept connections only from this Mac, and SHALL require a secret token that the app shows together with the URL and can regenerate. Requests without the valid token, or with a browser Origin that isn't allowed, SHALL be rejected without revealing data.
@@ -154,7 +154,7 @@ The system SHALL offer an MCP endpoint over HTTP that is off by default and swit
 
 #### Scenario: Other machine
 - **WHEN** another computer on the network tries to connect to the port
-- **THEN** it can't connect, and no request reaches WorkDash
+- **THEN** it can't connect, and no request reaches gly
 
 ### Requirement: Pages over MCP
 The system SHALL provide MCP tools to create a page (required title, optional markdown text and tags), read a page by id (all fields, links and backlinks), update the given fields of a page (one change in the history per call), and delete a page (recoverable). The same validation as in the app SHALL apply, and changes SHALL be attributed to the agent.

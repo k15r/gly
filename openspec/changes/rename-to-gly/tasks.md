@@ -9,7 +9,7 @@
 
 - [x] 2.1 Mechanical rename (R5): `git mv` the package to `Packages/GlyCore` and modules/targets/types to `Gly…`; `project.yml` targets, product names, bundle ids, launch agent plist, entitlements (both app groups, R2); MCP server name `gly`; log subsystems; all UI strings; `scripts/build.sh`, `scripts/manual-checks.py`, `docs/`; verify with a clean build of `gly.app`, the full test suite, and `grep -ri workdash Apps Packages scripts docs project.yml` finding only `GlyIDs.Legacy`, the scheme alias and the migration
 - [ ] 2.2 Run `LegacyMigration` in the agent before opening the store; verify manually (after the user stopped the WorkDash agent, R3) "Name in the system", "First start with WorkDash data" on the real store, and "WorkDash stopped before the switch"
-- [ ] 2.3 Editorial pass over `openspec/specs/**`: product name "WorkDash" → "gly" in prose only; verify `openspec validate --specs --strict` and `grep -r WorkDash openspec/specs` empty
+- [x] 2.3 Editorial pass over `openspec/specs/**`: product name "WorkDash" → "gly" in prose only; verify `openspec validate --specs --strict` and `grep -r WorkDash openspec/specs` empty
 
 ## 3. Switch-over
 

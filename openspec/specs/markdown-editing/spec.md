@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Gives all free text in WorkDash (page text, task notes, tag page descriptions) one comfortable markdown editor on the Mac, with light styling while typing and a rendered read view.
+Gives all free text in gly (page text, task notes, tag page descriptions) one comfortable markdown editor on the Mac, with light styling while typing and a rendered read view.
 
 ## Requirements
 

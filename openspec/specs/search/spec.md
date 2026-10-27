@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Finds pages, tasks and tags by their words as you type, to open them quickly and to pick link targets, so information in WorkDash is always one shortcut away.
+Finds pages, tasks and tags by their words as you type, to open them quickly and to pick link targets, so information in gly is always one shortcut away.
 
 ## Requirements
 

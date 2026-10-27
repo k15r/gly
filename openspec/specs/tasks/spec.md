@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lets the user capture and maintain their own tasks in WorkDash, with status, priority, due date, notes and tags, stored durably with a history of every change.
+Lets the user capture and maintain their own tasks in gly, with status, priority, due date, notes and tags, stored durably with a history of every change.
 
 ## Requirements
 
@@ -95,7 +95,7 @@ The system SHALL provide a task list showing all `open` tasks (and snoozed tasks
 Tasks SHALL be stored persistently and survive app restarts, reboots and quitting the app. Every change SHALL be recorded in a history with the previous value, new value, time and writer. Deleting a task SHALL keep its data recoverable rather than erasing it.
 
 #### Scenario: Restart
-- **WHEN** the user creates a task, quits WorkDash and opens it again
+- **WHEN** the user creates a task, quits gly and opens it again
 - **THEN** the task is still there unchanged
 
 #### Scenario: History records the writer
@@ -103,7 +103,7 @@ Tasks SHALL be stored persistently and survive app restarts, reboots and quittin
 - **THEN** the history entry records the old and new priority and the writer `user@<this Mac>`
 
 ### Requirement: Changes appear everywhere immediately
-A change to a task SHALL be reflected in every open view (day view, task list, tag filter) without manual refresh, including changes made by another WorkDash process writing to the same store.
+A change to a task SHALL be reflected in every open view (day view, task list, tag filter) without manual refresh, including changes made by another gly process writing to the same store.
 
 #### Scenario: Complete in the task list
 - **WHEN** the user completes a task in the task list
