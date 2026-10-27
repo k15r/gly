@@ -12,12 +12,12 @@
 
 ## 3. App
 
-- [ ] 3.1 Add `TagColorModel` and make `TagChip` use effective colors; dot on tag tree rows; "Color" submenu in the tree's context menu and on the tag page header with own/inherited/automatic caption (C4); verify manually "Color a group", "Override below", "Back to automatic", "Inherited color shown", readability of all palette colors in light and dark mode
-- [ ] 3.2 Add Rename… and Delete… to the tree's context menu and a "…" menu on the tag page (C9): rename alert, merge confirmation on conflict, delete confirmation with the item count, navigation after rename/delete, clicking a tag expands it; verify manually "Rename a group", "Merge two spellings", "Merge declined", "Delete a used tag", "Empty tag and finished tag", "Rename from the tag page"
+- [x] 3.1 Add `TagColorModel` and make `TagChip` use effective colors; dot on tag tree rows; "Color" submenu in the tree's context menu and on the tag page header with own/inherited/automatic caption (C4); verify manually "Color a group", "Override below", "Back to automatic", "Inherited color shown", readability of all palette colors in light and dark mode
+- [x] 3.2 Add Rename… and Delete… to the tree's context menu and a "…" menu on the tag page (C9): rename alert, merge confirmation on conflict, delete confirmation with the item count, navigation after rename/delete, clicking a tag expands it; verify manually "Rename a group", "Merge two spellings", "Merge declined", "Delete a used tag", "Empty tag and finished tag", "Rename from the tag page"
 
 ## 4. End to end
 
-- [ ] 4.1 Manual checks in `docs/manual-checks-tag-colors.md` (neutral test data): the color and tag-management scenarios above in the app, colors surviving a restart, rename/merge/delete each undone with one ⌘Z, and Claude Code setting `project/atlas` to orange via `update_tag_page` and reading it back with `list_tags`
+- [x] 4.1 Manual checks in `docs/manual-checks-tag-colors.md` (neutral test data): the color and tag-management scenarios above in the app, colors surviving a restart, rename/merge/delete each undone with one ⌘Z, and Claude Code setting `project/atlas` to orange via `update_tag_page` and reading it back with `list_tags`
 
 ## Workflow follow-up
 
