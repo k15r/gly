@@ -18,5 +18,5 @@ Neutral test data only (no real names). Setup: a tag `project/atlas` exists; a b
 - [x] B1 The menu bar shows the WorkDash icon with Quick Capture (showing the shortcut), Open WorkDash, Quit.
 - [x] B2 Close the main window, press the shortcut and capture a task → reopen via the menu bar's Open WorkDash → the task is there ("Window closed").
 - [x] B3 Settings → Capture → record ⌃⇧T → ⌃⇧T opens the panel, ⌃⌥Space doesn't; Reset brings ⌃⌥Space back ("Change the shortcut").
-- [ ] B4 Turn off "Show in menu bar" → the icon disappears; on → it's back.
+- [x] B4 Turn off "Show in menu bar" → the icon disappears; on → it's back.
 - [x] B5 Turn on "Open at login" → WorkDash is listed in System Settings → General → Login Items; turn it off → removed.

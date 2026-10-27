@@ -7,7 +7,7 @@
 ## 2. App
 
 - [x] 2.1 Add `GlobalHotKey` (Q2) and the shortcut setting with default ⌃⌥Space and failure reporting; `CapturePanel` + `CaptureView` (Q3: preview line, Tab Task↔Page, Return / ⌘Return / Esc, keep text on accidental close, no activation on Return); verify manually "Capture from another app", "Save and keep working", "Save and open", "Cancel"
-- [ ] 2.2 Add the `MenuBarExtra` (Q4) and the Settings "Capture" tab (Q5: shortcut recorder, Show in menu bar, Open at login via `SMAppService.mainApp`); verify manually "Change the shortcut", "Window closed", menu bar hidden/shown, open at login on and off
+- [x] 2.2 Add the `MenuBarExtra` (Q4) and the Settings "Capture" tab (Q5: shortcut recorder, Show in menu bar, Open at login via `SMAppService.mainApp`); verify manually "Change the shortcut", "Window closed", menu bar hidden/shown, open at login on and off
 
 ## 3. End to end
 
