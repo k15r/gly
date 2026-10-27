@@ -21,7 +21,7 @@
 **Non-Goals:**
 - Tracking progress on tasks. The forecast assumes nothing is done before the viewed day, just as today's plan doesn't know about work already done.
 - Planning views for past days.
-- Exposing the return day through the MCP tools. It's a display aid; the task fields agents see stay as they are.
+- Exposing the return day through the MCP tools. It's a display aid; the task fields agents see stay as they are. (Agents do get the forecast itself, F7.)
 - Sharing free time between tasks (unchanged from daily-planning).
 
 ## Decisions
@@ -73,6 +73,12 @@ If it doesn't fit, the option shows a warning symbol and "– won't fit anymore"
 ### F5: Snoozed summary and popover
 
 A new query `TaskQueries.snoozed(after: D)` returns tasks with status `snoozed` and `snoozed_until > D`, ordered by snooze date. `PlanningModel` observes it for the displayed day (D ≥ today). Under Coming up, a borderless button "N snoozed" opens a popover with rows of title, "until <day>" and due date; clicking a row closes the popover and navigates to the task. Tasks back on D aren't counted, because they already appear in D's lists.
+
+### F7: `get_schedule` follows the day view
+
+`get_schedule` shares `tasksForDay` with the day view and promises to match it (agent-access). For a date D ≥ today it therefore returns overdue tasks relative to D and the planning data (`today`, `coming_up`, `needed_today_minutes`, `without_estimate`). The plan comes from `Planning.plan` with `now` = the real clock for today and the start of D otherwise, and with `upcoming(today: D)`. Past dates keep their tasks and free time, without planning data. The tool description changes from "for today also" to "for today and later dates".
+
+- **Alternative: keep agents on the old per-day list** with a separate query variant. Rejected: agents would see less than the user, which breaks the "matching the day view" promise.
 
 ### F6: Past days unchanged
 

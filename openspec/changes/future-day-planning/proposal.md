@@ -24,6 +24,7 @@ None.
 - `day-view`: tasks for future days are shown as the planning sections instead of a plain list; the snooze behavior on future days changes accordingly.
 - `daily-planning`: the Today list, the work needed, its header and Coming up apply to today and future days; adds the "back from snooze" mark and the snoozed-tasks summary.
 - `tasks`: snoozing shows that the due date stays and warns when the task would no longer fit.
+- `agent-access`: `get_schedule` keeps matching the day view, so for later dates it returns the forecast (overdue tasks from that date, Today and Coming up data).
 
 ## Impact
 
@@ -31,4 +32,4 @@ None.
 - `Apps/Mac/App/TaskViews.swift`: snooze options in the task menu with the due date and the fit warning.
 - `Apps/Mac/App/PlanningModel.swift`, `TasksModel.swift`: plan from the start of the displayed day; data for the snoozed summary.
 - `GlyCore`: `TaskQueries` (overdue from the displayed day's view, snoozed tasks), the day a task came back from a snooze (stored with the task; schema migration v6), `Planning` unchanged except for a fit check.
-- No change to the MCP tools.
+- `GlyMCP`: `get_schedule` returns overdue tasks and planning data for later dates too; its tool description says so.
