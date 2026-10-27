@@ -37,7 +37,7 @@ None.
 
 ## Impact
 
-- **Store:** migration `v5` adds a nullable `color` column to `tags` (a synced table). New commands:
+- **Store:** the existing, so far unused `tags.color` column (since v1) holds the color, so there's no migration. New commands:
   - `setTagColor(name:, color:)`, which creates the tag row for a group name if needed
   - `renameTag(from:, to:)`, which renames the subtree and merges on a clash, rewriting tag links in texts
   - `deleteTag(name:)`, which tombstones the tag and its assignments

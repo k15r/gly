@@ -92,6 +92,7 @@ extension Database {
             let r = try Row.fetchOne(self, sql: "SELECT title, blocking FROM series_rules WHERE id = ?", arguments: [rule["row_id"] as String])
             return "\(Self.blockingVerb(r?["blocking"])) “\(r?["title"] as String? ?? "series")” (series)"
         }
+        if let tagLabel = try tagStructureLabel(entries) { return tagLabel }
         // Items first, then tag assignments (→ their item), then tags (a tag page edit).
         guard var primary = entries.first(where: { ($0["table_name"] as String) == "items" })
                 ?? entries.first(where: { ($0["table_name"] as String) == "item_tags" })
@@ -140,6 +141,28 @@ extension Database {
         }
         if tagsChanged { changed.append("tags") }
         return changed.isEmpty ? "Edit \(quoted)" : "Edit \(quoted) (\(changed.joined(separator: ", ")))"
+    }
+
+    /// Labels of tag colors, renames, merges and deletes (tag-colors C3, C7, C8). These batches also touch items
+    /// (relabelled links, moved assignments), so the tag change has to win over the item heuristics below.
+    private func tagStructureLabel(_ entries: [Row]) throws -> String? {
+        let tagEntries = entries.filter { ($0["table_name"] as String) == "tags" && ($0["op"] as String) != "insert" }
+        func name(_ id: String) throws -> String { try String.fetchOne(self, sql: "SELECT name FROM tags WHERE id = ?", arguments: [id]) ?? "tag" }
+        func value(_ e: Row, _ column: String) -> String? { String.fromDatabaseValue(ChangeValue.decode(e[column])) }
+        let tombstones = tagEntries.filter { ($0["field"] as String?) == "deleted_at" && !ChangeValue.decode($0["new_value"]).isNull }
+        if let gone = tombstones.first {
+            let moved = entries.contains { ($0["table_name"] as String) == "item_tags" && ($0["op"] as String) == "insert" }
+                || entries.contains { ($0["table_name"] as String) == "item_tags" && ($0["field"] as String?) == "tag_id" }
+            return moved ? "Merge tag “\(try name(gone["row_id"]))”" : "Delete tag “\(try name(gone["row_id"]))”"
+        }
+        if let renamed = tagEntries.filter({ ($0["field"] as String?) == "name" })
+            .min(by: { (value($0, "old_value") ?? "").count < (value($1, "old_value") ?? "").count }) {
+            return "Rename tag “\(value(renamed, "old_value") ?? "")” to “\(value(renamed, "new_value") ?? "")”"
+        }
+        if let colored = entries.first(where: { ($0["table_name"] as String) == "tags" && ($0["field"] as String?) == "color" }) {
+            return "Color of tag “\(try name(colored["row_id"]))”"
+        }
+        return nil
     }
 
     static func blockingVerb(_ value: String?) -> String {

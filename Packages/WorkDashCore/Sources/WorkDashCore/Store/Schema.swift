@@ -71,7 +71,7 @@ public enum Schema {
             syncColumns(t)
             t.column("name", .text).notNull()        // display casing as first entered
             t.column("name_key", .text).notNull()    // case-folded, used for identity and filtering
-            t.column("color", .text)
+            t.column("color", .text)                 // a TagColor name (tag-colors C1); nil = inherit / automatic
             t.column("page_body", .text).notNull().defaults(to: "")
             t.column("archived", .boolean).notNull().defaults(to: false)
         }

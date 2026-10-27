@@ -126,6 +126,8 @@ public enum Command: Codable, Equatable {
     case restore(id: String)
     /// Erases all data for good: items, tags, overrides, the trash and the whole history (Settings → Data). Not undoable.
     case eraseAllData
+    /// Sets or clears (nil) a tag's own color; creates the tag row for a group name (tag-colors C3).
+    case setTagColor(name: String, color: TagColor?)
     /// Creates an (empty) tag, e.g. a new subtag; an existing tag is returned unchanged (case-insensitive).
     case createTag(name: String)
     /// Blocking override for one occurrence or a whole series; nil = automatic (specs/appointment-annotations).
@@ -305,6 +307,13 @@ public struct CommandHandler {
                 try batch.update("items", id: id, ["deleted_at": nil])    // deleted without history: the item only
             }
             return CommandOK(id: id)
+
+        case .setTagColor(let name, let color):
+            let tag = try TagName(name)
+            let tagID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [tag.key])
+                ?? batch.insert("tags", ["name": tag.display, "name_key": tag.key, "page_body": ""])
+            let changed = try batch.update("tags", id: tagID, ["color": color?.rawValue])
+            return CommandOK(id: tagID, changed: !changed.isEmpty)
 
         case .createTag(let name):
             let tag = try TagName(name)

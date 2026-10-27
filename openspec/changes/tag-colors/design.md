@@ -26,7 +26,7 @@ Motivation is in `proposal.md`, behavior in this change's specs.
 ### C1: Palette as names, in Core
 
 `TagColor` is a `String` enum: `red, orange, yellow, green, teal, blue, indigo, purple, pink, brown, gray`.
-- **Stored values:** the raw names, in a new nullable `tags.color` column (migration `v5`). The column is synced like the other tag fields.
+- **Stored values:** the raw names, in the nullable `tags.color` column. The v1 schema already planned this column, but nothing has written to it, so every existing tag is "no own color". It's synced like the other tag fields.
 - **Display:** the app maps names to SwiftUI system colors, which adapt to light and dark mode.
 - **Unknown names** (an older app, or bad data) are treated as no color.
 
@@ -114,4 +114,4 @@ Creates the tag row if needed (as `updateTagPage` does, for group names), then s
 
 ## Migration Plan
 
-`v5`: `ALTER TABLE tags ADD COLUMN color TEXT`. Existing tags have no own color, so everything looks as today (automatic). There's no data migration. Rolling back to an older app ignores the column.
+No schema change: `tags.color` exists since v1 and is empty, so existing tags look as today (automatic). An older app ignores the column.
