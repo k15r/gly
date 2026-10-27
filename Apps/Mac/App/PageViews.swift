@@ -169,6 +169,8 @@ struct PageView: View {
     @State private var tags: [String] = []
     @State private var pendingTag = ""
     @State private var editing: Bool?
+    /// Opened for editing (quick capture ⌘Return): edit mode, cursor in the text.
+    @State private var focusText = false
     @FocusState private var titleFocused: Bool
 
     var body: some View {
@@ -192,6 +194,7 @@ struct PageView: View {
             guard let page else { return }
             if !titleFocused { title = page.title }
             tags = page.tags
+            if nav.editRequest == page.id { editing = true; focusText = true; nav.editRequest = nil }
             if editing == nil { editing = page.body.isEmpty }
         }
     }
@@ -227,7 +230,7 @@ struct PageView: View {
             if editing == true {
                 WDMarkdownEditor(text: page.body, onCommit: { text, session in
                     Task { await app.send(.updatePage(id: page.id, PagePatch(body: text, session: session))) }
-                })
+                }, initialCaret: focusText ? (page.body as NSString).length : nil)
                 .frame(maxHeight: .infinity)
                 Divider()
                 BacklinksView(backlinks: backlinks).padding().frame(maxHeight: 180, alignment: .top)

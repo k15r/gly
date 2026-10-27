@@ -25,6 +25,9 @@ final class Navigation {
     private var forwardStack: [Destination] = []
     var day = LocalDay(date: Date())
 
+    /// An item to open straight into editing with the cursor in its text (⌘Return in quick capture).
+    var editRequest: String?
+
     /// Sheets shown above everything.
     var showQuickOpen = false
     var showNewPage = false

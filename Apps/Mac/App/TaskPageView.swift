@@ -20,6 +20,8 @@ struct TaskPageView: View {
     @State private var tags: [String] = []
     @State private var pendingTag = ""
     @State private var editing: Bool?
+    /// Opened for editing (quick capture ⌘Return): edit mode, cursor in the text.
+    @State private var focusText = false
     @FocusState private var titleFocused: Bool
 
     var body: some View {
@@ -44,6 +46,7 @@ struct TaskPageView: View {
             guard let task else { return }
             if !titleFocused { title = task.title }
             tags = task.tags
+            if nav.editRequest == task.id { editing = true; focusText = true; nav.editRequest = nil }
             if editing == nil { editing = task.body.isEmpty }
         }
     }
@@ -89,7 +92,7 @@ struct TaskPageView: View {
             if editing == true {
                 WDMarkdownEditor(text: task.body, onCommit: { text, session in
                     send(.updateTask(id: task.id, TaskPatch(body: text, session: session)))
-                })
+                }, initialCaret: focusText ? (task.body as NSString).length : nil)
                 .frame(maxHeight: .infinity)
                 Divider()
                 BacklinksView(backlinks: backlinks).padding().frame(maxHeight: 180, alignment: .top)
