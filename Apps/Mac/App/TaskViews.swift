@@ -39,6 +39,8 @@ struct TaskRow: View {
     var onEdit: () -> Void
     /// Planning note (day view).
     var note: PlanNote? = nil
+    /// The day view's day when the task comes back from a snooze that day (future-day-planning F3).
+    var backFromSnoozeOn: LocalDay?
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
 
@@ -83,7 +85,9 @@ struct TaskRow: View {
                     if let due = task.due { Text(Self.dueText(due)).font(.caption).foregroundStyle(.secondary) }
                     if let effort = task.effort { EffortChip(effort: effort) }
                     if let note, !note.text.isEmpty { Text(note.text).font(.caption.bold()).foregroundStyle(note.color).help(note.help) }
-                    if task.isSnoozed(today: LocalDay(date: Date())), let until = task.snoozedUntil.flatMap(LocalDay.init) {
+                    if backFromSnoozeOn != nil {
+                        Label("back from snooze", systemImage: "moon.zzz").font(.caption).foregroundStyle(.purple).help(backFromSnoozeHelp)
+                    } else if task.isSnoozed(today: LocalDay(date: Date())), let until = task.snoozedUntil.flatMap(LocalDay.init) {
                         Label("until \(DayView.title(for: until))", systemImage: "moon.zzz").font(.caption).foregroundStyle(.blue)
                     }
                     ForEach(task.tags, id: \.self) { TagChip(name: $0) }
@@ -106,6 +110,12 @@ struct TaskRow: View {
         .padding(.vertical, 2)
     }
 
+    private var backFromSnoozeHelp: String {
+        let until = task.snoozeReturnDay.flatMap(LocalDay.init).map(DayView.title(for:)) ?? "this day"
+        guard let due = task.due else { return "Snoozed until \(until)" }
+        return "Snoozed until \(until) – due \(Self.dueText(due)) unchanged"
+    }
+
     static func dueText(_ due: Due) -> String {
         guard let date = due.date() else { return due.day }
         let f = DateFormatter()
@@ -117,6 +127,8 @@ struct TaskRow: View {
 
 struct TaskActions: View {
     @Environment(AppModel.self) private var app
+    @Environment(PlanningModel.self) private var planning
+    @Environment(CalendarModel.self) private var calendars
     let task: TaskItem
     /// Opens the task page; nil on the task page itself.
     var onEdit: (() -> Void)?
@@ -126,9 +138,12 @@ struct TaskActions: View {
         Divider()
         // Count from the later of today and the current snooze date, so an already snoozed task can be pushed further.
         let base = Self.snoozeBase(for: task)
-        Button(task.status == .snoozed ? "Snooze 1 More Day" : "Snooze until Tomorrow") { snooze(base.adding(days: 1)) }
-        Button("Snooze until Next Monday") { snooze(Self.nextMonday(after: base)) }
-        if let onEdit { Button("Snooze until…", action: onEdit) }
+        // What a snooze costs (specs/tasks "Snooze shows its cost"): the due date stays; warn when the task won't fit anymore.
+        if let due = task.due, let dueDay = LocalDay(due.day) {
+            Section("Due \(DayView.shortTitle(for: dueDay)) stays") { snoozeOptions(base) }
+        } else {
+            snoozeOptions(base)
+        }
         Divider()
         Menu("Effort") {
             ForEach(Effort.allCases, id: \.self) { e in
@@ -141,6 +156,22 @@ struct TaskActions: View {
         if task.status != .open { Button("Reopen") { send(.setStatus(id: task.id, .open)) } }
         if task.status != .dropped { Button("Drop") { send(.setStatus(id: task.id, .dropped)) } }
         Button("Delete", role: .destructive) { send(.deleteTask(id: task.id)) }
+    }
+
+    @ViewBuilder private func snoozeOptions(_ base: LocalDay) -> some View {
+        snoozeButton(task.status == .snoozed ? "Snooze 1 More Day" : "Snooze until Tomorrow", until: base.adding(days: 1))
+        snoozeButton("Snooze until Next Monday", until: Self.nextMonday(after: base))
+        if let onEdit { Button("Snooze until…", action: onEdit) }
+    }
+
+    private func snoozeButton(_ title: String, until day: LocalDay) -> some View {
+        Button { snooze(day) } label: {
+            if planning.fits(task, returningOn: day, calendars: calendars) == false {
+                Label("\(title) – won't fit anymore", systemImage: "exclamationmark.triangle")
+            } else {
+                Text(title)
+            }
+        }
     }
 
     private func snooze(_ day: LocalDay) { send(.setStatus(id: task.id, .snoozed, snoozedUntil: day.description)) }

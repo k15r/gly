@@ -100,7 +100,7 @@ struct GlyApp: App {
 
     private func syncDay() {
         tasks.set(day: nav.day, today: clock.today)
-        planning.set(today: clock.today)
+        planning.set(day: nav.day, today: clock.today)
         calendars.show(day: nav.day)
     }
 

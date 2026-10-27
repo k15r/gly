@@ -71,14 +71,18 @@ final class CalendarModel {
 
     func calendar(for id: String) -> CalendarInfo? { calendars.first { $0.id == id } }
 
-    /// Appointments of visible calendars in a range (planning horizon), cached until the calendar or visibility changes.
-    @ObservationIgnored private var rangeCache: (key: String, value: [Appointment])?
+    /// Appointments of visible calendars in a range (planning horizon, snooze checks), cached per range until the calendar
+    /// or visibility changes. Several ranges are in use at once, e.g. the day view's horizon and a task menu's fit checks.
+    @ObservationIgnored private var rangeCache: [String: [Appointment]] = [:]
+    @ObservationIgnored private var rangeCacheStamp = ""
     func appointments(in range: DateInterval) -> [Appointment] {
         guard authorization.canRead else { return [] }
-        let key = "\(range.start.timeIntervalSince1970)-\(range.end.timeIntervalSince1970)-\(changeCounter)-\(hiddenIDs.sorted().joined())"
-        if let c = rangeCache, c.key == key { return c.value }
+        let stamp = "\(changeCounter)-\(hiddenIDs.sorted().joined())"
+        if stamp != rangeCacheStamp || rangeCache.count > 32 { rangeCache = [:]; rangeCacheStamp = stamp }
+        let key = "\(range.start.timeIntervalSince1970)-\(range.end.timeIntervalSince1970)"
+        if let cached = rangeCache[key] { return cached }
         let value = source.appointments(overlapping: range, calendarIDs: visibleIDs)
-        rangeCache = (key, value)
+        rangeCache[key] = value
         return value
     }
 

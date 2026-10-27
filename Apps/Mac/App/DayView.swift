@@ -11,6 +11,7 @@ struct DayView: View {
     @Environment(PlanningModel.self) private var planning
     @Binding var day: LocalDay
     @State private var editing: TaskEditorTarget?
+    @State private var showingSnoozed = false
 
     private var model: DayModel {
         DayModel(day: day, now: clock.now, appointments: calendars.appointments, calendars: calendars.calendars, tasks: tasks.dayTasks)
@@ -86,8 +87,8 @@ struct DayView: View {
 
     @ViewBuilder
     private func tasksSection(_ model: DayModel) -> some View {
-        if model.isToday {
-            todaySections(model)
+        if day >= clock.today {
+            planningSections(model)
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -111,18 +112,20 @@ struct DayView: View {
             .disabled(!app.canWrite)
     }
 
-    /// Today (overdue, due today, needs work today) and Coming up (specs/daily-planning).
-    private func todaySections(_ model: DayModel) -> some View {
+    /// Today (overdue, due today, needs work today) and Coming up (specs/daily-planning). For a later day the same, seen from
+    /// that day: planned from its start, assuming nothing is done before it (future-day-planning F1).
+    private func planningSections(_ model: DayModel) -> some View {
         @Bindable var planning = planning
         let dayLength = planning.hours.minutesPerDay
-        let plan = planning.plan(model.tasks.map(\.task) + planning.upcoming, now: clock.now,
-                                 appointments: calendars.appointments(in: planning.horizonRange(today: clock.today)))
+        let isToday = day == clock.today
+        let plan = planning.plan(model.tasks.map(\.task) + planning.upcoming, now: isToday ? clock.now : day.interval().start,
+                                 appointments: calendars.appointments(in: planning.horizonRange(today: day)))
         let free = planning.freeMinutes(on: day, now: clock.now, appointments: calendars.appointments)
         let short = Double(plan.neededMinutes) - free
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Today").font(.headline)
+                    Text(isToday ? "Today" : Self.shortTitle(for: day)).font(.headline)
                     Text("needs \(formatEffort(Double(plan.neededMinutes), dayLength: dayLength)) · free \(formatMinutes(free))")
                         .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                     if short > 0 {
@@ -136,11 +139,12 @@ struct DayView: View {
                     newTaskButton
                 }
                 if plan.today.isEmpty {
-                    Text("Nothing needs work today").foregroundStyle(.secondary)
+                    Text(isToday ? "Nothing needs work today" : "Nothing needs work that day").foregroundStyle(.secondary)
                 } else {
                     ForEach(plan.today) { item in
                         TaskRow(task: item.task, overdue: item.reason == .overdue, onEdit: { nav.go(.task(item.task.id)) },
-                                note: todayNote(item, dayLength: dayLength))
+                                note: todayNote(item, dayLength: dayLength, isToday: isToday),
+                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil)
                     }
                 }
             }
@@ -160,22 +164,60 @@ struct DayView: View {
                     Text("Nothing else due in the next \(planning.horizon) days").foregroundStyle(.secondary)
                 } else {
                     ForEach(plan.comingUp) { item in
-                        TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, note: comingUpNote(item))
+                        TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, note: comingUpNote(item),
+                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil)
                     }
                 }
+                if !planning.snoozed.isEmpty { snoozedSummary }
             }
         }
     }
 
-    private func todayNote(_ item: TodayItem, dayLength: Int) -> PlanNote {
+    /// "N snoozed": tasks still snoozed on this day, so they aren't forgotten (specs/daily-planning "Snoozed tasks summary").
+    private var snoozedSummary: some View {
+        Button { showingSnoozed = true } label: {
+            Label("\(planning.snoozed.count) snoozed", systemImage: "moon.zzz").font(.caption)
+        }
+        .buttonStyle(.borderless)
+        .help("Tasks still snoozed on this day")
+        .popover(isPresented: $showingSnoozed, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(planning.snoozed) { task in
+                    Button {
+                        showingSnoozed = false
+                        nav.go(.task(task.id))
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(task.title)
+                            HStack(spacing: 6) {
+                                if let until = task.snoozedUntil.flatMap(LocalDay.init) { Text("until \(Self.title(for: until))").foregroundStyle(.blue) }
+                                if let due = task.due { Text("due \(TaskRow.dueText(due))").foregroundStyle(.secondary) }
+                            }
+                            .font(.caption)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 5).padding(.horizontal, 10)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 6)
+            .frame(minWidth: 260)
+        }
+    }
+
+    private func todayNote(_ item: TodayItem, dayLength: Int, isToday: Bool) -> PlanNote {
         if item.cantFit { return PlanNote(text: "can't fit", color: .red, help: "Even all free time until the due date isn't enough – move the due date or cut scope") }
+        let when = isToday ? "today" : Self.weekday(day)
         guard let needed = item.neededToday else {
-            return PlanNote(text: item.reason == .overdue ? "no estimate" : "due today · no estimate", color: .secondary, help: "Set an effort to plan it")
+            return PlanNote(text: item.reason == .overdue ? "no estimate" : "due \(when) · no estimate", color: .secondary, help: "Set an effort to plan it")
         }
         switch item.reason {
-        case .needsWork: return PlanNote(text: "today ≥ \(formatEffort(Double(needed), dayLength: dayLength))", color: .blue,
-                                         help: "At least this much today, or it won't be done by its due date")
-        case .dueToday: return PlanNote(text: "due today", color: .orange, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
+        case .needsWork: return PlanNote(text: "\(when) ≥ \(formatEffort(Double(needed), dayLength: dayLength))", color: .blue,
+                                         help: isToday ? "At least this much today, or it won't be done by its due date"
+                                                       : "At least this much that day, if nothing is done before, or it won't be done by its due date")
+        case .dueToday: return PlanNote(text: "due \(when)", color: .orange, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
         case .overdue: return PlanNote(text: "", color: .red, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
         }
     }
@@ -184,6 +226,13 @@ struct DayView: View {
         guard let start = item.startBy else { return PlanNote(text: "no estimate", color: .secondary, help: "Set an effort to plan it") }
         let text = start == clock.today.adding(days: 1) ? "start by tomorrow" : "start by " + DayView.weekday(start)
         return PlanNote(text: text, color: .secondary, help: "The last day to start and still finish")
+    }
+
+    /// "Thu 29 Oct": the planning list's title on a later day.
+    static func shortTitle(for day: LocalDay) -> String {
+        let f = DateFormatter()
+        f.setLocalizedDateFormatFromTemplate("EEE d MMM")
+        return f.string(from: day.interval().start)
     }
 
     static func weekday(_ day: LocalDay) -> String {

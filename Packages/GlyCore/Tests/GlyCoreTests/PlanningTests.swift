@@ -53,6 +53,21 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(p.today.first?.neededToday, 120)
     }
 
+    func testSnoozeCost() {
+        // specs/tasks "Snooze too long": XL (3 days) due Friday, Monday today, all days free.
+        let big = task("big", due: "2026-10-30", effort: .xl)
+        func fits(_ day: String, busy: [(interval: DateInterval, weight: BlockingWeight)] = []) -> Bool? {
+            Planning.fits(big, returningOn: LocalDay(day)!, sizes: sizes, hours: hours, busy: busy, calendar: cal)
+        }
+        XCTAssertEqual(fits("2026-10-27"), true, "back Tuesday: Tue–Fri free")
+        XCTAssertEqual(fits("2026-10-29"), false, "back Thursday: only 2 days left")
+        XCTAssertEqual(fits("2026-11-02"), false, "back after the due date")
+        XCTAssertEqual(fits("2026-10-27", busy: [blocked("2026-10-28"), blocked("2026-10-29")]), false, "meetings count")
+        // specs/tasks "No estimate": nothing to warn about.
+        XCTAssertNil(Planning.fits(task("x", due: "2026-10-30", effort: nil), returningOn: LocalDay("2026-11-02")!,
+                                   sizes: sizes, hours: hours, busy: [], calendar: cal))
+    }
+
     func testEnoughTimeLaterIsComingUp() {
         let p = plan([task("small", due: "2026-10-30", effort: .s)], now: at("2026-10-26", 9))
         XCTAssertEqual(p.today, [])

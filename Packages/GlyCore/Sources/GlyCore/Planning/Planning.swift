@@ -59,6 +59,16 @@ public enum Planning {
         return day.interval(in: calendar).end
     }
 
+    /// Whether a task coming back from a snooze on `returnDay` still fits before its due date (specs/tasks "Snooze shows its
+    /// cost"): its effort against the free time from the start of that day. nil without due date or effort (nothing to warn).
+    public static func fits(_ task: TaskItem, returningOn returnDay: LocalDay, sizes: EffortSizes, hours: WorkingHours,
+                            busy: [(interval: DateInterval, weight: BlockingWeight)], calendar: Calendar = .current) -> Bool? {
+        guard let effort = task.effort.map({ sizes[$0] }), let deadline = deadline(of: task, calendar: calendar) else { return nil }
+        let start = returnDay.interval(in: calendar).start
+        guard start < deadline else { return false }
+        return Double(effort) <= FreeTime.minutes(from: start, to: deadline, busy: busy, hours: hours, calendar: calendar)
+    }
+
     /// Plans today (design Q7): each task on its own against the free time until its deadline.
     public static func plan(_ tasks: [TaskItem], now: Date, sizes: EffortSizes, hours: WorkingHours,
                             busy: [(interval: DateInterval, weight: BlockingWeight)], calendar: Calendar = .current) -> DayPlan {

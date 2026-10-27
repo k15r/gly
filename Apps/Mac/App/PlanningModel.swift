@@ -15,11 +15,15 @@ final class PlanningModel {
     /// Annotations waiting for the user to pick their appointment.
     private(set) var ambiguous: [Annotation] = []
     private(set) var upcoming: [TaskItem] = []
+    /// Tasks still snoozed on the planned day (future-day-planning F5).
+    private(set) var snoozed: [TaskItem] = []
 
     @ObservationIgnored private var store: ReadOnlyStore?
-    @ObservationIgnored private var today = LocalDay(date: Date())
+    /// The day planned for: the displayed day if it is today or later (a forecast), else nothing to plan (F1, F2).
+    @ObservationIgnored private var planDay: LocalDay? = LocalDay(date: Date())
     @ObservationIgnored private var overridesObservation: AnyDatabaseCancellable?
     @ObservationIgnored private var upcomingObservation: AnyDatabaseCancellable?
+    @ObservationIgnored private var snoozedObservation: AnyDatabaseCancellable?
 
     init(settings: SharedSettings = .shared()) {
         self.settings = settings
@@ -39,16 +43,24 @@ final class PlanningModel {
         observeUpcoming()
     }
 
-    func set(today: LocalDay) {
-        guard today != self.today else { return }
-        self.today = today
+    func set(day: LocalDay, today: LocalDay) {
+        let planDay = day >= today ? day : nil
+        guard planDay != self.planDay else { return }
+        self.planDay = planDay
         observeUpcoming()
     }
 
     private func observeUpcoming() {
-        guard let store else { return }
-        let today = self.today, horizon = self.horizon
-        upcomingObservation = store.observe(ValueObservation.tracking { try TaskQueries.upcoming($0, today: today, horizon: horizon) },
+        guard let store, let day = planDay else {
+            upcomingObservation = nil; upcoming = []
+            snoozedObservation = nil; snoozed = []
+            return
+        }
+        snoozedObservation = store.observe(ValueObservation.tracking { try TaskQueries.snoozed($0, after: day) },
+                                           onError: { print("snoozed observation: \($0)") },
+                                           onChange: { [weak self] in self?.snoozed = $0 })
+        let horizon = self.horizon
+        upcomingObservation = store.observe(ValueObservation.tracking { try TaskQueries.upcoming($0, today: day, horizon: horizon) },
                                             onError: { print("upcoming observation: \($0)") },
                                             onChange: { [weak self] in self?.upcoming = $0 })
     }
@@ -64,6 +76,14 @@ final class PlanningModel {
     func freeMinutes(on day: LocalDay, now: Date, appointments: [Appointment]) -> Double {
         let from = day == LocalDay(date: now) ? now : day.interval().start
         return FreeTime.minutes(from: from, to: day.interval().end, busy: overrides.busy(appointments), hours: hours)
+    }
+
+    /// Whether the task, back from a snooze on `day`, still fits before its due date; nil when there's nothing to judge (F4).
+    func fits(_ task: TaskItem, returningOn day: LocalDay, calendars: CalendarModel) -> Bool? {
+        guard task.effort != nil, let deadline = Planning.deadline(of: task) else { return nil }
+        let start = day.interval().start
+        let appointments = start < deadline ? calendars.appointments(in: DateInterval(start: start, end: deadline)) : []
+        return Planning.fits(task, returningOn: day, sizes: sizes, hours: hours, busy: overrides.busy(appointments))
     }
 
     /// Today and Coming up, each task on its own against the free time until its deadline.
