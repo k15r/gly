@@ -269,6 +269,7 @@ struct TagPageView: View {
     @Environment(TasksModel.self) private var tasks
     @Environment(Navigation.self) private var nav
     @Environment(Clock.self) private var clock
+    @Environment(TagColorModel.self) private var tagColors
     let name: String
 
     @State private var live = Live<TagPageDetail>()
@@ -299,7 +300,7 @@ struct TagPageView: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Label(data.name, systemImage: "tag").font(.title.bold())
+                    Label(data.name, systemImage: "tag").font(.title.bold()).foregroundStyle(tagColors.color(data.name))
                     TagColorControl(name: data.name)
                     Spacer()
                     Button("Show in Tasks") {

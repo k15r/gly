@@ -77,7 +77,7 @@ struct TagColorMenuItems: View {
     }
 }
 
-/// The tag page header's color control: a dot with the menu, and where the color comes from.
+/// The tag page header's color picker: a small square in the effective color; where it comes from is in the tooltip.
 struct TagColorControl: View {
     @Environment(AppModel.self) private var app
     @Environment(TagColorModel.self) private var tagColors
@@ -88,14 +88,11 @@ struct TagColorControl: View {
         Menu {
             TagColorMenuItems(name: name)
         } label: {
-            HStack(spacing: 6) {
-                Circle().fill(effective.color.swiftUI).frame(width: 12, height: 12)
-                Text(Self.caption(effective.source)).font(.caption).foregroundStyle(.secondary)
-            }
+            RoundedRectangle(cornerRadius: 3).fill(effective.color.swiftUI).frame(width: 14, height: 14)
         }
-        .menuStyle(.borderlessButton).fixedSize()
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .disabled(!app.canWrite)
-        .help("Tag color")
+        .help("Tag color: \(Self.caption(effective.source))")
     }
 
     static func caption(_ source: TagColorSource) -> String {
