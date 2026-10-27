@@ -14,7 +14,7 @@ Neutral test data only (no real names in notes or tags; your real calendar meeti
 - [x] B2 Open next week's occurrence → same document; a new heading for that date appears above only once you type; leave without typing → nothing stored ("Weekly 1:1", "Nothing written").
 - [x] B3 Reopen this week's occurrence → the cursor is in this week's section ("Open an earlier meeting").
 - [x] B4 In the notes type `[[project/atlas/Roadmap]]` → the link works; the Roadmap page lists the meeting under backlinks; clicking it opens the meeting page ("Link from notes").
-- [ ] B5 Tag the notes `person/alex` on the meeting page → the meeting appears under `alex` in the tag tree (calendar icon) and under Meetings on the tag page of `person` ("Tagged meeting in the tree", "Person's meetings").
+- [x] B5 Tag the notes `person/alex` on the meeting page → the meeting appears under `alex` in the tag tree (calendar icon) and under Meetings on the tag page of `person` ("Tagged meeting in the tree", "Person's meetings").
 - [x] B6 ⌘K and search find the meeting by a word from its notes; Return opens its page ("Find a meeting by its notes").
 - [x] B7 "…" → Delete Notes → the notes are in the Trash (calendar icon); Restore brings them back with sections and tags ("Delete and restore notes").
 - [x] B8 Join on the meeting page opens the Teams link ("Join from the page").

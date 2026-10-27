@@ -17,7 +17,7 @@
 ## 4. App
 
 - [x] 4.1 Popover additions (description, Join, folded attendees, Notes) and note icons in the day view (N7); verify manually "Description and join link", "Series notes marked"
-- [ ] 4.2 `MeetingPageView` and the `meeting` destination (header, state badge, editor/read view at the right section, tags, backlinks, delete), meetings in the tag tree, tag pages and ⌘K/search (N7); verify manually "Weekly 1:1", "Write today's notes", "Open an earlier meeting", "Join from the page", "Link from notes", "Tagged meeting in the tree", "Person's meetings"
+- [x] 4.2 `MeetingPageView` and the `meeting` destination (header, state badge, editor/read view at the right section, tags, backlinks, delete), meetings in the tag tree, tag pages and ⌘K/search (N7); verify manually "Weekly 1:1", "Write today's notes", "Open an earlier meeting", "Join from the page", "Link from notes", "Tagged meeting in the tree", "Person's meetings"
 
 ## 5. End to end
 
