@@ -53,8 +53,14 @@ Creates the tag row if needed (as `updateTagPage` does, for group names), then s
 - **`TagColorModel`** (`@Observable`) observes `TagQueries.colors` and exposes `effective(name)`. It's attached like the other models and put into the environment.
 - **`TagChip.tint`** reads the model; the hash function moves to Core (C2).
 - **Tag tree rows:** a small filled circle in the effective color before the segment name.
-- **Context menu on tag rows:** a "Color" submenu with "Automatic", a separator, then the palette. Each entry has a colored circle image, and a `Toggle` gives the current own choice a native checkmark (lesson from planning: menus don't render `Label` images reliably, `Toggle`s render checkmarks).
-- **Tag page header:** a color circle with the same menu, and a caption: "own color", "inherited from person" or "automatic".
+- **Context menu on tag rows:** a "Color" submenu with the no-own-color entry, a separator, then the palette.
+  - The no-own-color entry reads "Inherit from <tag> (<color>)" when a tag above has a color, else "Automatic".
+  - `Toggle`s give the current choice a native checkmark.
+  - The entries carry colored dot images, but macOS doesn't render them in these menus, so the names stand alone (lesson from planning: menus don't render `Label` images reliably).
+- **Tag page header:**
+  - The tag icon and name are in the effective color.
+  - A small square swatch opens the same menu. It's drawn as an `NSImage`, because a menu button's label only renders text and images, not SwiftUI shapes.
+  - Its tooltip names the source: "own color", "inherited from person" or "automatic".
 
 ### C5: MCP
 

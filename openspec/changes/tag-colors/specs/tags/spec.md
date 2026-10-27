@@ -59,10 +59,10 @@ Every tag SHALL have an effective color: its own color if set, else the nearest 
 - **THEN** its chip uses the color derived from `project`, the same for every `project/…` tag
 
 ### Requirement: Set a tag color in the tag list
-The tag list's context menu on a tag SHALL offer the palette colors and "Automatic" (no own color, so the tag inherits again), with the current choice marked. This SHALL work for group names without their own tag too. Each change SHALL be one undo step.
+The tag list's context menu on a tag SHALL offer the palette colors and an entry for no own color, labeled "Inherit from <tag> (<color>)" when a tag above has a color and "Automatic" otherwise, with the current choice marked. This SHALL work for group names without their own tag too. Each change SHALL be one undo step.
 
-#### Scenario: Back to automatic
-- **WHEN** `person` is green, `person/alex` is orange, and the user chooses "Automatic" for `person/alex`
+#### Scenario: Back to inheriting
+- **WHEN** `person` is green, `person/alex` is orange, and the user chooses "Inherit from person (Green)" for `person/alex`
 - **THEN** `person/alex` and its subtags are green again, and one Undo brings orange back
 
 ### Requirement: Rename a tag
