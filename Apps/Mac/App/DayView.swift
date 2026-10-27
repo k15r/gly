@@ -361,7 +361,15 @@ struct AppointmentDetails: View {
                 if let c = entry.calendar { row("Calendar", "\(c.title) · \(c.sourceTitle)") }
                 if let l = a.location, !l.isEmpty { row("Location", l) }
                 if let o = a.organizer, !o.isEmpty { row("Organizer", o) }
-                if !a.attendees.isEmpty { row("Attendees", a.attendees.joined(separator: "\n")) }
+                if !a.attendees.isEmpty {
+                    // Folded: large meetings have dozens of attendees.
+                    GridRow {
+                        Text("Attendees").foregroundStyle(.secondary).gridColumnAlignment(.trailing)
+                        DisclosureGroup("\(a.attendees.count) attendee\(a.attendees.count == 1 ? "" : "s")") {
+                            Text(a.attendees.joined(separator: "\n")).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
             }
             let d = MeetingDescription.parse(notes: a.notes, location: a.location, url: a.url)
             if !d.agenda.isEmpty {
