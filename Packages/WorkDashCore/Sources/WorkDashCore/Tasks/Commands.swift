@@ -102,6 +102,14 @@ public struct TaskPatch: Codable, Equatable {
     }
 }
 
+/// The meeting a notes command addresses: the appointment as last seen, and whether it repeats (meeting-pages N4).
+public struct MeetingTarget: Codable, Equatable {
+    public var snapshot: AppointmentSnapshot
+    public var recurring: Bool
+    public init(snapshot: AppointmentSnapshot, recurring: Bool) { self.snapshot = snapshot; self.recurring = recurring }
+    public init(_ a: Appointment) { self.init(snapshot: AppointmentSnapshot(a), recurring: a.isRecurring) }
+}
+
 /// Every write the app (and later MCP) can make. Sent as JSON over XPC (design L4).
 public enum Command: Codable, Equatable {
     case ping
@@ -126,6 +134,12 @@ public enum Command: Codable, Equatable {
     case restore(id: String)
     /// Erases all data for good: items, tags, overrides, the trash and the whole history (Settings → Data). Not undoable.
     case eraseAllData
+    /// Replaces a meeting's notes (series document for recurring meetings); rows are created on first text (meeting-pages N4).
+    case saveMeetingNotes(MeetingTarget, body: String, tags: [String]? = nil, session: String? = nil)
+    /// Adds markdown to the dated section of `day` (YYYY-MM-DD) in the meeting's notes (agents).
+    case appendMeetingNotes(MeetingTarget, day: String, markdown: String)
+    /// Deletes a meeting's notes (Trash); a one-off row that also carries a blocking override is only emptied.
+    case deleteMeetingNotes(id: String)
     /// Sets or clears (nil) a tag's own color; creates the tag row for a group name (tag-colors C3).
     case setTagColor(name: String, color: TagColor?)
     /// Renames a tag and its subtree; an existing target name fails with `conflict` unless `merge` (tag-colors C7).
@@ -312,6 +326,30 @@ public struct CommandHandler {
             }
             return CommandOK(id: id)
 
+        case .saveMeetingNotes(let target, let body, let tags, _):
+            return try saveMeetingNotes(target, body: body, tags: tags, batch: batch)
+
+        case .appendMeetingNotes(let target, let dayString, let markdown):
+            guard let day = LocalDay(dayString) else { throw CommandFailure(.validation, "day must be YYYY-MM-DD.") }
+            let current = try Self.meetingNotesRow(target, db: db).flatMap {
+                try String.fetchOne(db, sql: "SELECT body FROM items WHERE id = ?", arguments: [$0])
+            } ?? ""
+            let body = NotesSections.insert(markdown, for: day, into: current, today: LocalDay(date: now))
+            return try saveMeetingNotes(target, body: body, tags: nil, batch: batch)
+
+        case .deleteMeetingNotes(let id):
+            guard let row = try Row.fetchOne(db, sql: "SELECT event_key, blocking FROM live_items WHERE id = ? AND kind = 'event_note'", arguments: [id]) else {
+                throw CommandFailure(.notFound, "Meeting notes \(id) not found.")
+            }
+            if (row["event_key"] as String?) != nil, (row["blocking"] as String?) != nil {
+                // The row also carries a blocking override for this meeting: keep it, empty the notes.
+                try batch.update("items", id: id, ["body": ""])
+                try replaceTags(of: id, with: [], batch: batch)
+            } else {
+                try batch.softDelete("items", id: id)
+            }
+            return CommandOK(id: id)
+
         case .setTagColor(let name, let color):
             let tag = try TagName(name)
             let tagID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [tag.key])
@@ -456,6 +494,44 @@ public struct CommandHandler {
         return f
     }
 
+    /// The notes row of a meeting, if it exists: the series document of a recurring meeting, else the occurrence row.
+    static func meetingNotesRow(_ target: MeetingTarget, db: Database) throws -> String? {
+        let s = target.snapshot
+        if target.recurring {
+            guard let rule = try AnnotationQueries.seriesRules(db).first(where: { $0.matches(s) }) else { return nil }
+            return try String.fetchOne(db, sql: "SELECT id FROM live_items WHERE kind = 'event_note' AND series_rule = ? ORDER BY created_at LIMIT 1",
+                                       arguments: [rule.id])
+        }
+        return try String.fetchOne(db, sql: "SELECT id FROM live_items WHERE kind = 'event_note' AND event_key = ? LIMIT 1", arguments: [s.key])
+    }
+
+    /// Saves notes, creating the series rule / notes row on the first non-empty text ("Nothing written" stores nothing).
+    private func saveMeetingNotes(_ target: MeetingTarget, body: String, tags: [String]?, batch: Batch) throws -> CommandOK {
+        let db = batch.db, s = target.snapshot
+        var rowID = try Self.meetingNotesRow(target, db: db)
+        if rowID == nil {
+            guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !(tags ?? []).isEmpty else { return CommandOK(changed: false) }
+            let title = s.title.isEmpty ? "Meeting" : s.title
+            if target.recurring {
+                let ruleID = try AnnotationQueries.seriesRules(db).first(where: { $0.matches(s) })?.id
+                    ?? batch.insert("series_rules", ["calendar_id": s.calendarID, "title": s.title, "organizer": s.organizer,
+                                                     "base_ids": AnnotationQueries.encodeIDs([s.baseID])])
+                rowID = try batch.insert("items", ["kind": "event_note", "title": title, "body": "", "series_rule": ruleID,
+                                                   "event_calendar": s.calendarID, "event_start": s.start, "event_end": s.end,
+                                                   "event_organizer": s.organizer, "event_state": "active"])
+            } else {
+                var fields = Self.snapshotFields(s, state: "active")
+                fields["kind"] = "event_note"; fields["body"] = ""
+                rowID = try batch.insert("items", fields)
+            }
+        }
+        guard let id = rowID else { return CommandOK(changed: false) }
+        let (text, unresolved) = try LinkResolver.resolve(body, db: db)
+        var changed = !(try batch.update("items", id: id, ["body": text])).isEmpty
+        if let tags { changed = try replaceTags(of: id, with: try tags.map(TagName.init), batch: batch) || changed }
+        return CommandOK(id: id, changed: changed, unresolved: unresolved)
+    }
+
     static func blockingFields(_ value: BlockingOverride?) -> Fields {
         var f: Fields = [:]
         f.updateValue(value?.rawValue, forKey: "blocking")
@@ -492,6 +568,7 @@ public struct CommandHandler {
         case .updateTask(_, let p): return p.session
         case .updatePage(_, let p): return p.session
         case .updateTagPage(_, _, let s): return s
+        case .saveMeetingNotes(_, _, _, let s): return s
         default: return nil
         }
     }
@@ -503,6 +580,7 @@ public struct CommandHandler {
         switch command {
         case .updateTask(let id, _), .updatePage(let id, _): rowID = id
         case .updateTagPage(let name, _, _): rowID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [TagName.key(for: name)])
+        case .saveMeetingNotes(let target, _, _, _): rowID = try Self.meetingNotesRow(target, db: db)
         default: rowID = nil
         }
         guard let rowID,

@@ -14,7 +14,20 @@ public struct PageItem: Equatable, Identifiable {
 
 /// Something a link or backlink points at: a page, a task or a tag.
 public struct LinkRef: Equatable, Hashable, Identifiable {
-    public enum Kind: String, Codable { case page, task, tag }
+    public enum Kind: String, Codable {
+        case page, task, tag
+        /// A meeting's notes document (meeting-pages N7); not offered by the `[[` picker.
+        case meeting
+
+        /// The kind of an `items` row (`info`, `task`, `event_note`).
+        public init(itemKind: String) {
+            switch itemKind {
+            case "info": self = .page
+            case "event_note": self = .meeting
+            default: self = .task
+            }
+        }
+    }
     public let kind: Kind
     public let id: String
     public let title: String
@@ -92,7 +105,7 @@ public enum LinkQueries {
             return (LinkRef(kind: .tag, id: r["id"], title: r["name"]), (r["deleted_at"] as Date?) != nil)
         }
         guard let r = try Row.fetchOne(db, sql: "SELECT id, kind, title, deleted_at FROM items WHERE id = ? COLLATE NOCASE", arguments: [id]) else { return nil }
-        return (LinkRef(kind: (r["kind"] as String) == "info" ? .page : .task, id: r["id"], title: r["title"]), (r["deleted_at"] as Date?) != nil)
+        return (LinkRef(kind: LinkRef.Kind(itemKind: r["kind"]), id: r["id"], title: r["title"]), (r["deleted_at"] as Date?) != nil)
     }
 
     /// Live pages, tasks and tag pages whose text links to the item or tag `targetID`.
@@ -139,6 +152,8 @@ public struct TagPageData: Equatable {
     public let body: String
     public let openTasks: [TaskItem]
     public let pages: [PageItem]
+    /// Meetings with notes tagged with it or below it, most recently edited first (meeting-pages).
+    public var meetings: [LinkRef] = []
     public let finishedTasks: [TaskItem]
 }
 
@@ -149,7 +164,11 @@ public enum TagPageQueries {
         let done = try TaskQueries.taskList(db, mode: .done, today: today, tag: name)
         let dropped = try TaskQueries.taskList(db, mode: .dropped, today: today, tag: name)
         let finished = (done + dropped).sorted { ($0.completedAt ?? $0.modifiedAt) > ($1.completedAt ?? $1.modifiedAt) }
+        let filter = TagFilter(name)
+        let meetings = try Row.fetchAll(db, sql: """
+            SELECT i.id, i.title FROM live_items i WHERE i.kind = 'event_note' AND i.body != '' AND \(filter.sql) ORDER BY i.modified_at DESC
+            """, arguments: filter.arguments).map { LinkRef(kind: .meeting, id: $0["id"], title: $0["title"]) }
         return TagPageData(name: tagRow?["name"] ?? name.display, tagID: tagRow?["id"], body: tagRow?["page_body"] ?? "",
-                           openTasks: open, pages: try PageQueries.list(db, tag: name), finishedTasks: finished)
+                           openTasks: open, pages: try PageQueries.list(db, tag: name), meetings: meetings, finishedTasks: finished)
     }
 }

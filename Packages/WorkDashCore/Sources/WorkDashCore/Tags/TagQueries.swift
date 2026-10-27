@@ -79,7 +79,7 @@ public enum TagQueries {
             SELECT it.item_id, t.name, i.kind FROM live_item_tags it
             JOIN live_tags t ON t.id = it.tag_id
             JOIN live_items i ON i.id = it.item_id
-            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info'
+            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info' OR (i.kind = 'event_note' AND i.body != '')
             UNION ALL
             SELECT NULL, t.name, NULL FROM live_tags t
             """)
@@ -116,12 +116,12 @@ public enum TagQueries {
         return children(of: nil)
     }
 
-    /// Open tasks (task-list order) then live pages (by title), per exact tag key, each with its other tags.
+    /// Open tasks (task-list order), live pages (by title), then meetings with notes, per exact tag key, each with its other tags.
     static func leavesByTag(_ db: Database) throws -> [String: [TreeLeaf]] {
         let rows = try Row.fetchAll(db, sql: """
             SELECT i.id, i.kind, i.title, i.status, i.body, t.name, t.name_key FROM live_items i
             JOIN live_item_tags it ON it.item_id = i.id JOIN live_tags t ON t.id = it.tag_id
-            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info'
+            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info' OR (i.kind = 'event_note' AND i.body != '')
             ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL), t.name_key
             """)
         var tagsOfItem: [String: [String]] = [:]
@@ -130,7 +130,7 @@ public enum TagQueries {
         for r in rows {
             let id: String = r["id"], name: String = r["name"]
             result[r["name_key"], default: []].append(TreeLeaf(
-                kind: (r["kind"] as String) == "info" ? .page : .task, id: id, title: r["title"],
+                kind: LinkRef.Kind(itemKind: r["kind"]), id: id, title: r["title"],
                 otherTags: (tagsOfItem[id] ?? []).filter { $0 != name }, snoozed: (r["status"] as String?) == "snoozed",
                 excerpt: TreeLeaf.excerpt(of: r["body"] ?? "")))
         }
@@ -145,7 +145,7 @@ public enum TagQueries {
               AND i.id NOT IN (SELECT item_id FROM live_item_tags)
             ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL)
             """).map { r in
-                TreeLeaf(kind: (r["kind"] as String) == "info" ? .page : .task, id: r["id"], title: r["title"],
+                TreeLeaf(kind: LinkRef.Kind(itemKind: r["kind"]), id: r["id"], title: r["title"],
                          otherTags: [], snoozed: (r["status"] as String?) == "snoozed", excerpt: TreeLeaf.excerpt(of: r["body"] ?? ""))
             }
     }

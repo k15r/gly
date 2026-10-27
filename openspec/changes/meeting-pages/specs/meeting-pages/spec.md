@@ -51,7 +51,7 @@ Notes SHALL never be deleted when a meeting changes in the calendar. If a meetin
 - **THEN** its notes are still found by search, and the page shows "no longer in the calendar" with the last known title and time
 
 ### Requirement: Delete meeting notes
-The user SHALL be able to delete a meeting's notes document; it SHALL go to the Trash and be restorable like pages and tasks. Blocking overrides of the meeting SHALL stay.
+The user SHALL be able to delete a meeting's notes document; it SHALL go to the Trash and be restorable like pages and tasks. Blocking overrides of the meeting SHALL stay: for a one-off meeting that also has a blocking override, deleting SHALL empty the notes instead (Undo brings them back).
 
 #### Scenario: Delete and restore notes
 - **WHEN** the user deletes the notes of "1:1 Alex" and restores them from the Trash

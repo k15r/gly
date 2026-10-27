@@ -50,6 +50,13 @@ public struct SeriesRule: Equatable, Identifiable {
     public let baseIDs: [String]
     public let blocking: BlockingOverride?
 
+    /// Same series as the appointment a snapshot was taken of (see `matches(_:)`).
+    public func matches(_ s: AppointmentSnapshot) -> Bool {
+        guard s.calendarID == calendarID else { return false }
+        if baseIDs.contains(s.baseID) { return true }
+        return TagName.key(for: s.title) == TagName.key(for: title) && (s.organizer ?? "") == (organizer ?? "")
+    }
+
     /// Same series (by id), or its continuation after a split (same calendar, title and organizer).
     public func matches(_ a: Appointment) -> Bool {
         guard a.identity.calendarID == calendarID else { return false }

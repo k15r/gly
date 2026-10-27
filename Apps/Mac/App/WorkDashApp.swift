@@ -160,6 +160,7 @@ struct ContentView: View {
                 case .page(let id): PageView(id: id)
                 case .task(let id): TaskPageView(id: id)
                 case .tag(let name): TagPageView(name: name)
+                case .meeting(let id): MeetingPageView(itemID: id)
                 }
             }
         }
@@ -408,6 +409,7 @@ struct TreeLeafRow: View {
         case .page: "doc.text"
         case .task: leaf.snoozed ? "moon.zzz" : "circle"
         case .tag: "tag"
+        case .meeting: "calendar"
         }
     }
 
@@ -448,6 +450,7 @@ struct TreeLeafRow: View {
         switch leaf.kind {
         case .page: nav.go(.page(leaf.itemID))
         case .task: nav.go(.task(leaf.itemID))
+        case .meeting: nav.go(.meeting(leaf.itemID))
         case .tag: break
         }
     }
@@ -458,9 +461,10 @@ struct TreeLeafRow: View {
             switch leaf.kind {
             case .page: await app.send(.deletePage(id: id))
             case .task: await app.send(.deleteTask(id: id))
+            case .meeting: await app.send(.deleteMeetingNotes(id: id))
             case .tag: return
             }
-            if nav.current == .page(id) || nav.current == .task(id) { nav.back() }
+            if nav.current == .page(id) || nav.current == .task(id) || nav.current == .meeting(id) { nav.back() }
         }
     }
 }
@@ -480,7 +484,7 @@ enum ItemMove {
             switch kind {
             case .page: guard let page = wiki.page(id) else { continue }; current = page.tags
             case .task: guard let task = tasks.task(id: id) else { continue }; current = task.tags
-            case .tag: continue
+            case .tag, .meeting: continue      // meetings: tags are edited on the meeting page
             }
             var tags = current
             func has(_ t: String) -> Bool { tags.contains { TagName.key(for: $0) == TagName.key(for: t) } }
@@ -495,7 +499,7 @@ enum ItemMove {
                 switch kind {
                 case .page: await app.send(.updatePage(id: id, PagePatch(tags: tags)))
                 case .task: await app.send(.updateTask(id: id, TaskPatch(tags: tags)))
-                case .tag: break
+                case .tag, .meeting: break
                 }
             }
         }

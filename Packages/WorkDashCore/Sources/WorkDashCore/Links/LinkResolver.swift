@@ -82,7 +82,7 @@ public enum LinkResolver {
         let rows = try Row.fetchAll(db, sql: sql, arguments: StatementArguments(args)).filter { TagName.key(for: $0["title"]) == titleKey }
         let tags = try TaskQueries.tagsByItem(db, ids: rows.map { $0["id"] as String })
         return rows.map { r in
-            LinkCandidate(id: r["id"], kind: (r["kind"] as String) == "info" ? .page : .task, title: r["title"], tags: tags[r["id"]] ?? [])
+            LinkCandidate(id: r["id"], kind: LinkRef.Kind(itemKind: r["kind"]), title: r["title"], tags: tags[r["id"]] ?? [])
         }
     }
 

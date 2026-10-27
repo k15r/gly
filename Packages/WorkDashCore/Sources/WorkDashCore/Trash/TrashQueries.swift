@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-/// A deleted page or task (specs/trash "Trash contents", design T1).
+/// A deleted page, task or meeting notes document (specs/trash "Trash contents", design T1).
 public struct TrashEntry: Equatable, Identifiable {
     public let id: String
     public let kind: LinkRef.Kind
@@ -26,13 +26,13 @@ public enum TrashQueries {
     public static func list(_ db: Database, since: Date? = nil) throws -> [TrashEntry] {
         let rows = try Row.fetchAll(db, sql: """
             SELECT i.id, i.kind, i.title, i.body, i.status, i.deleted_at FROM items i
-            WHERE i.kind IN ('info', 'task') AND i.deleted_at IS NOT NULL AND (? IS NULL OR i.deleted_at >= ?)
+            WHERE (i.kind IN ('info', 'task') OR (i.kind = 'event_note' AND i.body != '')) AND i.deleted_at IS NOT NULL AND (? IS NULL OR i.deleted_at >= ?)
             ORDER BY i.deleted_at DESC
             """, arguments: [since, since])
         return try rows.map { r in
             let id: String = r["id"]
             let delete = try deleteEntry(db, itemID: id)
-            return TrashEntry(id: id, kind: (r["kind"] as String) == "info" ? .page : .task, title: r["title"],
+            return TrashEntry(id: id, kind: LinkRef.Kind(itemKind: r["kind"]), title: r["title"],
                               tags: try delete.map { try tags(db, deletedIn: $0.batch, itemID: id) } ?? [],
                               excerpt: TreeLeaf.excerpt(of: r["body"] ?? ""),
                               status: (r["status"] as String?).flatMap(TaskStatus.init(rawValue:)),
@@ -43,13 +43,13 @@ public enum TrashQueries {
     /// Number of deleted pages and tasks deleted before `date` ("Show older (n)").
     public static func count(_ db: Database, before date: Date) throws -> Int {
         try Int.fetchOne(db, sql: """
-            SELECT COUNT(*) FROM items WHERE kind IN ('info', 'task') AND deleted_at IS NOT NULL AND deleted_at < ?
+            SELECT COUNT(*) FROM items WHERE (kind IN ('info', 'task') OR (kind = 'event_note' AND body != '')) AND deleted_at IS NOT NULL AND deleted_at < ?
             """, arguments: [date]) ?? 0
     }
 
     /// The deleted page or task with this id, or nil when it is live, unknown or another kind.
     public static func entry(_ db: Database, id: String) throws -> TrashEntry? {
-        guard try Bool.fetchOne(db, sql: "SELECT 1 FROM items WHERE id = ? AND kind IN ('info', 'task') AND deleted_at IS NOT NULL",
+        guard try Bool.fetchOne(db, sql: "SELECT 1 FROM items WHERE id = ? AND (kind IN ('info', 'task') OR (kind = 'event_note' AND body != '')) AND deleted_at IS NOT NULL",
                                 arguments: [id]) == true else { return nil }
         return try list(db).first { $0.id == id }
     }

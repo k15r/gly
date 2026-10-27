@@ -16,9 +16,11 @@ public struct SearchResults: Equatable {
     public var pages: [SearchHit] = []
     public var tasks: [SearchHit] = []
     public var tags: [SearchHit] = []
+    /// Meetings with notes (meeting-pages), found by title and notes text.
+    public var meetings: [SearchHit] = []
     public init() {}
-    public var isEmpty: Bool { pages.isEmpty && tasks.isEmpty && tags.isEmpty }
-    public var all: [SearchHit] { pages + tasks + tags }
+    public var isEmpty: Bool { pages.isEmpty && tasks.isEmpty && tags.isEmpty && meetings.isEmpty }
+    public var all: [SearchHit] { pages + tasks + meetings + tags }
 }
 
 public enum SearchQueries {
@@ -29,7 +31,7 @@ public enum SearchQueries {
         return words.enumerated().map { i, w in i == words.count - 1 ? "\"\(w)\"*" : "\"\(w)\"" }.joined(separator: " ")
     }
 
-    public static func search(_ db: Database, _ input: String, kinds: Set<LinkRef.Kind> = [.page, .task, .tag], limit: Int = 20) throws -> SearchResults {
+    public static func search(_ db: Database, _ input: String, kinds: Set<LinkRef.Kind> = [.page, .task, .tag, .meeting], limit: Int = 20) throws -> SearchResults {
         guard let match = ftsQuery(input) else { return SearchResults() }
         var results = SearchResults()
         for kind in kinds {
@@ -39,6 +41,8 @@ public enum SearchQueries {
             case .page: (ftsKind, extra) = ("info", "")
             case .task: (ftsKind, extra) = ("task", "")
             case .tag: (ftsKind, extra) = ("tag", " AND owner_id NOT IN (SELECT id FROM tags WHERE archived = 1)")
+            // Annotation rows that only carry a blocking override have no notes and aren't results.
+            case .meeting: (ftsKind, extra) = ("event_note", " AND owner_id IN (SELECT id FROM live_items WHERE kind = 'event_note' AND body != '')")
             }
             let rows = try Row.fetchAll(db, sql: """
                 SELECT owner_id, title, snippet(search_index, 4, '', '', '…', 12) AS excerpt
@@ -55,9 +59,11 @@ public enum SearchQueries {
             case .page: results.pages = hits
             case .task: results.tasks = hits
             case .tag: results.tags = hits
+            case .meeting: results.meetings = hits
             }
         }
         results.pages = try enrich(db, results.pages); results.tasks = try enrich(db, results.tasks); results.tags = try enrich(db, results.tags)
+        results.meetings = try enrich(db, results.meetings)
         return results
     }
 
@@ -70,7 +76,7 @@ public enum SearchQueries {
             WHERE ((i.kind = 'info' AND ?) OR (i.kind = 'task' AND i.status IN ('open', 'snoozed') AND ?)) AND \(filter.sql)
             ORDER BY i.modified_at DESC LIMIT ?
             """, arguments: [kinds.contains(.page), kinds.contains(.task)] + filter.arguments + [limit]).map { r in
-                SearchHit(ref: LinkRef(kind: (r["kind"] as String) == "info" ? .page : .task, id: r["id"], title: r["title"]), excerpt: "")
+                SearchHit(ref: LinkRef(kind: LinkRef.Kind(itemKind: r["kind"]), id: r["id"], title: r["title"]), excerpt: "")
             }
         if kinds.contains(.tag), hits.count < limit {
             hits += try Row.fetchAll(db, sql: "SELECT id, name FROM live_tags WHERE name_key LIKE ? ESCAPE '\\' ORDER BY name_key LIMIT ?",

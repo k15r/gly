@@ -17,7 +17,7 @@ public enum LinkAppearance: Equatable {
 extension LinkRef.Kind {
     /// SF Symbol shown before links of this kind.
     public var linkSymbol: String {
-        switch self { case .page: "doc.text"; case .task: "checkmark.circle"; case .tag: "tag" }
+        switch self { case .page: "doc.text"; case .task: "checkmark.circle"; case .tag: "tag"; case .meeting: "calendar" }
     }
 }
 

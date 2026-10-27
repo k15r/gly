@@ -11,6 +11,7 @@ final class Navigation {
         case page(String)       // page id
         case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
+        case meeting(String)    // meeting notes item id (meeting-pages N7)
     }
 
     private(set) var current: Destination = .day

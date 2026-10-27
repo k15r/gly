@@ -78,6 +78,7 @@ struct BacklinksView: View {
         case .page: nav.go(.page(ref.id))
         case .task: nav.go(.task(ref.id))
         case .tag: nav.go(.tag(ref.title))
+        case .meeting: nav.go(.meeting(ref.id))
         }
     }
 }
@@ -456,6 +457,7 @@ struct QuickOpenView: View {
             case .page: nav.go(.page(hit.ref.id))
             case .task: nav.go(.task(hit.ref.id))
             case .tag: nav.go(.tag(hit.ref.title))
+            case .meeting: nav.go(.meeting(hit.ref.id))
             }
         case .create(let title):
             Task { await opener?.createPage(title: title) }

@@ -88,7 +88,9 @@ extension Database {
     public func label(ofBatch batchID: String) throws -> String {
         let entries = try Row.fetchAll(self, sql: "SELECT * FROM change_log WHERE batch = ? ORDER BY seq", arguments: [batchID])
         // The primary row is the first one written; later rows are follow-ups (tag assignments, link label refreshes).
-        if let rule = entries.first(where: { ($0["table_name"] as String) == "series_rules" }) {
+        // A series rule created for a notes document is a follow-up of the notes, not a blocking change.
+        let createsSeriesNotes = entries.contains { ($0["table_name"] as String) == "items" && ($0["field"] as String?) == "series_rule" }
+        if !createsSeriesNotes, let rule = entries.first(where: { ($0["table_name"] as String) == "series_rules" }) {
             let r = try Row.fetchOne(self, sql: "SELECT title, blocking FROM series_rules WHERE id = ?", arguments: [rule["row_id"] as String])
             return "\(Self.blockingVerb(r?["blocking"])) “\(r?["title"] as String? ?? "series")” (series)"
         }
@@ -117,6 +119,15 @@ extension Database {
         }
         guard table == "items",
               let item = try Row.fetchOne(self, sql: "SELECT kind, title FROM items WHERE id = ?", arguments: [rowID]) else { return "change" }
+        // Meeting notes (meeting-pages N4): text written or the document deleted.
+        let notesWritten = own.contains { ($0["op"] as String) != "insert" && ($0["field"] as String?) == "body" }
+        if (item["kind"] as String) == "event_note", notesWritten || fields.contains("series_rule") || fields.contains("deleted_at") {
+            let title = item["title"] as String
+            if let entry = own.first(where: { ($0["field"] as String?) == "deleted_at" }) {
+                return ChangeValue.decode(entry["new_value"]).isNull ? "Restore notes “\(title)”" : "Delete notes “\(title)”"
+            }
+            return "Edit notes “\(title)”"
+        }
         if (item["kind"] as String) == "event_note", fields.contains("blocking") || own.contains(where: { ($0["op"] as String) == "insert" }) {
             let b = try String.fetchOne(self, sql: "SELECT blocking FROM items WHERE id = ?", arguments: [rowID])
             return "\(Self.blockingVerb(b)) “\(item["title"] as String)” (this occurrence)"
