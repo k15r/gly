@@ -68,17 +68,15 @@ Returns `(kind: .series(ruleID?) | .occurrence(key), itemID?, sectionDate)`:
   - The dial-in block starts at the first `____…` separator line or a "Microsoft Teams" heading.
   - Bare URLs in the agenda become links.
 
-### N6: Open in Calendar
+### N6: No "Open in Calendar"
 
-- **First try:** `ical://ekevent/<calendarItemExternalIdentifier or eventIdentifier>?method=show&options=more`, through `NSWorkspace`.
-- **Fallback:** activate Calendar. Showing a specific date needs AppleScript (`view calendar at date`), which requires the Apple Events entitlement and a one-time permission prompt in the sandbox. The spike decides whether that's worth it, or whether plain activation is enough.
-- **Task 1.1 is a spike** to settle which form works with Exchange events. The spec allows the fallback.
+Dropped after a first look. Opening one exact event needs an undocumented `ical://ekevent/…` URL, and the fallback only activates Calendar. With the description, the folded dial-in block and Join in the details, it adds nothing, so the details stay without it.
 
 ### N7: App
 
 - **`Navigation.Destination.meeting(MeetingRef)`:** `MeetingRef` is the notes item id, or an appointment identity plus date when no notes exist yet.
-- **`MeetingPageView`:** a header (facts, description, Join, Open in Calendar, a state badge for cancelled or gone), then the editor or read view with the `TaskPageView` patterns (session saves, link menu, tags, backlinks).
-- **Popover:** `AppointmentDetails` adds the description, Join, Open in Calendar and Notes.
+- **`MeetingPageView`:** a header (facts, description, Join, a state badge for cancelled or gone), then the editor or read view with the `TaskPageView` patterns (session saves, link menu, tags, backlinks).
+- **Popover:** `AppointmentDetails` adds the description (attendees folded), Join and Notes.
 - **Day view:** a note icon from a per-day "has notes" set (one query by keys and series rules).
 - **Tag tree, tag pages and ⌘K/search:** a `meeting` kind with a calendar icon (`calendar`), using `TreeLeaf.kind = .meeting` and `SearchResults.meetings`. `LinkRef.Kind` gains `meeting` for backlinks and search only. `[[` doesn't offer meetings (non-goal), and `LinkParser` doesn't change.
 
@@ -92,7 +90,6 @@ Returns `(kind: .series(ruleID?) | .occurrence(key), itemID?, sectionDate)`:
 
 - **[A recurring meeting without a matching rule after an unusual split]** → The resolver falls back to occurrence notes and the page shows a hint. Reconciliation keeps adopting splits as it does for overrides.
 - **[Descriptions contain sensitive text]** → Shown only, never stored or indexed. Search covers notes only.
-- **[`ical://ekevent` is undocumented]** → Spike first; the fallback keeps the action useful.
 - **[Large series documents]** → Plain text in one row; years of weekly notes are a few hundred KB, fine for SQLite and the editor.
 
 ## Migration Plan

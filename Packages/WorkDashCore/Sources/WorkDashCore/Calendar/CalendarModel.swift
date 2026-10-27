@@ -36,20 +36,18 @@ public struct Appointment: Identifiable, Hashable {
     /// The description and URL as the calendar has them; shown live, never stored (meeting-pages N5).
     public let notes: String?
     public let url: URL?
-    /// EventKit's local event id (for "Open in Calendar", meeting-pages N6).
-    public let eventIdentifier: String?
 
     public init(id: String, calendarID: String, title: String, start: Date, end: Date, isAllDay: Bool = false,
                 isCancelled: Bool = false, location: String? = nil, organizer: String? = nil, attendees: [String] = [],
                 lastModified: Date? = nil, identity: AppointmentIdentity? = nil, availability: Availability = .unknown,
                 myStatus: ParticipationStatus = .none, isOrganizer: Bool = false, isRecurring: Bool = false,
-                notes: String? = nil, url: URL? = nil, eventIdentifier: String? = nil) {
+                notes: String? = nil, url: URL? = nil) {
         self.id = id; self.calendarID = calendarID; self.title = title; self.start = start; self.end = end
         self.isAllDay = isAllDay; self.isCancelled = isCancelled; self.location = location; self.organizer = organizer
         self.attendees = attendees; self.lastModified = lastModified
         self.identity = identity ?? AppointmentIdentity(calendarID: calendarID, baseID: id, originalStart: start)
         self.availability = availability; self.myStatus = myStatus; self.isOrganizer = isOrganizer; self.isRecurring = isRecurring
-        self.notes = notes; self.url = url; self.eventIdentifier = eventIdentifier
+        self.notes = notes; self.url = url
     }
 
     public var interval: DateInterval { DateInterval(start: start, end: max(start, end)) }

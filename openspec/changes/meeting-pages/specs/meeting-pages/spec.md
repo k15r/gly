@@ -33,11 +33,11 @@ A series document SHALL be organized in sections headed by the meeting date (for
 - **THEN** the page shows the series document scrolled to the 27 Oct section
 
 ### Requirement: Meeting page
-The meeting page SHALL show the meeting's title, time, calendar, location, organizer and attendees, its description with clickable links and a folded dial-in block, a join button when the description or location contains a meeting link, and an "Open in Calendar" action, followed by the notes document with tags and backlinks. Notes SHALL be edited like page text (links, autosave, one undo step per edit session).
+The meeting page SHALL show the meeting's title, time, calendar, location, organizer and attendees, its description with clickable links and a folded dial-in block, and a join button when the description or location contains a meeting link, followed by the notes document with tags and backlinks. Notes SHALL be edited like page text (links, autosave, one undo step per edit session).
 
-#### Scenario: Join and open
+#### Scenario: Join from the page
 - **WHEN** the user opens the page of a Teams meeting
-- **THEN** a Join button opens the Teams link, and "Open in Calendar" shows the meeting in Calendar (or Calendar on that day where the exact event can't be addressed)
+- **THEN** a Join button opens the Teams link
 
 #### Scenario: Link from notes
 - **WHEN** the notes contain `[[project/atlas/Roadmap]]`

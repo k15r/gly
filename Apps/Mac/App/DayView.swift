@@ -387,13 +387,6 @@ struct AppointmentDetails: View {
                     Button { NSWorkspace.shared.open(join) } label: { Label("Join \(d.service ?? "")", systemImage: "video") }
                         .buttonStyle(.borderedProminent)
                 }
-                // SPIKE (meeting-pages 1.1): which "Open in Calendar" form shows the exact event?
-                Menu("Open in Calendar") {
-                    Button("A · EventKit id") { CalendarOpener.open(.eventIdentifier, a) }
-                    Button("B · external id") { CalendarOpener.open(.externalIdentifier, a) }
-                    Button("C · just activate Calendar") { CalendarOpener.open(.activate, a) }
-                }
-                .fixedSize()
             }
         }
         .textSelection(.enabled)

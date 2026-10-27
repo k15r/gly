@@ -9,7 +9,6 @@ Meetings are the one thing in my day WorkDash can't hold notes for. Clicking an 
 - **Richer appointment popover:**
   - the meeting description, with links clickable
   - the Teams/Zoom join link as a button, and the dial-in boilerplate folded
-  - "Open in Calendar"
   - "Notes", which opens the meeting page
 - **Meeting page** in the main pane, like a task page. A header shows the meeting facts and description, then a markdown document with `[[links]]`, tags and backlinks:
   - **Recurring meetings:** one ever-growing document for the whole series, which follows series splits like series overrides do. It has dated sections, newest on top. Opening it from a specific meeting goes to that meeting's section; the heading (`## Tue 3 Nov`) is added only once text is written there.
@@ -24,17 +23,17 @@ Meetings are the one thing in my day WorkDash can't hold notes for. Clicking an 
   - `get_schedule` marks meetings that have notes
   - new tools read and write a meeting's notes, e.g. "prep notes for my 14:00 from the atlas pages"; writing appends to the meeting's dated section
 
-Not in this change: linking a meeting with `[[…]]`, notes on appointments from hidden calendars, editing the appointment itself, bookmarks and quick capture (separate changes).
+Not in this change: opening the meeting in Calendar (dropped: description and Join cover it), linking a meeting with `[[…]]`, notes on appointments from hidden calendars, editing the appointment itself, bookmarks and quick capture (separate changes).
 
 ## Capabilities
 
 ### New Capabilities
 
-- `meeting-pages`: notes documents per series or one-off meeting, the meeting page (header, description, join link, Open in Calendar), dated sections, and their life cycle when meetings change or disappear.
+- `meeting-pages`: notes documents per series or one-off meeting, the meeting page (header, description, join link), dated sections, and their life cycle when meetings change or disappear.
 
 ### Modified Capabilities
 
-- `day-view`: the appointment popover gains description, join link, Open in Calendar and Notes; appointments with notes are marked.
+- `day-view`: the appointment popover gains description, join link and Notes; appointments with notes are marked.
 - `tags`: the tag list also lists tagged meetings as leaves.
 - `tag-pages`: tag pages list tagged meetings.
 - `search`: full-text search and quick open include meeting notes.
@@ -55,4 +54,3 @@ Not in this change: linking a meeting with `[[…]]`, notes on appointments from
   - the popover, the meeting page and the navigation destination
   - note indicators, meetings in the tag tree, tag pages and ⌘K
 - **MCP:** a `has_notes` field in `get_schedule`, and two tools.
-- **Spike:** opening one specific event in Calendar (undocumented `ical://ekevent/…` URL) vs. opening Calendar on the meeting's day.
