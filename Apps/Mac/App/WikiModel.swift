@@ -2,8 +2,8 @@ import AppKit
 import Foundation
 import GRDB
 import Observation
-import WorkDashCore
-import WorkDashEditor
+import GlyCore
+import GlyEditor
 
 /// Observes one query for one view (page view, tag page view).
 @MainActor

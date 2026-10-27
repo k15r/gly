@@ -1,6 +1,6 @@
 # Manual checks: info-pages-and-links
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
 Use neutral test data only (no real names).
 
 ## A. Editor (tasks 4.2–4.4)

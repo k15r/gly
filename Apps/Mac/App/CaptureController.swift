@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// Owns the capture panel and the global shortcut (quick-capture Q2–Q4).
 @MainActor
@@ -51,7 +51,7 @@ final class CaptureController {
 
     var draft: CaptureDraft { CaptureParser.parse(text, kind: kind, today: LocalDay(date: Date())) }
 
-    /// Creates the item; with `open`, shows it in WorkDash. The text is only cleared after a successful save.
+    /// Creates the item; with `open`, shows it in gly. The text is only cleared after a successful save.
     func save(open: Bool) {
         let d = draft
         guard !d.isEmpty, let app else { return }
@@ -78,7 +78,7 @@ final class CaptureController {
     }
 }
 
-/// A floating panel that takes keyboard input without activating WorkDash (Q3).
+/// A floating panel that takes keyboard input without activating gly (Q3).
 final class CapturePanel: NSPanel, NSWindowDelegate {
     init(contentRect: NSRect) {
         super.init(contentRect: contentRect, styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],

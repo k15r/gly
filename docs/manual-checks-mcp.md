@@ -1,14 +1,14 @@
 # Manual checks: mcp-server
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
-Registration (once): copy the command from WorkDash → Settings (⌘,) → Agents → Claude Code.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
+Registration (once): copy the command from gly → Settings (⌘,) → Agents → Claude Code.
 Use neutral test data only (no real names).
 
 ## A. Claude Code (task 4.3)
 
-- [x] A1 `claude mcp list` shows `workdash` as connected.
+- [x] A1 `claude mcp list` shows `gly` as connected.
 - [x] A2 In a **new** Claude Code session, ask for today's schedule: the reply lists today's SAP and iCloud appointments and today's due/overdue tasks.
-- [x] A3 Ask Claude Code to create a test task ("MCP test task", priority high, due tomorrow, tag `project/atlas`): it appears in the WorkDash task list at once.
+- [x] A3 Ask Claude Code to create a test task ("MCP test task", priority high, due tomorrow, tag `project/atlas`): it appears in the gly task list at once.
 
 ## B. Settings → Agents (tasks 6.1, 6.2)
 
@@ -23,17 +23,17 @@ Use neutral test data only (no real names).
 - [x] C2 Claude Code lists overdue tasks (it should use `list_tasks` with `due_before`).
 - [x] C3 Claude Code updates the test task: snooze until a date, change tags. Each change shows in the app at once and in "Recent agent changes".
 - [x] C4 Claude Code deletes the test task: it disappears from the app. (Deleted tasks are only visible as "Delete …" in Recent agent changes; a trash bin with restore is a later change.)
-- [x] C5 Edit some task yourself, let Claude Code change another task, then press ⌘Z in WorkDash: only your edit is undone.
-- [x] C6 Developer → Unregister Agent, then ask Claude Code for the schedule: it gets an "agent unavailable" error quickly (no hang). Quit and reopen WorkDash to re-register.
+- [x] C5 Edit some task yourself, let Claude Code change another task, then press ⌘Z in gly: only your edit is undone.
+- [x] C6 Developer → Unregister Agent, then ask Claude Code for the schedule: it gets an "agent unavailable" error quickly (no hang). Quit and reopen gly to re-register.
 
 ## D. Joule experiment (task 7.2)
 
 - [x] D1 Switch the HTTP endpoint on and copy the URL.
 - [x] D2 In Joule → Add Connector, enter the URL (`http://127.0.0.1:47615/mcp/<token>`). Note whether the form accepts it. If not, try `http://localhost:47615/mcp/<token>`.
-- [x] D3 Check what arrived: `/usr/bin/log show --last 10m --predicate 'process == "WorkDashAgent"' | grep http:`
+- [x] D3 Check what arrived: `/usr/bin/log show --last 10m --predicate 'process == "glyAgent"' | grep http:`
   - nothing → Joule calls from the cloud; a local endpoint can't work
   - requests with a browser `origin=` and 403 → add that origin under "Allowed browser origins", Apply, retry
-  - 200 responses → Joule can use WorkDash; try "what's on my schedule today?"
+  - 200 responses → Joule can use gly; try "what's on my schedule today?"
 - [x] D4 Record the outcome in the results table. (Endpoint left on, since Joule Desktop now uses it.)
 
 ## Results

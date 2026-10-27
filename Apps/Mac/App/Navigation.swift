@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// A meeting page: stored notes (from search, tags, backlinks) or an appointment from the day view (notes or not).
 enum MeetingRef: Hashable {

@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 extension Color {
     init(hex: String) {
@@ -47,8 +47,8 @@ struct NoCalendarAccessView: View {
             Image(systemName: "calendar.badge.exclamationmark").font(.largeTitle).foregroundStyle(.secondary)
             Text("No calendar access").font(.headline)
             Text(calendars.authorization == .notDetermined
-                 ? "WorkDash will ask for access to show your appointments."
-                 : "Allow WorkDash to read your calendars to see appointments here. Tasks keep working without it.")
+                 ? "gly will ask for access to show your appointments."
+                 : "Allow gly to read your calendars to see appointments here. Tasks keep working without it.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary)
             Button("Open Calendar Privacy Settings") { calendars.openPrivacySettings() }
         }

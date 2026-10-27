@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// Settings → Data: erase all data for good (settings stay). Two confirmations: the button, then the alert.
 struct DataSettingsView: View {
@@ -25,7 +25,7 @@ struct DataSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 480)
-        .alert("Erase all WorkDash data?", isPresented: $confirming) {
+        .alert("Erase all gly data?", isPresented: $confirming) {
             Button("Erase All Data", role: .destructive) {
                 Task {
                     guard case .ok = await app.send(.eraseAllData) else { return }

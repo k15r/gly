@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// Settings → Agents (mcp-server design M8): MCP status, Claude Code registration, the experimental
 /// local HTTP endpoint, and recent agent changes.
@@ -14,8 +14,8 @@ struct AgentsSettingsView: View {
     @State private var origins = ""
     @State private var copied: String?
 
-    private var wdMCPPath: String { Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/wd-mcp").path }
-    private var claudeCommand: String { "claude mcp add --scope user workdash -- \"\(wdMCPPath)\"" }
+    private var glyMCPPath: String { Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/gly-mcp").path }
+    private var claudeCommand: String { "claude mcp add --scope user gly -- \"\(glyMCPPath)\"" }
     private var url: String { "http://127.0.0.1:\(port)/mcp/\(token)" }
 
     var body: some View {
@@ -34,7 +34,7 @@ struct AgentsSettingsView: View {
                     }
                 }
             } header: { Text("Claude Code") } footer: {
-                Text("Run once in Terminal. Run it again if you move WorkDash.app.").font(.caption).foregroundStyle(.secondary)
+                Text("Run once in Terminal. Run it again if you move gly.app.").font(.caption).foregroundStyle(.secondary)
             }
 
             Section {

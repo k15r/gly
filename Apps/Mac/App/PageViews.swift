@@ -1,11 +1,11 @@
 import GRDB
 import SwiftUI
-import WorkDashCore
-import WorkDashEditor
+import GlyCore
+import GlyEditor
 
 // MARK: - Shared pieces
 
-/// The markdown editor wired to WorkDash: link appearance, `[[` suggestions and link opening (design P8).
+/// The markdown editor wired to gly: link appearance, `[[` suggestions and link opening (design P8).
 struct WDMarkdownEditor: View {
     @Environment(WikiModel.self) private var wiki
     @Environment(\.linkOpener) private var opener
@@ -25,7 +25,7 @@ struct WDMarkdownEditor: View {
     }
 }
 
-/// Rendered markdown with WorkDash link appearance.
+/// Rendered markdown with gly link appearance.
 struct WDMarkdownReadView: View {
     @Environment(WikiModel.self) private var wiki
     let text: String

@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// The main screen (specs/day-view): one day with all visible appointments and the tasks for that day.
 struct DayView: View {

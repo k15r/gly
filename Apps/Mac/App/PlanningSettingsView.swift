@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// Settings → Planning (specs/daily-planning "Working hours", "Effort sizes", "Work on list").
 struct PlanningSettingsView: View {

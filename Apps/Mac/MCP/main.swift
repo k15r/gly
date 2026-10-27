@@ -1,8 +1,8 @@
-// wd-mcp: stdio MCP endpoint for clients like Claude Code (mcp-server design M1).
-// A message pipe: every JSON-RPC line from stdin goes over XPC to WorkDashAgent, which runs the MCP server;
+// gly-mcp: stdio MCP endpoint for clients like Claude Code (mcp-server design M1).
+// A message pipe: every JSON-RPC line from stdin goes over XPC to glyAgent, which runs the MCP server;
 // replies are written to stdout. The only state is the client name from `initialize` (for attribution).
 import Foundation
-import WorkDashCore
+import GlyCore
 
 final class Pipe: @unchecked Sendable {
     private let lock = NSLock()
@@ -35,7 +35,7 @@ final class Pipe: @unchecked Sendable {
             // Requests get a JSON-RPC error instead of hanging; notifications are dropped.
             guard let id = message?["id"] else { return }
             let error: [String: Any] = ["jsonrpc": "2.0", "id": id,
-                                        "error": ["code": -32000, "message": "WorkDash agent unavailable: \(failure.message). Open WorkDash and check Settings → Agents."]]
+                                        "error": ["code": -32000, "message": "gly agent unavailable: \(failure.message). Open gly and check Settings → Agents."]]
             if let out = try? JSONSerialization.data(withJSONObject: error) { write(out) }
         }
     }

@@ -1,6 +1,6 @@
 # Manual checks: tag-colors
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
 Neutral test data only (no real names). Setup: tasks or pages tagged `person/alex`, `person/alex/blargh`, `person/sam`, `project/atlas`; a done task tagged `person/old`; a page "Hub" linking to the tag `person/alex` (via the `[[` picker).
 
 ## A. Colors (task 3.1)
@@ -24,5 +24,5 @@ Neutral test data only (no real names). Setup: tasks or pages tagged `person/ale
 
 ## C. End to end (task 4.1)
 
-- [x] C1 Quit and reopen WorkDash → colors are kept.
+- [x] C1 Quit and reopen gly → colors are kept.
 - [x] C2 Ask Claude Code to make `project/atlas` orange and list the tags → it uses `update_tag_page` with `color: "orange"`; `list_tags` shows `color: orange`, `effective_color: orange`; the app shows it orange.

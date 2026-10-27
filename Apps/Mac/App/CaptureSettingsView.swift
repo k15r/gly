@@ -34,7 +34,7 @@ struct CaptureSettingsView: View {
                     Text("This shortcut is used by another app or the system – choose a different one.")
                         .font(.caption).foregroundStyle(.red)
                 }
-                Text("Opens the capture panel from any app while WorkDash runs.").font(.caption).foregroundStyle(.secondary)
+                Text("Opens the capture panel from any app while gly runs.").font(.caption).foregroundStyle(.secondary)
             }
             Section {
                 Toggle("Show in menu bar", isOn: $showMenuBarIcon)
@@ -59,7 +59,7 @@ struct CaptureSettingsView: View {
                 if !mods.isEmpty { heldSomething = true }
                 // Modifiers released without any key arriving: the system or another app took the combination.
                 if mods.isEmpty, heldSomething {
-                    recordHint = "macOS or another app uses that combination, so it never reached WorkDash – try another (e.g. ⌃⌥⌘Space)."
+                    recordHint = "macOS or another app uses that combination, so it never reached gly – try another (e.g. ⌃⌥⌘Space)."
                     heldSomething = false
                 }
                 return event

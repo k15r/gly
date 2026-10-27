@@ -1,13 +1,13 @@
 # Manual checks: mac-day-view-and-tasks
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
 Mark each item with ✅ / ❌ and a note. Use neutral test data only (no real names).
 
 ## A. App shell and agent (task 7.1)
 
-- [x] A1 First launch: no "Writing disabled" banner (or, if macOS asks, approve the WorkDash login item and press **Retry** in the banner).
-- [x] A2 System Settings → General → Login Items & Extensions: "WorkDash" is listed and allowed.
-- [x] A3 Developer → Unregister Agent → the yellow banner "Writing disabled …" appears and New Task is disabled. Quit and reopen WorkDash → banner gone again.
+- [x] A1 First launch: no "Writing disabled" banner (or, if macOS asks, approve the gly login item and press **Retry** in the banner).
+- [x] A2 System Settings → General → Login Items & Extensions: "gly" is listed and allowed.
+- [x] A3 Developer → Unregister Agent → the yellow banner "Writing disabled …" appears and New Task is disabled. Quit and reopen gly → banner gone again.
 
 ## B. Calendars (task 7.2)
 
@@ -48,9 +48,9 @@ Mark each item with ✅ / ❌ and a note. Use neutral test data only (no real na
 
 ## F. End to end on the SAP Mac (task 8.2)
 
-- [x] F1 In Outlook, move a meeting you organize (e.g. a test series) → once Apple Calendar has it, WorkDash shows the new time without any refresh.
+- [x] F1 In Outlook, move a meeting you organize (e.g. a test series) → once Apple Calendar has it, gly shows the new time without any refresh.
 - [x] F2 The account indicator for Exchange updates after F1.
-- [x] F3 Quit WorkDash → reopen: all tasks unchanged. Reboot → still unchanged.
+- [x] F3 Quit gly → reopen: all tasks unchanged. Reboot → still unchanged.
 
 ## Results
 
@@ -58,7 +58,7 @@ Mark each item with ✅ / ❌ and a note. Use neutral test data only (no real na
 |---|---|---|---|
 | 2026-10-25 | owner | A ✅ | App shell and agent: all good |
 | 2026-10-25 | owner | B ✅ | Calendars; fixed: visibility toggles didn't update (state read from UserDefaults wasn't observed) |
-| 2026-10-25 | owner | C ✅ | Day view; fixed: ⌘N opened a new window instead of the task editor. Note: a private multi-day Exchange item isn't delivered by Apple Calendar (outside WorkDash, cause under investigation) |
+| 2026-10-25 | owner | C ✅ | Day view; fixed: ⌘N opened a new window instead of the task editor. Note: a private multi-day Exchange item isn't delivered by Apple Calendar (outside gly, cause under investigation) |
 | 2026-10-26 | owner | D ✅ | Tasks and tags; fixed: ⌘N new window, unconfirmed tag lost on Save, tag field squeezed the editor, ticking now shows the check for 1.5 s before the task leaves, snooze reworked: snoozed tasks stay in the task list with an "until …" marker, are hidden from the day view until their date, and can be snoozed further |
 | 2026-10-26 | owner | E ✅ | Undo/redo; added: overlay (rewind/forward arrow + step with task name) and named Edit menu items; fixed: one editor save was up to three undo steps |
 | 2026-10-26 | owner | F ✅ | End to end: a meeting moved in Outlook showed at the new time without refresh, Exchange indicator updated, tasks survived quit and reboot. EventKit doesn't need Calendar.app running |

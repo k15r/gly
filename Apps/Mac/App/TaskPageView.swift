@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 struct TaskDetail: Equatable {
     var task: TaskItem?

@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 import Observation
-import WorkDashCore
+import GlyCore
 
 /// Planning state for the day view (planning-day-view): settings, overrides, upcoming tasks; computes free time and states.
 @MainActor

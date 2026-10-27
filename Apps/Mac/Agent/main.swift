@@ -1,25 +1,25 @@
-// WorkDashAgent: launch agent inside WorkDash.app, registered as a login item.
-// The only process that writes the store (design L2); reached over XPC by the app and by `wd-mcp`,
+// glyAgent: launch agent inside gly.app, registered as a login item.
+// The only process that writes the store (design L2); reached over XPC by the app and by `gly-mcp`,
 // and hosts the MCP server (mcp-server design M1).
 import Foundation
 import os
-import WorkDashCore
-import WorkDashMCP
+import GlyCore
+import GlyMCP
 
-let log = Logger(subsystem: "dev.k15r.workdash.agent", category: "agent")
+let log = Logger(subsystem: "dev.k15r.gly.agent", category: "agent")
 
 /// The MCP server is created asynchronously; messages arriving before that wait for it.
 actor MCPHost {
-    private var server: WorkDashMCPServer?
-    private var waiters: [CheckedContinuation<WorkDashMCPServer, Never>] = []
+    private var server: GlyMCPServer?
+    private var waiters: [CheckedContinuation<GlyMCPServer, Never>] = []
 
-    func set(_ server: WorkDashMCPServer) {
+    func set(_ server: GlyMCPServer) {
         self.server = server
         waiters.forEach { $0.resume(returning: server) }
         waiters = []
     }
 
-    func get() async -> WorkDashMCPServer {
+    func get() async -> GlyMCPServer {
         if let server { return server }
         return await withCheckedContinuation { waiters.append($0) }
     }
@@ -63,14 +63,18 @@ actor HTTPController {
 }
 
 do {
+    // First start after the rename: copy the WorkDash store and settings (rename-to-gly R2). Never fatal.
+    do { _ = try LegacyMigration.runForApp() } catch {
+        log.error("taking over WorkDash data failed: \(String(describing: error), privacy: .public)")
+    }
     let url = try StoreFactory.defaultDatabaseURL()
     let pool = try StoreFactory.openReadWrite(at: url)
     try pool.write { _ in }        // make sure the WAL file exists for the app's change watcher
     let settings = SharedSettings.shared()
     let calendar = EventKitSource()
-    let tools = WorkDashTools(writer: pool, calendar: calendar,
-                              hiddenCalendarIDs: { settings.hiddenCalendarIDs }, deviceID: settings.deviceID,
-                              planning: { (settings.workingHours, settings.effortSizes, settings.horizonDays) })
+    let tools = GlyTools(writer: pool, calendar: calendar,
+                         hiddenCalendarIDs: { settings.hiddenCalendarIDs }, deviceID: settings.deviceID,
+                         planning: { (settings.workingHours, settings.effortSizes, settings.horizonDays) })
     // Keeps appointment annotations attached after calendar changes (planning-day-view design Q4).
     let reconciler = AnnotationReconciler(writer: pool, calendar: calendar, writerName: "system@\(settings.deviceID)")
     reconciler.start()
@@ -78,7 +82,7 @@ do {
     let http = HTTPController(settings: settings, mcp: mcp)
     Task { await http.apply() }
     Task {
-        do { await mcp.set(try await WorkDashMCPServer(tools: tools)) }
+        do { await mcp.set(try await GlyMCPServer(tools: tools)) }
         catch { log.fault("MCP server failed to start: \(String(describing: error), privacy: .public)") }
     }
     let service = AgentService(
@@ -94,9 +98,9 @@ do {
     let listener = NSXPCListener(machServiceName: GlyIDs.agentMachService)
     listener.delegate = delegate
     listener.resume()
-    log.info("WorkDashAgent listening on \(GlyIDs.agentMachService, privacy: .public), store \(url.path, privacy: .public)")
+    log.info("glyAgent listening on \(GlyIDs.agentMachService, privacy: .public), store \(url.path, privacy: .public)")
     withExtendedLifetime(delegate) { RunLoop.main.run() }
 } catch {
-    log.fault("WorkDashAgent failed to start: \(String(describing: error), privacy: .public)")
+    log.fault("glyAgent failed to start: \(String(describing: error), privacy: .public)")
     exit(1)
 }

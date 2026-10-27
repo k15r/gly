@@ -92,8 +92,8 @@ gly never opens the WorkDash store for writing; the takeover reads it once. Ther
 | modules | `WorkDashCore`, `WorkDashMCP`, `WorkDashEditor` | `GlyCore`, `GlyMCP`, `GlyEditor` |
 | test targets | the same, with `Tests` | the same, with `Tests` |
 | app sources | `Apps/Mac` (kept) | targets `gly`, `glyAgent`, `gly-mcp` |
-| Xcode | `WorkDash.xcodeproj`, scheme `WorkDash` | `Gly.xcodeproj`, scheme `gly` |
-| entitlement files | `WorkDash.entitlements` | `gly.entitlements` |
+| Xcode | `WorkDash.xcodeproj`, scheme `WorkDash` | `gly.xcodeproj`, scheme `gly` |
+| entitlement files | `WorkDash.entitlements`, `WorkDashAgent.entitlements` | `gly.entitlements`, `glyAgent.entitlements` |
 
 - **Types with the name in them:** `WorkDashIDs` → `GlyIDs`, `WorkDashTools` → `GlyTools`, `WorkDashMCPServer` → `GlyMCPServer`, `WorkDashApp` → `GlyApp`, `WorkDashAgent` → `glyAgent`.
 - **UI strings:**

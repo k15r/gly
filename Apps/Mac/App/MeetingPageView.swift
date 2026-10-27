@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 struct MeetingPageData: Equatable {
     var itemID: String?

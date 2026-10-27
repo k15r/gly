@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// Rename (with merge on conflict) and delete for one tag, shared by the tag tree and the tag page (tag-colors C9).
 struct TagManagementPrompts: ViewModifier {

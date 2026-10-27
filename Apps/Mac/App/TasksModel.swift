@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 import Observation
-import WorkDashCore
+import GlyCore
 
 /// Live task data for the views, observed from the read-only store (updates on agent writes, design L2).
 @MainActor

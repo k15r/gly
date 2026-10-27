@@ -1,7 +1,7 @@
 import GRDB
 import SwiftUI
-import WorkDashCore
-import WorkDashEditor
+import GlyCore
+import GlyEditor
 
 /// A sidebar row with a live count from the store (Tasks: open, Pages: all, Trash: deleted in the last 30 days).
 struct SidebarCountRow: View {

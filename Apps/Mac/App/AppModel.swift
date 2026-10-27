@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 import ServiceManagement
-import WorkDashCore
+import GlyCore
 
 struct UndoNotice: Equatable {
     let id = UUID()

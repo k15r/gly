@@ -1,6 +1,6 @@
 # Manual checks: trash-bin
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
 Neutral test data only (no real names). Setup: two pages "Goals" tagged `person/alex` and `person/bob`, a page "Hub" with a link to each (via the `[[` picker), and a task "Call the venue" tagged `project/atlas` with a due date.
 
 ## A. Trash view (task 3.2)

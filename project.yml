@@ -1,5 +1,5 @@
-# WorkDash Mac app. Generate with `xcodegen generate` (the .xcodeproj is git-ignored) or use scripts/build.sh.
-name: WorkDash
+# gly Mac app. Generate with `xcodegen generate` (the .xcodeproj is git-ignored) or use scripts/build.sh.
+name: gly
 options:
   bundleIdPrefix: dev.k15r
   deploymentTarget:
@@ -14,78 +14,78 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
 packages:
-  WorkDashCore:
-    path: Packages/WorkDashCore
+  GlyCore:
+    path: Packages/GlyCore
 targets:
-  WorkDash:
+  gly:
     type: application
     platform: macOS
     sources: [Apps/Mac/App]
     dependencies:
-      - package: WorkDashCore
-      - package: WorkDashCore
-        product: WorkDashEditor
-      - target: WorkDashAgent
+      - package: GlyCore
+      - package: GlyCore
+        product: GlyEditor
+      - target: glyAgent
         embed: true
         copy: {destination: executables}
-      - target: wd-mcp
+      - target: gly-mcp
         embed: true
         copy: {destination: executables}
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash
-        PRODUCT_NAME: WorkDash
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.gly
+        PRODUCT_NAME: gly
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        INFOPLIST_KEY_CFBundleDisplayName: WorkDash
+        INFOPLIST_KEY_CFBundleDisplayName: gly
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
-        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: WorkDash shows the appointments of all your calendars in its day view.
-        INFOPLIST_KEY_NSCalendarsUsageDescription: WorkDash shows the appointments of all your calendars in its day view.
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: gly shows the appointments of all your calendars in its day view.
+        INFOPLIST_KEY_NSCalendarsUsageDescription: gly shows the appointments of all your calendars in its day view.
     entitlements:
-      path: Apps/Mac/App/WorkDash.entitlements
+      path: Apps/Mac/App/gly.entitlements
       properties:
         com.apple.security.app-sandbox: true
-        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
+        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.gly, DB33H6YGK7.dev.k15r.workdash]   # old group: read once for the takeover (rename-to-gly R2)
         com.apple.security.personal-information.calendars: true
     postCompileScripts:
       - name: Copy launch agent plist
         script: |
           mkdir -p "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents"
-          cp "${SRCROOT}/Apps/Mac/LaunchAgents/dev.k15r.workdash.store-agent.plist" "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents/"
-        inputFiles: [$(SRCROOT)/Apps/Mac/LaunchAgents/dev.k15r.workdash.store-agent.plist]
-        outputFiles: [$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchAgents/dev.k15r.workdash.store-agent.plist]
-  WorkDashAgent:
+          cp "${SRCROOT}/Apps/Mac/LaunchAgents/dev.k15r.gly.store-agent.plist" "${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Library/LaunchAgents/"
+        inputFiles: [$(SRCROOT)/Apps/Mac/LaunchAgents/dev.k15r.gly.store-agent.plist]
+        outputFiles: [$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/LaunchAgents/dev.k15r.gly.store-agent.plist]
+  glyAgent:
     type: tool
     platform: macOS
     sources: [Apps/Mac/Agent]
     dependencies:
-      - package: WorkDashCore
-      - package: WorkDashCore
-        product: WorkDashMCP
+      - package: GlyCore
+      - package: GlyCore
+        product: GlyMCP
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.agent
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.gly.agent
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "WorkDash's background agent reads your calendars so AI agents can see your schedule."
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "gly's background agent reads your calendars so AI agents can see your schedule."
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         SKIP_INSTALL: YES
     entitlements:
-      path: Apps/Mac/Agent/WorkDashAgent.entitlements
+      path: Apps/Mac/Agent/glyAgent.entitlements
       properties:
         com.apple.security.app-sandbox: true
-        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.workdash]
+        com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.gly, DB33H6YGK7.dev.k15r.workdash]   # old group: read once for the takeover (rename-to-gly R2)
         com.apple.security.personal-information.calendars: true
         com.apple.security.network.server: true
-  wd-mcp:
+  gly-mcp:
     type: tool
     platform: macOS
     sources: [Apps/Mac/MCP]
     dependencies:
-      - package: WorkDashCore
+      - package: GlyCore
     settings:
       base:
-        PRODUCT_NAME: wd-mcp
-        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.workdash.mcp
+        PRODUCT_NAME: gly-mcp
+        PRODUCT_BUNDLE_IDENTIFIER: dev.k15r.gly.mcp
         GENERATE_INFOPLIST_FILE: YES
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         SKIP_INSTALL: YES

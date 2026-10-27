@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// The new-task form's preset (tasks are edited on their task page, specs/tasks "Task page").
 enum TaskEditorTarget: Identifiable {

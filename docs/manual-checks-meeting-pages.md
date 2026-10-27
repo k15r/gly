@@ -1,6 +1,6 @@
 # Manual checks: meeting-pages
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
 Neutral test data only (no real names in notes or tags; your real calendar meetings are fine to click). Setup: a recurring meeting this week and next (e.g. a weekly), a one-off meeting with a Teams link, a page "Roadmap" tagged `project/atlas`.
 
 ## A. Details popover (task 4.1)

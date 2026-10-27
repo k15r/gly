@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import Observation
-import WorkDashCore
+import GlyCore
 
 /// Calendar state for the app: permission, calendar list, visibility, appointments of the shown day,
 /// per-account "last change seen" (specs/calendar-sources).

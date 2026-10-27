@@ -1,6 +1,6 @@
 import GRDB
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// Which meetings have notes, observed once for all day-view rows (meeting-pages N7).
 @MainActor

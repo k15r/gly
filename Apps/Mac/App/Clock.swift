@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import WorkDashCore
+import GlyCore
 
 /// Current time for time-based UI state; ticks every 30 s and reports day changes (midnight).
 @MainActor

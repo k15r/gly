@@ -1,5 +1,5 @@
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// The capture panel's content (specs/quick-capture "Capture panel").
 struct CaptureView: View {

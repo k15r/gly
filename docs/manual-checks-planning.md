@@ -1,6 +1,6 @@
 # Manual checks: planning-day-view
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
 Neutral test data only (no real names).
 
 ## A. Probe (task 1.1)

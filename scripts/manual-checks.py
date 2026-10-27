@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
-"""Manual checks as WorkDash tasks, through the app's own MCP bridge (wd-mcp).
+"""Manual checks as gly tasks, through the app's own MCP bridge (gly-mcp).
 
   scripts/manual-checks.py push docs/manual-checks-tag-colors.md   # one task per open check (+ a setup task)
   scripts/manual-checks.py pull docs/manual-checks-tag-colors.md   # tick checks whose tasks are done
 
-Tasks are tagged `workdash/checks/<name>` (from the file name), titled "<ID> · <short text>", with the full check
+Tasks are tagged `gly/checks/<name>` (from the file name), titled "<ID> · <short text>", with the full check
 and its section in the notes. `push` skips checks that already have a task; `pull` ticks `- [ ] <ID>` lines whose
 task is done and reports dropped ones (a dropped task = the check failed or doesn't apply; see its notes).
 """
 import json, os, re, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WD_MCP = os.path.join(ROOT, "build/Build/Products/Debug/WorkDash.app/Contents/MacOS/wd-mcp")
+GLY_MCP = os.path.join(ROOT, "build/Build/Products/Debug/gly.app/Contents/MacOS/gly-mcp")
 CHECK = re.compile(r"^- \[( |x)\] ([A-Z]\d+) (.+)$")
 
 
 def call(tool, arguments):
-    """One tools/call through wd-mcp (a fresh stdio session per call keeps it simple)."""
+    """One tools/call through gly-mcp (a fresh stdio session per call keeps it simple)."""
     lines = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
          "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "claude-code", "version": "1"}}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": tool, "arguments": arguments}},
     ]
-    out = subprocess.run([WD_MCP], input="\n".join(json.dumps(l) for l in lines) + "\n",
+    out = subprocess.run([GLY_MCP], input="\n".join(json.dumps(l) for l in lines) + "\n",
                          capture_output=True, text=True, timeout=30).stdout
     for line in out.splitlines():
         msg = json.loads(line)
@@ -33,7 +33,7 @@ def call(tool, arguments):
             if result.get("isError"):
                 sys.exit(f"{tool} failed: {text}")
             return result.get("structuredContent") or json.loads(text)
-    sys.exit(f"{tool}: no answer from wd-mcp")
+    sys.exit(f"{tool}: no answer from gly-mcp")
 
 
 def parse(path):
@@ -52,7 +52,7 @@ def parse(path):
 
 def tag_for(path):
     name = os.path.basename(path).removeprefix("manual-checks-").removesuffix(".md")
-    return f"workdash/checks/{name}"
+    return f"gly/checks/{name}"
 
 
 def short(text):

@@ -1,6 +1,6 @@
 # Manual checks: link-disambiguation
 
-Build and run: `scripts/build.sh && open build/Build/Products/Debug/WorkDash.app`.
+Build and run: `scripts/build.sh && open build/Build/Products/Debug/gly.app`.
 Neutral test data only (no real names). Setup: tags `person/alex` and `person/sam`; a page "Goals" tagged `person/alex` and a second page "Goals" tagged `person/sam`; a task "Review notes".
 
 ## A. Icons and qualifiers on links (task 3.1)

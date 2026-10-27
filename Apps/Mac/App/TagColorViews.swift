@@ -1,7 +1,7 @@
 import AppKit
 import GRDB
 import SwiftUI
-import WorkDashCore
+import GlyCore
 
 /// Effective tag colors for every view (tag-colors C4): one observation of the tags' own colors; chips just read it.
 @MainActor
