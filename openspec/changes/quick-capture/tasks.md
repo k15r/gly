@@ -6,12 +6,12 @@
 
 ## 2. App
 
-- [ ] 2.1 Add `GlobalHotKey` (Q2) and the shortcut setting with default ⌃⌥Space and failure reporting; `CapturePanel` + `CaptureView` (Q3: preview line, Tab Task↔Page, Return / ⌘Return / Esc, keep text on accidental close, no activation on Return); verify manually "Capture from another app", "Save and keep working", "Save and open", "Cancel"
+- [x] 2.1 Add `GlobalHotKey` (Q2) and the shortcut setting with default ⌃⌥Space and failure reporting; `CapturePanel` + `CaptureView` (Q3: preview line, Tab Task↔Page, Return / ⌘Return / Esc, keep text on accidental close, no activation on Return); verify manually "Capture from another app", "Save and keep working", "Save and open", "Cancel"
 - [ ] 2.2 Add the `MenuBarExtra` (Q4) and the Settings "Capture" tab (Q5: shortcut recorder, Show in menu bar, Open at login via `SMAppService.mainApp`); verify manually "Change the shortcut", "Window closed", menu bar hidden/shown, open at login on and off
 
 ## 3. End to end
 
-- [ ] 3.1 Write `docs/manual-checks-quick-capture.md` (neutral test data) and push it as WorkDash tasks with `scripts/manual-checks.py push`; covers capturing from a browser, a full-screen app and with the window closed, the syntax preview, ⌘Return, and undo of a captured task; done when `pull` reports every check passed
+- [x] 3.1 Write `docs/manual-checks-quick-capture.md` (neutral test data) and push it as WorkDash tasks with `scripts/manual-checks.py push`; covers capturing from a browser, a full-screen app and with the window closed, the syntax preview, ⌘Return, and undo of a captured task; done when `pull` reports every check passed
 
 ## Workflow follow-up
 
