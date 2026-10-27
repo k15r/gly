@@ -38,6 +38,8 @@ public struct TagNode: Equatable, Identifiable {
     public let children: [TagNode]
     /// Open tasks, then pages, tagged with exactly this path (the tag tree shows everything tagged).
     public var items: [TreeLeaf] = []
+    /// A tag used only by finished tasks, listed because "Show unused tags" is on (tag-colors C6).
+    public var unused = false
 }
 
 /// An item listed in the tag tree; `otherTags` are its other tags ("also in …").
@@ -74,7 +76,7 @@ public enum TagQueries {
     /// Tags assigned to at least one open task or live page, plus empty tags (nothing assigned, e.g. a new subtag),
     /// as a hierarchy with roll-up open-task counts. Tags used only by finished tasks stay hidden.
     /// "Open" includes snoozed tasks, as in the task list (snoozed = not now, still open).
-    public static func tagTree(_ db: Database, today: String) throws -> [TagNode] {
+    public static func tagTree(_ db: Database, today: String, includeUnused: Bool = false) throws -> [TagNode] {
         let rows = try Row.fetchAll(db, sql: """
             SELECT it.item_id, t.name, i.kind FROM live_item_tags it
             JOIN live_tags t ON t.id = it.tag_id
@@ -83,15 +85,22 @@ public enum TagQueries {
             UNION ALL
             SELECT NULL, t.name, NULL FROM live_tags t
             WHERE NOT EXISTS (SELECT 1 FROM live_item_tags it JOIN live_items i ON i.id = it.item_id WHERE it.tag_id = t.id)
-            """)
+            UNION ALL
+            SELECT NULL, t.name, 'unused' FROM live_tags t
+            WHERE ? AND EXISTS (SELECT 1 FROM live_item_tags it JOIN live_items i ON i.id = it.item_id WHERE it.tag_id = t.id)
+              AND NOT EXISTS (SELECT 1 FROM live_item_tags it JOIN live_items i ON i.id = it.item_id WHERE it.tag_id = t.id
+                              AND ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info'))
+            """, arguments: [includeUnused])
         // path key -> (display path, items, isTag)
         var itemsByPath: [String: Set<String>] = [:]
         var displayByPath: [String: String] = [:]
         var tagPaths = Set<String>()
+        var unusedKeys = Set<String>()
         for row in rows {
             let item: String? = row["item_id"]
             let name: String = row["name"]
             let isTask = (row["kind"] as String?) == "task"
+            if (row["kind"] as String?) == "unused" { unusedKeys.insert(TagName.key(for: name)) }
             let segments = name.split(separator: "/").map(String.init)
             tagPaths.insert(TagName.key(for: name))
             for depth in 1...segments.count {
@@ -111,7 +120,7 @@ public enum TagQueries {
                     let display = displayByPath[key]!
                     return TagNode(segment: String(display.split(separator: "/").last!), path: display,
                                    isTag: tagPaths.contains(key), openCount: itemsByPath[key]!.count,
-                                   children: children(of: key), items: leaves[key] ?? [])
+                                   children: children(of: key), items: leaves[key] ?? [], unused: unusedKeys.contains(key))
                 }
         }
         return children(of: nil)

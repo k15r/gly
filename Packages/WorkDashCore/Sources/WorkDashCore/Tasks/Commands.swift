@@ -128,6 +128,10 @@ public enum Command: Codable, Equatable {
     case eraseAllData
     /// Sets or clears (nil) a tag's own color; creates the tag row for a group name (tag-colors C3).
     case setTagColor(name: String, color: TagColor?)
+    /// Renames a tag and its subtree; an existing target name fails with `conflict` unless `merge` (tag-colors C7).
+    case renameTag(from: String, to: String, merge: Bool = false)
+    /// Deletes a tag (its assignments too; subtags stay) (tag-colors C8).
+    case deleteTag(name: String)
     /// Creates an (empty) tag, e.g. a new subtag; an existing tag is returned unchanged (case-insensitive).
     case createTag(name: String)
     /// Blocking override for one occurrence or a whole series; nil = automatic (specs/appointment-annotations).
@@ -164,7 +168,7 @@ public struct CommandOK: Codable, Equatable {
 }
 
 public struct CommandFailure: Codable, Equatable, Error, CustomStringConvertible {
-    public enum Code: String, Codable { case validation, notFound, unavailable, `internal` }
+    public enum Code: String, Codable { case validation, notFound, unavailable, `internal`, conflict }
     public var code: Code
     public var message: String
     public init(_ code: Code, _ message: String) { self.code = code; self.message = message }
@@ -314,6 +318,12 @@ public struct CommandHandler {
                 ?? batch.insert("tags", ["name": tag.display, "name_key": tag.key, "page_body": ""])
             let changed = try batch.update("tags", id: tagID, ["color": color?.rawValue])
             return CommandOK(id: tagID, changed: !changed.isEmpty)
+
+        case .renameTag(let from, let to, let merge):
+            return CommandOK(id: try TagManagement.rename(from: from, to: to, merge: merge, batch: batch))
+
+        case .deleteTag(let name):
+            return CommandOK(id: try TagManagement.delete(name, batch: batch))
 
         case .createTag(let name):
             let tag = try TagName(name)

@@ -155,9 +155,17 @@ extension Database {
                 || entries.contains { ($0["table_name"] as String) == "item_tags" && ($0["field"] as String?) == "tag_id" }
             return moved ? "Merge tag “\(try name(gone["row_id"]))”" : "Delete tag “\(try name(gone["row_id"]))”"
         }
-        if let renamed = tagEntries.filter({ ($0["field"] as String?) == "name" })
-            .min(by: { (value($0, "old_value") ?? "").count < (value($1, "old_value") ?? "").count }) {
-            return "Rename tag “\(value(renamed, "old_value") ?? "")” to “\(value(renamed, "new_value") ?? "")”"
+        let renames = tagEntries.filter { ($0["field"] as String?) == "name" }
+        if !renames.isEmpty {
+            // A renamed subtree reads as its common prefix: person/alex + person/sam -> "person" to "people".
+            func common(_ names: [String]) -> String {
+                let split = names.map { $0.split(separator: "/").map(String.init) }
+                var prefix = split[0]
+                for s in split.dropFirst() { prefix = Array(zip(prefix, s).prefix { $0.0 == $0.1 }.map(\.0)) }
+                return prefix.joined(separator: "/")
+            }
+            let old = common(renames.compactMap { value($0, "old_value") }), new = common(renames.compactMap { value($0, "new_value") })
+            return "Rename tag “\(old)” to “\(new)”"
         }
         if let colored = entries.first(where: { ($0["table_name"] as String) == "tags" && ($0["field"] as String?) == "color" }) {
             return "Color of tag “\(try name(colored["row_id"]))”"

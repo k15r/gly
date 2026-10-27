@@ -135,6 +135,13 @@ public enum LinkResolver {
         try rewrite(sources, batch: batch)
     }
 
+    /// Relabels links to a tag after a rename (tag-colors C7).
+    static func refreshLabels(tag id: String, batch: Batch) throws {
+        let sources = try Row.fetchAll(batch.db, sql: "SELECT DISTINCT source_table, source_id FROM link_index WHERE target_kind = 'tag' AND target_id = ?",
+                                       arguments: [id.uppercased()])
+        try rewrite(sources, batch: batch)
+    }
+
     private static func rewrite(_ sources: [Row], batch: Batch) throws {
         for s in sources {
             let table: String = s["source_table"], id: String = s["source_id"]
