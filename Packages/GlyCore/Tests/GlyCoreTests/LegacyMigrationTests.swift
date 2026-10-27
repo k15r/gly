@@ -40,7 +40,7 @@ final class LegacyMigrationTests: XCTestCase {
         try LegacyMigration.run(newDatabase: fresh, legacyDatabase: legacy, newDefaults: newDefaults, legacyDefaults: oldDefaults)
     }
 
-    func testFirstStartWithGlyData() throws {
+    func testFirstStartWithWorkDashData() throws {
         let (task, page) = try makeLegacyStore()
         let r = try takeOver()
         XCTAssertTrue(r.copied)
@@ -76,7 +76,22 @@ final class LegacyMigrationTests: XCTestCase {
         XCTAssertEqual(newDefaults.integer(forKey: "workingStartMinute"), 480)
     }
 
-    func testNoGlyStore() throws {
+    /// The app may start first and create a device id, token or hidden list before the agent copies the store.
+    func testWorkDashSettingsReplaceValuesGlyCreatedFirst() throws {
+        _ = try makeLegacyStore()
+        newDefaults.set("mac-new", forKey: "deviceID")
+        newDefaults.set("fresh", forKey: "httpToken")
+        XCTAssertEqual(LegacyMigration.takeOverSharedSettings(into: newDefaults, from: oldDefaults), 3, "the app's call")
+        XCTAssertEqual(newDefaults.string(forKey: "deviceID"), "mac-1")
+        XCTAssertEqual(newDefaults.string(forKey: "httpToken"), "tok")
+        newDefaults.set(480, forKey: "workingStartMinute")
+        let agent = try takeOver()
+        XCTAssertTrue(agent.copied)
+        XCTAssertEqual(agent.settingsCopied, 0, "done once")
+        XCTAssertEqual(newDefaults.integer(forKey: "workingStartMinute"), 480, "a change made in gly stays")
+    }
+
+    func testNoWorkDashStore() throws {
         let r = try takeOver()
         XCTAssertFalse(r.copied)
         XCTAssertFalse(FileManager.default.fileExists(atPath: fresh.path), "nothing created; the agent opens a fresh store as usual")

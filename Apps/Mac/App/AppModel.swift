@@ -39,6 +39,8 @@ final class AppModel {
 
     init(settings: SharedSettings = .shared()) {
         self.settings = settings
+        // First launch after the rename: WorkDash's shared settings before anything reads them (rename-to-gly R2).
+        LegacyMigration.takeOverSharedSettings()
         // Settings moved to the app group so the agent shares them (design M7); copy old values once.
         settings.migrate(from: .standard)
         let id = settings.deviceID

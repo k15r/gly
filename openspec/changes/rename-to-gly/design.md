@@ -59,7 +59,7 @@ It runs in the agent before `StoreFactory.openReadWrite`:
 2. **Copy the database** with SQLite's online backup (GRDB `backup(to:)`), from a read-only connection to the old file into a temporary file in the new container, then rename it into place. The backup is consistent even if the old agent is still running. The rename is atomic, so a crash leaves no half store.
 3. **Open and migrate** the copy normally (schema migrations are idempotent).
 4. **Rewrite links** in one transaction, as plain SQL outside the change log: `items.body` and `tags.page_body`, replacing `](workdash://` with `](gly://`. History entries keep their old text; undoing to such a state is still read through the alias (R4).
-5. **Copy shared settings:** every key of `UserDefaults(suiteName: Legacy.appGroup)` into the new suite, if the new suite has no `http…`/`working…` keys yet. Then synchronize.
+5. **Copy shared settings, once:** the known keys of `UserDefaults(suiteName: Legacy.appGroup)` replace the values in the new suite, then a marker key records that it's done. The app runs this step too, first thing at launch: app and agent start in either order, and whichever comes first would otherwise create a fresh device id, token or hidden list. So the marker, not the presence of keys, decides.
 6. **Log** a notice with counts: items, tags, rewritten texts.
 
 **Entitlements:** app and agent both list the new and the old app group. The old one is only read, during the takeover. The old group can be dropped from the entitlements in a later release.
