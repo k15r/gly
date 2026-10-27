@@ -47,10 +47,10 @@ final class MarkdownStylerTests: XCTestCase {
     }
 
     func testWorkDashLinkChipAndHiddenSyntax() {
-        let link = "[Atlas](workdash://item/\(id))"
+        let link = "[Atlas](gly://item/\(id))"
         let t = "see \(link)"
         let r = runs(t, appearance: .live(title: "Atlas"))
-        XCTAssertTrue(r.contains(StyleRun(NSRange(location: 5, length: 5), .chip(.live(title: "Atlas"), url: "workdash://item/\(id)"))))
+        XCTAssertTrue(r.contains(StyleRun(NSRange(location: 5, length: 5), .chip(.live(title: "Atlas"), url: "gly://item/\(id)"))))
         let hidden = r.filter { $0.style == .hidden }.map(\.range)
         XCTAssertEqual(hidden, [NSRange(location: 4, length: 1), NSRange(location: 10, length: (link as NSString).length - 6)])
     }
@@ -58,8 +58,8 @@ final class MarkdownStylerTests: XCTestCase {
     func testMissingAndDeletedLinks() {
         let t = "[[Retro notes]]"
         XCTAssertEqual(styles(t, at: "Retro notes"), [.missingLink(title: "Retro notes")])
-        let d = "[Old](workdash://item/\(id))"
-        XCTAssertEqual(styles(d, at: "Old", appearance: .deleted(title: "Old")), [.chip(.deleted(title: "Old"), url: "workdash://item/\(id)")])
+        let d = "[Old](gly://item/\(id))"
+        XCTAssertEqual(styles(d, at: "Old", appearance: .deleted(title: "Old")), [.chip(.deleted(title: "Old"), url: "gly://item/\(id)")])
     }
 
     func testWebLinks() {
@@ -71,12 +71,12 @@ final class MarkdownStylerTests: XCTestCase {
     }
 
     func testApplyingNeverChangesTheString() {
-        let t = "# H\n- [ ] a **b** `c`\n[x](workdash://item/\(id)) [[m]] https://example.com"
+        let t = "# H\n- [ ] a **b** `c`\n[x](gly://item/\(id)) [[m]] https://example.com"
         let s = NSMutableAttributedString(string: t)
         MarkdownAttributes.apply(runs(t), to: s)
         XCTAssertEqual(s.string, t)
         XCTAssertNotNil(s.attribute(.wdLink, at: (t as NSString).range(of: "https").location, effectiveRange: nil))
-        XCTAssertEqual(s.attribute(.wdHidden, at: (t as NSString).range(of: "](workdash").location, effectiveRange: nil) as? Bool, true)
+        XCTAssertEqual(s.attribute(.wdHidden, at: (t as NSString).range(of: "](gly").location, effectiveRange: nil) as? Bool, true)
         XCTAssertEqual(s.attribute(.wdCheckbox, at: (t as NSString).range(of: "[ ]").location, effectiveRange: nil) as? Bool, false)
     }
 }
@@ -84,7 +84,7 @@ final class MarkdownStylerTests: XCTestCase {
 extension MarkdownStylerTests {
     /// link-disambiguation K3: icon and qualifier are drawn into kerning space; the string never changes.
     func testDecorationAndKerningAroundChips() {
-        let t = "see [Goals](workdash://item/\(id)) now"
+        let t = "see [Goals](gly://item/\(id)) now"
         let s = NSMutableAttributedString(string: t)
         MarkdownAttributes.apply(runs(t, appearance: .live(title: "Goals", kind: .page, qualifier: "person/alex")), to: s)
         XCTAssertEqual(s.string, t)
@@ -97,7 +97,7 @@ extension MarkdownStylerTests {
     }
 
     func testTaskIconAndWebGlobe() {
-        let t = "[Do it](workdash://item/\(id)) [docs](https://example.com) https://example.com/x"
+        let t = "[Do it](gly://item/\(id)) [docs](https://example.com) https://example.com/x"
         let s = NSMutableAttributedString(string: t)
         MarkdownAttributes.apply(runs(t, appearance: .live(title: "Do it", kind: .task)), to: s)
         XCTAssertEqual((s.attribute(.wdDecoration, at: 1, effectiveRange: nil) as? LinkDecoration)?.symbol, "checkmark.circle")

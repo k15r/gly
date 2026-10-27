@@ -50,7 +50,7 @@ final class PageToolTests: XCTestCase {
     func testAgentLinksByTitleAndUnresolvedIsReported() async throws {
         let page = str(await call("create_page", ["title": "Atlas architecture"]).value, "id")!
         let t = await call("create_task", ["title": "T", "notes": "details in [[Atlas architecture]], plan in [[Atlas roadmap]]"])
-        XCTAssertEqual(str(t.value, "notes"), "details in [Atlas architecture](workdash://item/\(page)), plan in [[Atlas roadmap]]")
+        XCTAssertEqual(str(t.value, "notes"), "details in [Atlas architecture](gly://item/\(page)), plan in [[Atlas roadmap]]")
         XCTAssertEqual(list(t.value, "unresolved"), ["Atlas roadmap"])
     }
 
@@ -118,7 +118,7 @@ extension PageToolTests {
         let candidates = list(list(r.value, "unresolved_links").first, "candidates")
         XCTAssertEqual(Set(candidates.compactMap { str($0, "display") }), ["Goals · person/alex", "Goals · person/sam"])
         let retry = await call("create_task", ["title": "T2", "notes": "see [[person/alex/Goals]]"])
-        XCTAssertEqual(str(retry.value, "notes"), "see [Goals](workdash://item/\(alex))")
+        XCTAssertEqual(str(retry.value, "notes"), "see [Goals](gly://item/\(alex))")
         XCTAssertEqual(list(retry.value, "unresolved_links"), [])
     }
 

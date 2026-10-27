@@ -24,7 +24,7 @@ final class DerivedIndexTests: XCTestCase {
         let h = CommandHandler(writer: queue)
         guard case .ok(let a) = h.perform(.createTask(TaskDraft(title: "Target", tags: ["project/atlas"])), writer: "u"),
               let target = a.id else { return XCTFail() }
-        guard case .ok(let b) = h.perform(.createTask(TaskDraft(title: "Source", body: "see [x](workdash://item/\(target)) and [[Later]]")), writer: "u"),
+        guard case .ok(let b) = h.perform(.createTask(TaskDraft(title: "Source", body: "see [x](gly://item/\(target)) and [[Later]]")), writer: "u"),
               let source = b.id else { return XCTFail() }
         try assertConsistent(queue)
         XCTAssertEqual(try queue.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM link_index WHERE source_id = ?", arguments: [source]) }, 2)
@@ -46,7 +46,7 @@ final class DerivedIndexTests: XCTestCase {
     func testSearchIndexHoldsPlainText() throws {
         let queue = try StoreFactory.openInMemory()
         let h = CommandHandler(writer: queue)
-        _ = h.perform(.createTask(TaskDraft(title: "Budget", body: "[Überblick](workdash://item/0E5A3C1D-2B4F-4A6E-9C8D-1F2E3D4C5B6A)")), writer: "u")
+        _ = h.perform(.createTask(TaskDraft(title: "Budget", body: "[Überblick](gly://item/0E5A3C1D-2B4F-4A6E-9C8D-1F2E3D4C5B6A)")), writer: "u")
         let text = try queue.read { try String.fetchOne($0, sql: "SELECT text FROM search_index") }
         XCTAssertEqual(text, "Überblick")
         let hits = try queue.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM search_index WHERE search_index MATCH 'uberblick'") }

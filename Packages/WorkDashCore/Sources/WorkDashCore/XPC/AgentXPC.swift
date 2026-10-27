@@ -58,7 +58,7 @@ public final class AgentListenerDelegate: NSObject, NSXPCListenerDelegate {
     private let codeRequirement: String?
 
     /// - Parameter codeRequirement: required peer signature; nil only in tests.
-    public init(service: AgentService, codeRequirement: String? = WorkDashIDs.teamCodeRequirement) {
+    public init(service: AgentService, codeRequirement: String? = GlyIDs.teamCodeRequirement) {
         self.service = service
         self.codeRequirement = codeRequirement
     }
@@ -80,8 +80,8 @@ public final class AgentClient {
     /// Connects to the agent's Mach service (production).
     public convenience init(timeout: TimeInterval = 5) {
         self.init(timeout: timeout) {
-            let c = NSXPCConnection(machServiceName: WorkDashIDs.agentMachService)
-            c.setCodeSigningRequirement(WorkDashIDs.teamCodeRequirement)
+            let c = NSXPCConnection(machServiceName: GlyIDs.agentMachService)
+            c.setCodeSigningRequirement(GlyIDs.teamCodeRequirement)
             return c
         }
     }

@@ -90,7 +90,7 @@ final class PageCommandTests: XCTestCase {
     func testUniqueTitleResolves() throws {
         let page = ok(.createPage(PageDraft(title: "Atlas architecture"))).id!
         let task = ok(.createTask(TaskDraft(title: "T", body: "see [[atlas Architecture]]")))
-        XCTAssertEqual(try body(task.id!), "see [Atlas architecture](workdash://item/\(page))")
+        XCTAssertEqual(try body(task.id!), "see [Atlas architecture](gly://item/\(page))")
         XCTAssertEqual(task.unresolved, [])
     }
 
@@ -98,7 +98,7 @@ final class PageCommandTests: XCTestCase {
         ok(.createTask(TaskDraft(title: "x", tags: ["person/alex"])))
         let tagID = try db.read { try String.fetchOne($0, sql: "SELECT id FROM tags") }!
         let t = ok(.createTask(TaskDraft(title: "y", body: "[[person/alex]]"))).id!
-        XCTAssertEqual(try body(t), "[person/alex](workdash://tag/\(tagID))")
+        XCTAssertEqual(try body(t), "[person/alex](gly://tag/\(tagID))")
     }
 
     func testAmbiguousOrUnknownStaysMissing() throws {
@@ -113,8 +113,8 @@ final class PageCommandTests: XCTestCase {
         let a = ok(.createTask(TaskDraft(title: "A", body: "x [[Retro notes]]"))).id!
         let b = ok(.createPage(PageDraft(title: "B", body: "[[retro notes]] y"))).id!
         let page = ok(.createPage(PageDraft(title: "Retro notes"))).id!
-        XCTAssertEqual(try body(a), "x [Retro notes](workdash://item/\(page))")
-        XCTAssertEqual(try body(b), "[Retro notes](workdash://item/\(page)) y")
+        XCTAssertEqual(try body(a), "x [Retro notes](gly://item/\(page))")
+        XCTAssertEqual(try body(b), "[Retro notes](gly://item/\(page)) y")
         XCTAssertEqual(try undoLabel(), "Create page “Retro notes”")
         ok(.undo)
         XCTAssertEqual(try body(a), "x [[Retro notes]]")
@@ -125,7 +125,7 @@ final class PageCommandTests: XCTestCase {
         let page = ok(.createPage(PageDraft(title: "Atlas architecture"))).id!
         let t = ok(.createTask(TaskDraft(title: "T", body: "[[Atlas architecture]]"))).id!
         ok(.updatePage(id: page, PagePatch(title: "Atlas system design")))
-        XCTAssertEqual(try body(t), "[Atlas system design](workdash://item/\(page))")
+        XCTAssertEqual(try body(t), "[Atlas system design](gly://item/\(page))")
         XCTAssertEqual(try undoLabel(), "Edit page “Atlas system design” (title)")
     }
 
@@ -155,5 +155,16 @@ final class PageCommandTests: XCTestCase {
         ok(.updateTask(id: task, TaskPatch(body: "mine again", session: "s3")))
         let mine = try db.read { try Int.fetchOne($0, sql: "SELECT COUNT(DISTINCT batch) FROM change_log WHERE row_id = ? AND field = 'body' AND writer = ?", arguments: [task, self.me]) }
         XCTAssertEqual(mine, 2, "another writer's change in between ends the coalescing")
+    }
+
+    // MARK: rename-to-gly 1.1: a taken-over text with an old link
+    func testTakenOverOldLinkResolvesAndRelabels() throws {
+        let task = ok(.createTask(TaskDraft(title: "Call venue"))).id!
+        let page = try db.write { db in
+            try Batch(db: db, writer: me).insert("items", ["kind": "info", "title": "Plan", "body": "see [Call venue](workdash://item/\(task))"])
+        }
+        XCTAssertEqual(try db.read { try LinkQueries.backlinks($0, to: task) }.map(\.source.id), [page], "old link still links")
+        ok(.updateTask(id: task, TaskPatch(title: "Call the venue")))
+        XCTAssertEqual(try body(page), "see [Call the venue](gly://item/\(task))", "relabelled and written with the new scheme")
     }
 }

@@ -34,7 +34,7 @@ public struct StyleRun: Equatable {
         case done                         // text of a checked checklist line
         case quote                        // whole line
         case chip(LinkAppearance, url: String)  // label of a WorkDash link
-        case hidden                       // collapsed `[` and `](workdash://…)` of a WorkDash link
+        case hidden                       // collapsed `[` and `](gly://…)` of a glyash link
         case missingLink(title: String)   // title inside `[[…]]`
         case webLink(url: String)         // label of a web link or a bare URL
     }

@@ -106,12 +106,12 @@ final class TagColorTests: XCTestCase {
         let a = ok(.createTask(TaskDraft(title: "A", tags: ["person/alex"]))).id!
         let b = ok(.createTask(TaskDraft(title: "B", tags: ["person/sam"]))).id!
         let alexTag = try db.read { try String.fetchOne($0, sql: "SELECT id FROM tags WHERE name_key = 'person/alex'")! }
-        let page = ok(.createPage(PageDraft(title: "Hub", body: "see [person/alex](workdash://tag/\(alexTag))"))).id!
+        let page = ok(.createPage(PageDraft(title: "Hub", body: "see [person/alex](gly://tag/\(alexTag))"))).id!
         ok(.renameTag(from: "person", to: "people"))
         XCTAssertEqual(try liveTagNames(), ["people/alex", "people/sam"])
         XCTAssertEqual(try tags(of: a), ["people/alex"])
         XCTAssertEqual(try tags(of: b), ["people/sam"])
-        XCTAssertEqual(try body(page), "see [people/alex](workdash://tag/\(alexTag))", "link label follows")
+        XCTAssertEqual(try body(page), "see [people/alex](gly://tag/\(alexTag))", "link label follows")
         XCTAssertEqual(try db.read { try $0.undoLabel(writer: me) }, "Rename tag “person” to “people”")
     }
 
@@ -133,7 +133,7 @@ final class TagColorTests: XCTestCase {
         ok(.setTagColor(name: "person/al", color: .pink))
         let alTag = try db.read { try String.fetchOne($0, sql: "SELECT id FROM tags WHERE name_key = 'person/al'")! }
         let alexTag = try db.read { try String.fetchOne($0, sql: "SELECT id FROM tags WHERE name_key = 'person/alex'")! }
-        let hub = ok(.createPage(PageDraft(title: "Hub", body: "[person/al](workdash://tag/\(alTag))"))).id!
+        let hub = ok(.createPage(PageDraft(title: "Hub", body: "[person/al](gly://tag/\(alTag))"))).id!
 
         XCTAssertEqual(failure(.renameTag(from: "person/al", to: "person/alex"))?.code, .conflict, "asks first")
         XCTAssertEqual(try tags(of: t1), ["person/al"], "nothing changed without merge")
@@ -145,13 +145,13 @@ final class TagColorTests: XCTestCase {
         XCTAssertEqual(try liveTagNames(), ["person/alex"])
         XCTAssertEqual(try db.read { try String.fetchOne($0, sql: "SELECT page_body FROM tags WHERE id = ?", arguments: [alexTag]) }, "Team lead\n\nold notes")
         XCTAssertEqual(try colors().color("person/alex"), .pink, "target had no own color")
-        XCTAssertEqual(try body(hub), "[person/alex](workdash://tag/\(alexTag))", "link rewritten to the merged tag")
+        XCTAssertEqual(try body(hub), "[person/alex](gly://tag/\(alexTag))", "link rewritten to the merged tag")
         XCTAssertEqual(try db.read { try $0.undoLabel(writer: me) }, "Merge tag “person/al”")
 
         try undo()
         XCTAssertEqual(try tags(of: t1), ["person/al"])
         XCTAssertEqual(try tags(of: both), ["person/al", "person/alex"])
-        XCTAssertEqual(try body(hub), "[person/al](workdash://tag/\(alTag))")
+        XCTAssertEqual(try body(hub), "[person/al](gly://tag/\(alTag))")
         XCTAssertEqual(try liveTagNames(), ["person/al", "person/alex"])
     }
 

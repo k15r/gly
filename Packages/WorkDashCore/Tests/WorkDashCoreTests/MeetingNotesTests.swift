@@ -135,7 +135,7 @@ final class MeetingNotesTests: XCTestCase {
     func testLinkFromNotesShowsAsBacklink() throws {
         let page = ok(.createPage(PageDraft(title: "Roadmap", tags: ["project/atlas"]))).id!
         let notes = ok(.saveMeetingNotes(MeetingTarget(appt("S1", day: "2026-11-03")), body: "see [[project/atlas/Roadmap]]")).id!
-        XCTAssertEqual(try body(notes), "see [Roadmap](workdash://item/\(page))")
+        XCTAssertEqual(try body(notes), "see [Roadmap](gly://item/\(page))")
         let back = try db.read { try LinkQueries.backlinks($0, to: page, isTag: false) }
         XCTAssertEqual(back.map(\.source.kind), [.meeting])
         XCTAssertEqual(back.first?.source.title, "1:1 Alex")

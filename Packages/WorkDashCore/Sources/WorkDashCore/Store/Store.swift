@@ -5,10 +5,10 @@ import GRDB
 public enum StoreFactory {
     /// Location in the app group container shared by app and agent.
     public static func defaultDatabaseURL() throws -> URL {
-        guard let dir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: WorkDashIDs.appGroup) else {
+        guard let dir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: GlyIDs.appGroup) else {
             throw StoreError.noAppGroupContainer
         }
-        return dir.appendingPathComponent(WorkDashIDs.databaseFileName)
+        return dir.appendingPathComponent(GlyIDs.databaseFileName)
     }
 
     /// Read-write pool with migrations applied. Only the agent (and tests) use this.

@@ -3,7 +3,7 @@ import XCTest
 
 final class PackageTests: XCTestCase {
     func testIdentifiersAreConsistent() {
-        XCTAssertTrue(WorkDashIDs.agentMachService.hasPrefix(WorkDashIDs.appGroup))
-        XCTAssertTrue(WorkDashIDs.appGroup.hasPrefix(WorkDashIDs.teamID))
+        XCTAssertTrue(GlyIDs.agentMachService.hasPrefix(GlyIDs.appGroup))
+        XCTAssertTrue(GlyIDs.appGroup.hasPrefix(GlyIDs.teamID))
     }
 }

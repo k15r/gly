@@ -31,7 +31,7 @@ final class AppModel {
     let writer: String
     let systemWriter: String
     private let client = AgentClient()
-    private let service = SMAppService.agent(plistName: WorkDashIDs.agentPlistName)
+    private let service = SMAppService.agent(plistName: GlyIDs.agentPlistName)
 
     let settings: SharedSettings
     /// Agent-reported state for Settings → Agents, e.g. "calendar: fullAccess".

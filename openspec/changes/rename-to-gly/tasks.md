@@ -2,7 +2,7 @@
 
 ## 1. Core
 
-- [ ] 1.1 Introduce `GlyIDs` with the new identifiers and `GlyIDs.Legacy` (R1); switch `LinkParser` to `gly://` with `workdash` as a read alias (R4); verify with tests for "Taken-over link" (old URL resolves, opens, relabels), "Pasted old link", canonical links written as `gly://`, and `missingURL`/`missingText` with both schemes
+- [x] 1.1 Introduce `GlyIDs` with the new identifiers and `GlyIDs.Legacy` (R1); switch `LinkParser` to `gly://` with `workdash` as a read alias (R4); verify with tests for "Taken-over link" (old URL resolves, opens, relabels), "Pasted old link", canonical links written as `gly://`, and `missingURL`/`missingText` with both schemes
 - [ ] 1.2 Add `LegacyMigration` (R2: online backup into a temp file + atomic rename, migrate, rewrite `](workdash://` in `items.body`/`tags.page_body`, copy shared settings when empty, log counts; no-op when the gly store exists); verify with tests on a copy-like fixture for "First start with WorkDash data" (counts, settings, links rewritten, old file unchanged), "Later starts" (no second copy), and no old store at all
 
 ## 2. Rename

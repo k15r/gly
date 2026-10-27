@@ -94,7 +94,7 @@ final class PlanningToolTests: XCTestCase {
         XCTAssertFalse(isError, text)
         let heading = NotesSections.heading(for: LocalDay(date: weekly(1).start), today: LocalDay(date: now))
         guard case .string(let notes)? = field(r, "text") else { return XCTFail("no text") }
-        XCTAssertTrue(notes.hasPrefix(heading + "\n- discuss [Roadmap](workdash://item/"), notes)
+        XCTAssertTrue(notes.hasPrefix(heading + "\n- discuss [Roadmap](gly://item/"), notes)
         XCTAssertEqual(field(r, "kind"), "series")
         let (after, _, _) = await call("get_schedule", ["date": .string(tomorrow)])
         XCTAssertEqual(field(list(after, "appointments").first, "has_notes"), .bool(true))

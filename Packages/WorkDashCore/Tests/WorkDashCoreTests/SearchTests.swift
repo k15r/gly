@@ -58,7 +58,7 @@ final class SearchTests: XCTestCase {
     func testLinkMarkupIsNotSearched() throws {
         let target = make(.createPage(PageDraft(title: "Target")))
         make(.createPage(PageDraft(title: "Source", body: "see [[Target]]")))
-        XCTAssertEqual(try search("workdash").pages.count, 0)
+        XCTAssertEqual(try search("gly").pages.count, 0)
         XCTAssertEqual(try search(String(target.prefix(8))).pages.count, 0)
     }
 

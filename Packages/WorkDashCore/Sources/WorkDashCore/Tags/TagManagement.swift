@@ -65,8 +65,11 @@ enum TagManagement {
             let table: String = src["source_table"], id: String = src["source_id"]
             let column = table == "tags" ? "page_body" : "body"
             guard let text = try String.fetchOne(db, sql: "SELECT \(column) FROM \(table) WHERE id = ? AND deleted_at IS NULL", arguments: [id]) else { continue }
-            let rewritten = text.replacingOccurrences(of: "\(LinkParser.scheme)://tag/\(source)", with: "\(LinkParser.scheme)://tag/\(target)",
-                                                      options: .caseInsensitive)
+            var rewritten = text
+            for scheme in [LinkParser.scheme] + LinkParser.legacySchemes {   // old workdash:// links merge too
+                rewritten = rewritten.replacingOccurrences(of: "\(scheme)://tag/\(source)", with: "\(LinkParser.scheme)://tag/\(target)",
+                                                           options: .caseInsensitive)
+            }
             if rewritten != text { try batch.update(table, id: id, [column: rewritten]) }
         }
         try batch.softDelete("tags", id: source)

@@ -15,13 +15,23 @@ public struct ParsedLink: Equatable {
     public let range: NSRange
 }
 
-/// Finds WorkDash links in markdown. Canonical: `[label](workdash://item/<uuid>)` / `workdash://tag/<uuid>`;
-/// missing: `[[Title]]`. Links inside code spans and fenced code blocks don't count; web links are ignored.
+/// Finds gly links in markdown. Canonical: `[label](gly://item/<uuid>)` / `gly://tag/<uuid>`; the old
+/// `workdash://` scheme is read the same way (rename-to-gly R4). Missing: `[[Title]]`. Links inside code spans and
+/// fenced code blocks don't count; web links are ignored.
 public enum LinkParser {
-    public static let scheme = "workdash"
+    /// The scheme links are written with.
+    public static let scheme = "gly"
+    /// Schemes still read as links (texts from before the rename, pasted links).
+    public static let legacySchemes = ["workdash"]
+
+    /// Whether a URL is one of ours (current or legacy scheme).
+    public static func isOwn(_ url: URL) -> Bool {
+        guard let s = url.scheme?.lowercased() else { return false }
+        return s == scheme || legacySchemes.contains(s)
+    }
 
     static let canonical = try! NSRegularExpression(
-        pattern: #"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\(workdash://(item|tag)/([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\)"#)
+        pattern: #"\[((?:[^\[\]\n]|\[[^\[\]\n]*\])*)\]\((?:gly|workdash)://(item|tag)/([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\)"#)
     static let missing = try! NSRegularExpression(pattern: #"\[\[([^\[\]\n]+?)\]\]"#)
     static let fence = try! NSRegularExpression(pattern: #"^[ \t]*(```|~~~).*$"#, options: [.anchorsMatchLines])
     static let codeSpan = try! NSRegularExpression(pattern: #"(`+)(?:(?!\1).)+?\1"#)
@@ -92,7 +102,7 @@ public enum LinkParser {
 
     /// The typed text of a missing-link URL (the whole path, not just its last segment).
     public static func missingText(_ url: URL) -> String? {
-        guard url.scheme == scheme, url.host == "missing" else { return nil }
+        guard isOwn(url), url.host == "missing" else { return nil }
         let text = String(url.path(percentEncoded: false).dropFirst())
         return text.isEmpty ? nil : text
     }

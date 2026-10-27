@@ -56,7 +56,7 @@ public struct SharedSettings {
 
     /// The app-group suite (production).
     public static func shared() -> SharedSettings {
-        SharedSettings(defaults: UserDefaults(suiteName: WorkDashIDs.appGroup) ?? .standard)
+        SharedSettings(defaults: UserDefaults(suiteName: GlyIDs.appGroup) ?? .standard)
     }
 
     public init(defaults: UserDefaults) { self.defaults = defaults }

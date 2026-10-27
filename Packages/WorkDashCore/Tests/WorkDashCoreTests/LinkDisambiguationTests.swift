@@ -19,7 +19,7 @@ final class LinkDisambiguationTests: XCTestCase {
         let alex = ok(.createPage(PageDraft(title: "Goals", tags: ["person/alex"]))).id!
         ok(.createPage(PageDraft(title: "Goals", tags: ["person/sam"])))
         let t = ok(.createTask(TaskDraft(title: "T", body: "see [[person/alex/Goals]]")))
-        XCTAssertEqual(try body(t.id!), "see [Goals](workdash://item/\(alex))")
+        XCTAssertEqual(try body(t.id!), "see [Goals](gly://item/\(alex))")
         XCTAssertEqual(t.unresolved, [])
     }
 
@@ -40,10 +40,10 @@ final class LinkDisambiguationTests: XCTestCase {
         let task = ok(.createTask(TaskDraft(title: "Offsite"))).id!
         let page = ok(.createPage(PageDraft(title: "P", body: "[[Offsite]] and [[task:Offsite]]")))
         XCTAssertEqual(page.unresolvedLinks?.first?.candidates.count, 2, "bare title is ambiguous across kinds")
-        XCTAssertTrue(try body(page.id!).hasSuffix("[Offsite](workdash://item/\(task))"))
+        XCTAssertTrue(try body(page.id!).hasSuffix("[Offsite](gly://item/\(task))"))
         ok(.createPage(PageDraft(title: "Q", tags: ["project/atlas"])))
         let q = ok(.createPage(PageDraft(title: "R", body: "[[tag:project/atlas]]")))
-        XCTAssertTrue(try body(q.id!).contains("workdash://tag/"))
+        XCTAssertTrue(try body(q.id!).contains("gly://tag/"))
     }
 
     func testResolvedOnceSurvivesTagChanges() throws {
@@ -51,20 +51,20 @@ final class LinkDisambiguationTests: XCTestCase {
         ok(.createPage(PageDraft(title: "Goals", tags: ["person/sam"])))
         let t = ok(.createTask(TaskDraft(title: "T", body: "[[person/alex/Goals]]"))).id!
         ok(.updatePage(id: alex, PagePatch(tags: ["person/kim"])))
-        XCTAssertEqual(try body(t), "[Goals](workdash://item/\(alex))")
+        XCTAssertEqual(try body(t), "[Goals](gly://item/\(alex))")
     }
 
     func testTitleContainingSlashStillMatchesExactly() throws {
         let p = ok(.createPage(PageDraft(title: "Q3/Q4 plan"))).id!
         let t = ok(.createTask(TaskDraft(title: "T", body: "[[Q3/Q4 plan]]"))).id!
-        XCTAssertEqual(try body(t), "[Q3/Q4 plan](workdash://item/\(p))")
+        XCTAssertEqual(try body(t), "[Q3/Q4 plan](gly://item/\(p))")
     }
 
     func testPageCreatedLaterResolvesATagPathLink() throws {
         let t = ok(.createTask(TaskDraft(title: "T", body: "[[person/alex/Goals]]"))).id!
         XCTAssertEqual(try body(t), "[[person/alex/Goals]]")
         let page = ok(.createPage(PageDraft(title: "Goals", tags: ["person/alex"]))).id!
-        XCTAssertEqual(try body(t), "[Goals](workdash://item/\(page))")
+        XCTAssertEqual(try body(t), "[Goals](gly://item/\(page))")
     }
 }
 
@@ -76,7 +76,7 @@ extension LinkDisambiguationTests {
         let candidates = try db.read { try LinkResolver.candidates($0, typed: "Goals") }
         let chosen = candidates.first { $0.id == alex }!
         ok(.resolveLink(sourceTable: "items", sourceID: t.id!, typed: "Goals", target: chosen))
-        XCTAssertEqual(try body(t.id!), "first [Goals](workdash://item/\(alex)) then [[Goals]]", "only the chosen occurrence is pinned")
+        XCTAssertEqual(try body(t.id!), "first [Goals](gly://item/\(alex)) then [[Goals]]", "only the chosen occurrence is pinned")
         ok(.undo)
         XCTAssertEqual(try body(t.id!), "first [[Goals]] then [[Goals]]", "one undo step")
     }
@@ -118,6 +118,6 @@ extension LinkDisambiguationTests {
     func testNewTaskResolvesWaitingLink() throws {
         let page = ok(.createPage(PageDraft(title: "P", body: "todo: [[person/alex/Call]]"))).id!
         let task = ok(.createTask(TaskDraft(title: "Call", tags: ["person/alex"]))).id!
-        XCTAssertEqual(try body(page), "todo: [Call](workdash://item/\(task))")
+        XCTAssertEqual(try body(page), "todo: [Call](gly://item/\(task))")
     }
 }

@@ -171,7 +171,7 @@ final class WikiModel {
     }
 
     func destination(for url: URL) -> LinkDestination? {
-        guard url.scheme == LinkParser.scheme else { return .web(url) }
+        guard LinkParser.isOwn(url) else { return .web(url) }
         let id = url.lastPathComponent
         switch url.host {
         case "item":

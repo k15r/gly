@@ -92,7 +92,7 @@ final class TrashTests: XCTestCase {
 
     func testRestoreAnAgentsDelete() throws {
         let task = ok(.createTask(TaskDraft(title: "Call the venue", due: Due(day: "2026-11-02"), tags: ["project/atlas"]))).id!
-        let page = ok(.createPage(PageDraft(title: "Plan", body: "see [Call the venue](workdash://item/\(task))"))).id!
+        let page = ok(.createPage(PageDraft(title: "Plan", body: "see [Call the venue](gly://item/\(task))"))).id!
         ok(.deleteTask(id: task), as: "agent:joule@mac-test01")
         XCTAssertEqual(try db.read { try LinkQueries.reference($0, id: task, isTag: false)?.1 }, true, "link target deleted")
 

@@ -90,7 +90,7 @@ public enum MarkdownBlocks {
         return "New \(kind == .task ? "task" : "page") “\(item.title)”" + (item.tags.first.map { " in \($0)" } ?? "")
     }
 
-    /// Inline markdown → AttributedString; `[[X]]` becomes a `workdash://missing/X` link; WorkDash links get their
+    /// Inline markdown → AttributedString; `[[X]]` becomes a `gly://missing/X` link; WorkDash links get their
     /// current appearance (deleted ones struck through, missing ones red).
     public static func inline(_ text: String, appearance: (ParsedLink.Target) -> LinkAppearance) -> AttributedString {
         let ns = NSMutableString(string: text)
@@ -104,7 +104,7 @@ public enum MarkdownBlocks {
         // Collect first, then edit from the end, so earlier ranges stay valid.
         var titleReplacements: [(Range<AttributedString.Index>, String, URL)] = []
         for run in attributed.runs {
-            guard let url = run.link, url.scheme == LinkParser.scheme else { continue }
+            guard let url = run.link, LinkParser.isOwn(url) else { continue }
             let range = run.range
             switch url.host {
             case "missing":
@@ -149,7 +149,7 @@ extension MarkdownBlocks {
             }
             lastLink = url
             var qualifier: String?
-            if url.scheme == LinkParser.scheme, let host = url.host, host == "item" || host == "tag" {
+            if LinkParser.isOwn(url), let host = url.host, host == "item" || host == "tag" {
                 let id = url.lastPathComponent.uppercased()
                 let a = appearance(host == "tag" ? .tag(id) : .item(id))
                 if let kind = a.kind { result = result + Text(Image(systemName: kind.linkSymbol)).foregroundColor(.secondary) + Text(" ") }

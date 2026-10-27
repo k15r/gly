@@ -39,9 +39,9 @@ public struct LinkMenuModel: Equatable {
 }
 
 extension ParsedLink.Target {
-    /// The target a WorkDash link URL points to (`workdash://item|tag/<id>`, `workdash://missing/<text>`).
+    /// The target a WorkDash link URL points to (`gly://item|tag/<id>`, `gly://missing/<text>`).
     public init?(url: URL) {
-        guard url.scheme == LinkParser.scheme else { return nil }
+        guard LinkParser.isOwn(url) else { return nil }
         switch url.host {
         case "item": self = .item(url.lastPathComponent.uppercased())
         case "tag": self = .tag(url.lastPathComponent.uppercased())

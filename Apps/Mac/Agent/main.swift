@@ -91,10 +91,10 @@ do {
         reloadSettings: { Task { await http.apply() } },
         mcp: { message, client in await mcp.get().handleStdio(message, client: client) })
     let delegate = AgentListenerDelegate(service: service)
-    let listener = NSXPCListener(machServiceName: WorkDashIDs.agentMachService)
+    let listener = NSXPCListener(machServiceName: GlyIDs.agentMachService)
     listener.delegate = delegate
     listener.resume()
-    log.info("WorkDashAgent listening on \(WorkDashIDs.agentMachService, privacy: .public), store \(url.path, privacy: .public)")
+    log.info("WorkDashAgent listening on \(GlyIDs.agentMachService, privacy: .public), store \(url.path, privacy: .public)")
     withExtendedLifetime(delegate) { RunLoop.main.run() }
 } catch {
     log.fault("WorkDashAgent failed to start: \(String(describing: error), privacy: .public)")
