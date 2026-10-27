@@ -43,11 +43,15 @@ extension TagColor {
     var label: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
 
     /// A colored dot for menu items (menus template-render SF Symbols, so a real image keeps the color).
-    var menuImage: Image {
-        let size = NSSize(width: 12, height: 12)
-        let image = NSImage(size: size, flipped: false) { rect in
-            NSColor(swiftUI).setFill()
-            NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
+    var menuImage: Image { swatch(size: 12, square: false) }
+
+    /// A colored swatch as an image: menu buttons only draw text and images as their label, not SwiftUI shapes.
+    func swatch(size: CGFloat, square: Bool) -> Image {
+        let color = NSColor(swiftUI)
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            color.setFill()
+            let r = rect.insetBy(dx: 1, dy: 1)
+            (square ? NSBezierPath(roundedRect: r, xRadius: 3, yRadius: 3) : NSBezierPath(ovalIn: r)).fill()
             return true
         }
         image.isTemplate = false
@@ -88,7 +92,7 @@ struct TagColorControl: View {
         Menu {
             TagColorMenuItems(name: name)
         } label: {
-            RoundedRectangle(cornerRadius: 3).fill(effective.color.swiftUI).frame(width: 14, height: 14)
+            effective.color.swatch(size: 16, square: true)
         }
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .disabled(!app.canWrite)
