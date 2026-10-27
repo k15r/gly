@@ -248,6 +248,7 @@ struct AppointmentRow: View {
     @Environment(PlanningModel.self) private var planning
     @Environment(MeetingMarksModel.self) private var marks
     @Environment(AppModel.self) private var app
+    @Environment(Navigation.self) private var nav
     let entry: DayAppointment
     let allDay: Bool
     @State private var showingDetails = false
@@ -266,7 +267,13 @@ struct AppointmentRow: View {
                 HStack(spacing: 6) {
                     Text(a.title).strikethrough(a.isCancelled).fontWeight(entry.state == .current ? .semibold : .regular)
                     if marks.marks.hasNotes(a) {
-                        Image(systemName: "note.text").font(.caption).foregroundStyle(.secondary).help("Has notes")
+                        // A shortcut past the details popover (specs/meeting-pages "Notes mark opens the notes"); the button
+                        // takes the click, so the row's tap gesture doesn't open the popover as well.
+                        Button { nav.go(.meeting(.appointment(a))) } label: {
+                            Image(systemName: "note.text").font(.caption).foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Open notes")
                     }
                     if a.isCancelled { Text("Cancelled").font(.caption).padding(.horizontal, 4).background(.red.opacity(0.15)).clipShape(Capsule()) }
                     if entry.state == .current { Text("Now").font(.caption.bold()).foregroundStyle(.white).padding(.horizontal, 5).background(.blue).clipShape(Capsule()) }
