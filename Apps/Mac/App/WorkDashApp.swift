@@ -486,7 +486,10 @@ enum ItemMove {
             switch kind {
             case .page: guard let page = wiki.page(id) else { continue }; current = page.tags
             case .task: guard let task = tasks.task(id: id) else { continue }; current = task.tags
-            case .tag, .meeting: continue      // meetings: tags are edited on the meeting page
+            case .meeting:
+                guard let tags = try? wiki.store?.read({ try TaskQueries.tagsByItem($0, ids: [id])[id] ?? [] }) else { continue }
+                current = tags
+            case .tag: continue
             }
             var tags = current
             func has(_ t: String) -> Bool { tags.contains { TagName.key(for: $0) == TagName.key(for: t) } }
@@ -501,7 +504,8 @@ enum ItemMove {
                 switch kind {
                 case .page: await app.send(.updatePage(id: id, PagePatch(tags: tags)))
                 case .task: await app.send(.updateTask(id: id, TaskPatch(tags: tags)))
-                case .tag, .meeting: break
+                case .meeting: await app.send(.updateMeetingNotes(id: id, body: nil, tags: tags))
+                case .tag: break
                 }
             }
         }
