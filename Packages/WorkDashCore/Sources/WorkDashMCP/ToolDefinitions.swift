@@ -1,4 +1,5 @@
 import MCP
+import WorkDashCore
 
 /// The MCP tools WorkDash offers (specs/agent-access "Tool descriptions guide agents").
 public enum ToolDefinitions {
@@ -82,7 +83,7 @@ public enum ToolDefinitions {
              inputSchema: object(["id": string("Task id.")], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false)),
         Tool(name: "list_tags",
-             description: "Existing tags with their number of open tasks (unused tags included), optionally only those starting with a prefix. Use it to reuse existing tags instead of inventing new ones.",
+             description: "Existing tags with their number of open tasks (unused tags included) and colors (color: own palette name or null; effective_color: own, inherited or automatic), optionally only those starting with a prefix. Use it to reuse existing tags instead of inventing new ones.",
              inputSchema: object(["prefix": string("Only tags starting with this text, e.g. \"person/\".")]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "create_page",
@@ -126,15 +127,17 @@ public enum ToolDefinitions {
              ]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "get_tag_page",
-             description: "A tag's page: its markdown description and everything tagged with it or below it, grouped as open_tasks, pages and finished_tasks. Works for group names like \"person\" too. \(taskShape)",
+             description: "A tag's page: its markdown description, color (own or null) and effective_color, and everything tagged with it or below it, grouped as open_tasks, pages and finished_tasks. Works for group names like \"person\" too. \(taskShape)",
              inputSchema: object(["name": string("Tag name, e.g. \"project/atlas\".")], required: ["name"]),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "update_tag_page",
-             description: "Replace a tag's page description (markdown). Creates the tag if it doesn't exist. \(linkNote)",
+             description: "Replace a tag's page description (markdown) and/or set its color. Creates the tag if it doesn't exist. A tag without its own color inherits the nearest color set above it (person/alex from person), else gets an automatic one. \(linkNote)",
              inputSchema: object([
                 "name": string("Tag name."),
                 "text": string("New description (markdown)."),
-             ], required: ["name", "text"]),
+                "color": string("The tag's own color, or automatic to remove it (inherit again).",
+                                enum: (TagColor.allCases.map(\.rawValue) + ["automatic"]).map { Value.string($0) }),
+             ], required: ["name"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
         Tool(name: "list_trash",
              description: "List deleted pages and tasks, most recently deleted first: {items: [{id, kind (page|task), title, tags (as when deleted), excerpt, status (tasks), deleted_at (YYYY-MM-DDTHH:mm, local time), deleted_by}], older_count}. By default the last 30 days; older_count says how many older ones exist (all: true lists everything). Nothing in the trash is ever erased.",

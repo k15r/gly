@@ -8,7 +8,7 @@
 
 ## 2. MCP
 
-- [ ] 2.1 Add `color` / `effective_color` to `list_tags` and `get_tag_page`, and `color` (palette name or `automatic`) to `update_tag_page` with optional `text` (C5); verify with MCP tests for "Tags below a prefix" (colors present), "Agent colors a tag", clearing, and an unknown color name rejected with the allowed list
+- [x] 2.1 Add `color` / `effective_color` to `list_tags` and `get_tag_page`, and `color` (palette name or `automatic`) to `update_tag_page` with optional `text` (C5); verify with MCP tests for "Tags below a prefix" (colors present), "Agent colors a tag", clearing, and an unknown color name rejected with the allowed list
 
 ## 3. App
 

@@ -107,7 +107,8 @@ final class ToolTests: XCTestCase {
         let overdue = await call("list_tasks", ["due_before": "2026-10-25"])
         XCTAssertEqual(titles(overdue.value), ["atlas"])
         let tags = await call("list_tags", ["prefix": "person/"])
-        XCTAssertEqual(list(tags.value, "tags"), [.object(["name": "person/alex", "open_tasks": .int(1)])])
+        XCTAssertEqual(list(tags.value, "tags"), [.object(["name": "person/alex", "open_tasks": .int(1), "color": .null,
+                                                           "effective_color": .string(TagColor.automatic(forRoot: "person").rawValue)])])
     }
 
     // MARK: 3.4 write tools

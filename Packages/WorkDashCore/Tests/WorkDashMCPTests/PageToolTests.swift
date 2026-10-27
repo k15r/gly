@@ -135,6 +135,42 @@ extension PageToolTests {
         XCTAssertEqual(str(list(back.value, "backlinks").first, "display"), "Hub")
     }
 
+    // MARK: tag-colors 2.1 (specs/agent-access "List tags", "Tag pages over MCP")
+
+    func testTagsBelowAPrefixCarryColors() async throws {
+        _ = await call("create_task", ["title": "A", "tags": ["person/alex"]])
+        _ = await call("create_task", ["title": "B", "tags": ["person/sam"]])
+        _ = await call("update_tag_page", ["name": "person", "color": "green"])
+        let r = await call("list_tags", ["prefix": "person/"])
+        let tags = list(r.value, "tags")
+        XCTAssertEqual(tags.count, 2)
+        for t in tags {
+            XCTAssertEqual(field(t, "color"), .null, "no own color")
+            XCTAssertEqual(str(t, "effective_color"), "green", "inherited from person")
+        }
+    }
+
+    func testAgentColorsATagAndClearsIt() async throws {
+        _ = await call("create_task", ["title": "A", "tags": ["project/atlas/logs"]])
+        let r = await call("update_tag_page", ["name": "project/atlas", "color": "orange"])
+        XCTAssertFalse(r.isError, r.text)
+        XCTAssertEqual(str(r.value, "color"), "orange")
+        XCTAssertEqual(str(r.value, "effective_color"), "orange")
+        let sub = await call("get_tag_page", ["name": "project/atlas/logs"])
+        XCTAssertEqual(str(sub.value, "effective_color"), "orange")
+        XCTAssertEqual(str(sub.value, "text"), "", "description untouched")
+        let cleared = await call("update_tag_page", ["name": "project/atlas", "color": "automatic"])
+        XCTAssertEqual(field(cleared.value, "color"), .null)
+    }
+
+    func testUnknownColorIsRejected() async throws {
+        let r = await call("update_tag_page", ["name": "x", "color": "chartreuse"])
+        XCTAssertTrue(r.isError)
+        XCTAssertTrue(r.text.contains("orange") && r.text.contains("automatic"), r.text)
+        let none = await call("update_tag_page", ["name": "x"])
+        XCTAssertTrue(none.isError, "text or color required")
+    }
+
     // MARK: trash-bin 2.1 (specs/agent-access "Trash over MCP")
 
     func testAgentUndoesItsOwnDelete() async throws {

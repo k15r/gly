@@ -170,8 +170,13 @@ public final class WorkDashTools: @unchecked Sendable {
 
     func listTags(_ args: Arguments) throws -> Value {
         let today = self.today.description
-        let tags = try reader.read { try TagQueries.list($0, prefix: try args.string("prefix"), today: today) }
-        return .object(["tags": .array(tags.map { .object(["name": .string($0.name), "open_tasks": .int($0.openCount)]) })])
+        let prefix = try args.string("prefix")
+        let (tags, colors) = try reader.read { (try TagQueries.list($0, prefix: prefix, today: today), try TagQueries.colors($0)) }
+        return .object(["tags": .array(tags.map { t in
+            var o: [String: Value] = ["name": .string(t.name), "open_tasks": .int(t.openCount)]
+            Self.addColors(&o, name: t.name, colors: colors)
+            return .object(o)
+        })])
     }
 
     // MARK: - Write tools
@@ -412,19 +417,37 @@ public final class WorkDashTools: @unchecked Sendable {
     func tagPage(_ args: Arguments) throws -> Value {
         let tag = try TagName(try args.requiredString("name"))
         let today = self.today
-        let data = try reader.read { try TagPageQueries.page($0, name: tag, today: today) }
-        return .object([
+        let (data, colors) = try reader.read { (try TagPageQueries.page($0, name: tag, today: today), try TagQueries.colors($0)) }
+        var o: [String: Value] = [
             "name": .string(data.name), "text": .string(data.body),
             "open_tasks": .array(data.openTasks.map(encode)),
             "pages": .array(data.pages.map { encode(LinkRef(kind: .page, id: $0.id, title: $0.title)) }),
             "finished_tasks": .array(data.finishedTasks.map(encode)),
-        ])
+        ]
+        Self.addColors(&o, name: data.name, colors: colors)
+        return .object(o)
+    }
+
+    /// `color`: the tag's own palette name or null; `effective_color`: own, inherited or automatic (tag-colors C5).
+    static func addColors(_ o: inout [String: Value], name: String, colors: TagColors) {
+        let own = colors.own[TagName.key(for: name)]
+        o["color"] = own.map { .string($0.rawValue) } ?? .null
+        o["effective_color"] = .string(colors.color(name).rawValue)
     }
 
     func updateTagPage(_ args: Arguments, writer: String) throws -> Value {
         let name = try args.requiredString("name")
-        guard let text = try args.string("text") else { throw ToolError("text is required.") }
-        let ok = try performOK(.updateTagPage(name: name, body: text), writer: writer)
+        let text = try args.string("text"), colorName = try args.string("color")
+        guard text != nil || colorName != nil else { throw ToolError("Give text, color, or both.") }
+        var color: TagColor??
+        if let colorName {
+            if colorName == "automatic" { color = .some(nil) }
+            else if let c = TagColor(rawValue: colorName) { color = .some(c) }
+            else { throw ToolError("Unknown color “\(colorName)”. Use one of: \(TagColor.allCases.map(\.rawValue).joined(separator: ", ")), or automatic.") }
+        }
+        var ok = CommandOK()
+        if let text { ok = try performOK(.updateTagPage(name: name, body: text), writer: writer) }
+        if let color { _ = try performOK(.setTagColor(name: name, color: color), writer: writer) }
         return withUnresolved(try tagPage(Arguments(["name": .string(name)])), ok)
     }
 
