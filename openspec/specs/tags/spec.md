@@ -44,7 +44,7 @@ The system SHALL let the user filter the task list by a tag. The filter SHALL in
 - **THEN** the task is not shown, because `al` is not a full segment
 
 ### Requirement: Tag list
-The system SHALL show all tags as a hierarchy, including tags with no open items, with the number of open tasks per tag (including descendants); selecting a tag SHALL open its tag page and expand it. Each tag node SHALL list the open tasks and pages tagged exactly with it as leaves, each with the start of its text and a context menu to open or delete it; open tasks and pages without tags SHALL be listed under "Untagged".
+The system SHALL show all tags as a hierarchy, including tags with no open items, with the number of open tasks per tag (including descendants); selecting a tag SHALL open its tag page and expand it. Each tag node SHALL list the open tasks, pages and meetings with notes tagged exactly with it as leaves, each with the start of its text and a context menu to open or delete it; open tasks, pages and meetings with notes without tags SHALL be listed under "Untagged".
 
 #### Scenario: Tag hierarchy with counts
 - **WHEN** two open tasks are tagged `person/alex` and one `person/sam`
@@ -81,6 +81,10 @@ The system SHALL show all tags as a hierarchy, including tags with no open items
 #### Scenario: Select a tag
 - **WHEN** the user selects `project/atlas` in the tag list
 - **THEN** the tag page of `project/atlas` opens and `atlas` expands in the tag list
+
+#### Scenario: Tagged meeting in the tree
+- **WHEN** the notes of the series "1:1 Alex" are tagged `person/alex`
+- **THEN** the meeting is listed under `alex` with a meeting icon, and clicking it opens its meeting page
 
 ### Requirement: Move items in the tree
 The user SHALL be able to drag a task or page in the tag list onto another tag node. A plain drop SHALL replace the tag the item was dragged from with the target tag (move); a drop with ⌥ held SHALL add the target tag and keep the others (alias). A drop onto "Untagged" SHALL remove the tag the item was dragged from. Tasks and pages dragged from the task list or the pages list SHALL get the target tag added. Each drop SHALL be one undo step.
