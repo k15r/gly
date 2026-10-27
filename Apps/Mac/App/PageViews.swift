@@ -355,6 +355,16 @@ struct TagPageView: View {
                         }.buttonStyle(.plain)
                     }
                 }
+                if !data.meetings.isEmpty {
+                    section("Meetings", count: data.meetings.count) {
+                        ForEach(data.meetings) { meeting in
+                            Button { nav.go(.meeting(.notes(meeting.id))) } label: {
+                                HStack { Label(meeting.title, systemImage: "calendar"); Spacer() }
+                                    .contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }
                 DisclosureGroup("Finished tasks (\(data.finishedTasks.count))", isExpanded: $showFinished) {
                     ForEach(data.finishedTasks) { task in
                         TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })

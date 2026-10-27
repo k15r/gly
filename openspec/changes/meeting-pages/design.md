@@ -48,7 +48,7 @@ Returns `(kind: .series(ruleID?) | .occurrence(key), itemID?, sectionDate)`:
 - A section heading is `## <EEE d MMM>` in a fixed English format (`## Tue 3 Nov`), plus the year when it's not the current year. A fixed format keeps parsing independent of the system language. A heading without a year belongs to the current year, or to the year before when that would put it more than six months in the future.
 - **Parsing:** headings that parse as a date in that format form sections. Other headings are ordinary markdown inside a section.
 - **`insert(text, for date, into body)`:** if a section for the date exists, append to it. Otherwise insert a new section above the first older section (newest on top), or at the top.
-- **The page** doesn't insert the heading on open. The editor opens scrolled to the section, or at the top with a placeholder "Notes for Tue 3 Nov". The first keystroke into the empty placeholder inserts the heading in the same edit (one undo step).
+- **The page** opens the editor with the cursor in the meeting's section. If the section doesn't exist yet, its heading is already in the editor's text (placed newest-on-top), but it's stored only once something is typed, because the editor saves changes only. Opening and leaving without typing stores nothing.
 - **Agents** use `insert` as well.
 
 ### N4: Commands
@@ -58,6 +58,7 @@ Returns `(kind: .series(ruleID?) | .occurrence(key), itemID?, sectionDate)`:
 - **Deleting:** reuses `deletePage`-like logic (`deleteMeetingNotes(itemID)`).
   - For a one-off row that also has a blocking override, it clears the body and tags instead of tombstoning, so the override stays (spec "Delete meeting notes").
   - The Trash entry then shows the notes via the change log revert.
+- **`updateMeetingNotes(id, body?, tags?, session)`:** changes existing notes by id. The page uses it when opened from search, tags or backlinks, and the tag tree uses it for drags.
 - **Undo labels:** "Edit notes “1:1 Alex”", "Delete notes “1:1 Alex”".
 
 ### N5: Description and join link (live, never stored)
@@ -77,7 +78,8 @@ Dropped after a first look. Opening one exact event needs an undocumented `ical:
 - **`Navigation.Destination.meeting(MeetingRef)`:** `MeetingRef` is the notes item id, or an appointment identity plus date when no notes exist yet.
 - **`MeetingPageView`:** a header (facts, description, Join, a state badge for cancelled or gone), then the editor or read view with the `TaskPageView` patterns (session saves, link menu, tags, backlinks).
 - **Popover:** `AppointmentDetails` adds the description (attendees folded), Join and Notes.
-- **Day view:** a note icon from a per-day "has notes" set (one query by keys and series rules).
+- **Day view:** a note icon from `MeetingMarksModel`, one observation of the occurrence keys and series rules that have notes (`MeetingNotes.marks`), shared by all rows.
+- **Tag tree:** untagged meeting notes appear under "Untagged". Dragging meeting notes onto tags changes their tags (move, ⌥ alias, Untagged removes), like pages and tasks.
 - **Tag tree, tag pages and ⌘K/search:** a `meeting` kind with a calendar icon (`calendar`), using `TreeLeaf.kind = .meeting` and `SearchResults.meetings`. `LinkRef.Kind` gains `meeting` for backlinks and search only. `[[` doesn't offer meetings (non-goal), and `LinkParser` doesn't change.
 
 ### N8: MCP
