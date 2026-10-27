@@ -129,6 +129,6 @@ gly never opens the WorkDash store for writing; the takeover reads it once. Ther
 3. Start gly: the takeover copies the data, and the agent asks for calendar access.
 4. Check the data in gly, with the manual checks.
 5. Update the Claude Code config (R6).
-6. Delete WorkDash.app; the notice disappears.
+6. Delete WorkDash.app.
 
 **Rollback:** WorkDash's container is untouched. Starting the old build gets back the state at the moment of the switch.
