@@ -20,6 +20,7 @@ Neutral test data only (no real names). Setup: tasks or pages tagged `person/ale
 - [ ] B4 Same rename, Cancel at the merge question → nothing changes ("Merge declined").
 - [ ] B5 Delete `project/atlas` → the alert says "Remove … from N items?"; confirm → the items lose the tag, links to it show as deleted; ⌘Z brings it back ("Delete a used tag").
 - [ ] B6 On a tag page, "…" → Rename… → the page shows the new name; "…" → Delete… → the page goes back ("Rename from the tag page").
+- [ ] B7 Right-click a page or task in the tag tree → Open opens it; Delete moves it to the Trash (it leaves the tree); ⌘Z brings it back ("Delete from the tree").
 
 ## C. End to end (task 4.1)
 

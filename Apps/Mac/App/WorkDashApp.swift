@@ -433,14 +433,34 @@ struct TreeLeafRow: View {
             .compactMap { $0 }.joined(separator: "\n"))
         .treeRow(group: fromTag.map { .tag($0) } ?? .untagged, state: drop,
                  drag: leaf.kind.rawValue + "\n" + leaf.itemID + "\n" + (fromTag ?? ""),
-                 onTap: {
-                     switch leaf.kind {
-                     case .page: nav.go(.page(leaf.itemID))
-                     case .task: nav.go(.task(leaf.itemID))
-                     case .tag: break
-                     }
-                 }) { items in
+                 onTap: open) { items in
             ItemMove.perform(items, to: fromTag, app: app, wiki: wiki, tasks: tasks)
+        }
+        .contextMenu {
+            Button("Open", action: open)
+            Divider()
+            // Goes to the Trash like any delete: no confirmation, ⌘Z or the Trash brings it back.
+            Button("Delete", role: .destructive) { delete() }.disabled(!app.canWrite)
+        }
+    }
+
+    private func open() {
+        switch leaf.kind {
+        case .page: nav.go(.page(leaf.itemID))
+        case .task: nav.go(.task(leaf.itemID))
+        case .tag: break
+        }
+    }
+
+    private func delete() {
+        let id = leaf.itemID
+        Task {
+            switch leaf.kind {
+            case .page: await app.send(.deletePage(id: id))
+            case .task: await app.send(.deleteTask(id: id))
+            case .tag: return
+            }
+            if nav.current == .page(id) || nav.current == .task(id) { nav.back() }
         }
     }
 }
