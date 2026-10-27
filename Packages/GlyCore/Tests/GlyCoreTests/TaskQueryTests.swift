@@ -81,25 +81,40 @@ final class TaskQueryTests: XCTestCase {
         }
     }
 
-    func testFutureDayScenarioHasNoOverdue() throws {
+    func testFutureDayScenarioShowsOverdueFromThatDay() throws {
+        // specs/day-view "Future day": a task due today and still open is overdue on tomorrow's list.
         try db.write { db in
-            try addTask(db, "yesterday", dueDay: "2026-10-26")
-            try addTask(db, "tomorrow", dueDay: "2026-10-28")
+            try addTask(db, "today", dueDay: "2026-10-27", createdAt: t(1))
+            try addTask(db, "tomorrow", dueDay: "2026-10-28", createdAt: t(2))
+            try addTask(db, "later", dueDay: "2026-10-30")
             let day = try TaskQueries.tasksForDay(db, day: today.adding(days: 1), today: today)
-            XCTAssertEqual(day.map(\.task.title), ["tomorrow"])
-            XCTAssertFalse(day[0].isOverdue)
+            XCTAssertEqual(day.map(\.task.title), ["today", "tomorrow"])
+            XCTAssertEqual(day.map(\.isOverdue), [true, false])
+        }
+    }
+
+    func testPastDayScenario() throws {
+        // specs/day-view "Past day": only the tasks due that day, nothing overdue.
+        try db.write { db in
+            try addTask(db, "two days ago", dueDay: "2026-10-25")
+            try addTask(db, "yesterday", dueDay: "2026-10-26")
+            let day = try TaskQueries.tasksForDay(db, day: today.adding(days: -1), today: today)
+            XCTAssertEqual(day.map(\.task.title), ["yesterday"])
+            XCTAssertEqual(day.map(\.isOverdue), [false])
         }
     }
 
     func testSnoozedUntilTomorrowScenario() throws {
-        // specs/day-view: a task due today, snoozed until tomorrow, is in no day view until tomorrow is today; then it's overdue.
+        // specs/day-view: a task due today, snoozed until tomorrow, is gone today; tomorrow's view (forecast or real) has it overdue.
         let h = CommandHandler(writer: db)
         guard case .ok(let r) = h.perform(.createTask(TaskDraft(title: "B", due: Due(day: "2026-10-27"))), writer: "u") else { return XCTFail() }
         _ = h.perform(.setStatus(id: r.id!, .snoozed, snoozedUntil: "2026-10-28"), writer: "u")
         let nextDay = today.adding(days: 1)
         try db.read { db in
             XCTAssertTrue(try TaskQueries.tasksForDay(db, day: today, today: today).isEmpty, "gone today")
-            XCTAssertTrue(try TaskQueries.tasksForDay(db, day: nextDay, today: today).isEmpty, "not shown on a future day")
+            let forecast = try TaskQueries.tasksForDay(db, day: nextDay, today: today)
+            XCTAssertEqual(forecast.map(\.task.title), ["B"], "back in tomorrow's forecast")
+            XCTAssertEqual(forecast.map(\.isOverdue), [true])
             // Still a regular entry of the task list, marked snoozed.
             let list = try TaskQueries.taskList(db, mode: .open, today: today)
             XCTAssertEqual(list.map(\.title), ["B"])

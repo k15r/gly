@@ -56,8 +56,10 @@ public enum TaskQueries {
 
     /// Tasks for the day view (specs/day-view "Tasks for the day"): open tasks due on `day`,
     /// plus overdue ones when `day` is `today`. Tasks still snoozed on `day` are left out.
+    /// Open tasks for a day view: for today and later days also those overdue as seen from that day (a forecast that assumes
+    /// nothing is done before it, specs/day-view "Tasks for the day"); for past days only the tasks due that day.
     public static func tasksForDay(_ db: Database, day: LocalDay, today: LocalDay) throws -> [DayTask] {
-        let includeOverdue = day == today
+        let includeOverdue = day >= today
         let dueCondition = includeOverdue ? "i.due_day <= :day" : "i.due_day = :day"
         let tasks = try fetchTasks(db, sql: """
             SELECT i.* FROM live_items i

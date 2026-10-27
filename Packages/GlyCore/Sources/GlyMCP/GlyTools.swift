@@ -121,11 +121,12 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
             result["free_minutes"] = .int(Int(FreeTime.minutes(from: dayStart, to: day.interval().end,
                                                                busy: overrides.busy(model.allDay.map(\.appointment) + model.timed.map(\.appointment)),
                                                                hours: hours).rounded()))
-            if day == today {
-                let range = DateInterval(start: today.interval().start, end: today.adding(days: horizon).interval().end)
-                let upcoming = try await reader.read { try TaskQueries.upcoming($0, today: today, horizon: horizon) }
+            if day >= today {
+                // Same plan as the day view: for a later day a forecast from its start (agent-access, future-day-planning F7).
+                let range = DateInterval(start: day.interval().start, end: day.adding(days: horizon).interval().end)
+                let upcoming = try await reader.read { try TaskQueries.upcoming($0, today: day, horizon: horizon) }
                 let busy = overrides.busy(calendar.appointments(overlapping: range, calendarIDs: visible))
-                let plan = Planning.plan(tasks.map(\.task) + upcoming, now: now(), sizes: sizes, hours: hours, busy: busy)
+                let plan = Planning.plan(tasks.map(\.task) + upcoming, now: dayStart, sizes: sizes, hours: hours, busy: busy)
                 result["today"] = .array(plan.today.map { item in
                     guard case .object(var o) = encode(item.task) else { return .null }
                     o["reason"] = .string(item.reason.rawValue)

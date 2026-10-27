@@ -2,10 +2,10 @@
 
 ## 1. Core
 
-- [ ] 1.1 Overdue from the displayed day (F1, F6): `tasksForDay` includes overdue tasks for any day ≥ today with `isOverdue` relative to that day, past days unchanged; verify with tests for "Future day" (a task due today and still open is overdue on tomorrow's list), "Past day" and "Snoozed until tomorrow" (absent today, present tomorrow), plus a `Planning.plan` test for "Forecast for a later day" (`now` = start of Wednesday gives "≥ 1 day")
+- [x] 1.1 Overdue from the displayed day (F1, F6): `tasksForDay` includes overdue tasks for any day ≥ today with `isOverdue` relative to that day, past days unchanged; verify with tests for "Future day" (a task due today and still open is overdue on tomorrow's list), "Past day" and "Snoozed until tomorrow" (absent today, present tomorrow), plus a `Planning.plan` test for "Forecast for a later day" (`now` = start of Wednesday gives "≥ 1 day")
 - [ ] 1.2 Return day (F3): migration v6 adds `items.snooze_ended_on`; `reconcileSnoozes` sets it from `snoozed_until`, user status changes clear it; add a helper telling whether a task is back from snooze on a given day (reconciled or still snoozed until that day); verify with schema and command tests (set on reconcile, cleared on snooze/done/drop/reopen, undo restores it) and helper tests for today, a forecast day and the day after
 - [ ] 1.3 Snoozed query (F5): `TaskQueries.snoozed(after:)` returns tasks still snoozed after a day, ordered by snooze date; verify with tests for "See snoozed tasks" and "Snoozed until the viewed day" (not counted on its return day)
-- [ ] 1.4 `get_schedule` forecast (F7): overdue tasks and planning data (`today`, `coming_up`, needed minutes) for any date ≥ today, planned from the start of a later date, past dates without planning data; tool description updated; verify with MCP tests for "Another day", "Past day" and "Planning data for a later day"
+- [x] 1.4 `get_schedule` forecast (F7): overdue tasks and planning data (`today`, `coming_up`, needed minutes) for any date ≥ today, planned from the start of a later date, past dates without planning data; tool description updated; verify with MCP tests for "Another day", "Past day" and "Planning data for a later day"
 
 ## 2. Day view
 

@@ -57,6 +57,25 @@ final class PlanningToolTests: XCTestCase {
         XCTAssertEqual(field(list(v2, "today").first, "cant_fit"), .bool(false))
     }
 
+    /// specs/agent-access "Planning data for a later day": planned from the start of that day, horizon after it.
+    func testPlanningDataForALaterDay() async throws {
+        let today = LocalDay(date: now)
+        let later = today.adding(days: 2), inFive = later.adding(days: 5), inSix = later.adding(days: 6)
+        _ = await call("create_task", ["title": "Due today", "due_date": .string(today.description), "effort": "S"])
+        _ = await call("create_task", ["title": "Due later", "due_date": .string(later.description), "effort": "M"])
+        _ = await call("create_task", ["title": "In five", "due_date": .string(inFive.description), "effort": "XS"])
+        _ = await call("create_task", ["title": "In six", "due_date": .string(inSix.description), "effort": "XS"])
+        let (v, isError, text) = await call("get_schedule", ["date": .string(later.description)])
+        XCTAssertFalse(isError, text)
+        XCTAssertEqual(field(v, "free_minutes"), .int(480), "the whole working day, no meetings")
+        let todayList = list(v, "today")
+        XCTAssertEqual(Set(todayList.compactMap { if case .string(let s)? = field($0, "title") { s } else { nil } }), ["Due today", "Due later"])
+        XCTAssertEqual(field(todayList.first { field($0, "title") == "Due today" }, "reason"), "overdue")
+        XCTAssertEqual(field(v, "needed_today_minutes"), .int(120 + 240))
+        XCTAssertEqual(list(v, "coming_up").compactMap { if case .string(let s)? = field($0, "title") { s } else { nil } }, ["In five"],
+                       "horizon of 5 days counted from the later day")
+    }
+
     /// specs/agent-access "Appointment details in the schedule": Appointment with an override.
     func testAppointmentWithAnOverride() async throws {
         let a = meeting(10, 1, id: "a"), b = meeting(14, 1, id: "b")

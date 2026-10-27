@@ -228,7 +228,22 @@ final class ToolTests: XCTestCase {
         }
         let r = await call("get_schedule", ["date": "2026-10-28"])
         XCTAssertEqual(list(r.value, "appointments").compactMap { str($0, "title") }, ["Wednesday sync"])
-        XCTAssertEqual(titles(r.value), ["wednesday"])
+        // specs/agent-access "Another day": matches Wednesday's day view, so the earlier task is overdue from there.
+        XCTAssertEqual(Set(titles(r.value)), ["overdue", "wednesday"])
+        let overdue = list(r.value, "tasks").first { str($0, "title") == "overdue" }
+        XCTAssertEqual(field(overdue, "overdue"), .bool(true))
+    }
+
+    func testPastDay() async throws {
+        // specs/agent-access "Past day": the tasks due that day, no overdue ones, no planning data.
+        try await db.write { db in
+            try addTask(db, "older", dueDay: "2026-10-20")
+            try addTask(db, "friday", dueDay: "2026-10-23")
+        }
+        let r = await call("get_schedule", ["date": "2026-10-23"])
+        XCTAssertEqual(titles(r.value), ["friday"])
+        XCTAssertNil(field(r.value, "today"))
+        XCTAssertNil(field(r.value, "coming_up"))
     }
 
     func testNoCalendarAccess() async throws {

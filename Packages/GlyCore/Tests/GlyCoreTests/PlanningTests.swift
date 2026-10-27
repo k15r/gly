@@ -37,6 +37,22 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(p.today.first?.cantFit, false)
     }
 
+    func testForecastForALaterDay() {
+        // specs/daily-planning "Forecast for a later day": Monday; viewing Wednesday (free), Thursday and Friday free too.
+        // Planned from the start of Wednesday: XL (3 days) due Friday, 2 free days after Wednesday → Wednesday needs 1 day.
+        let p = plan([task("big", due: "2026-10-30", effort: .xl)], now: LocalDay("2026-10-28")!.interval(in: cal).start)
+        XCTAssertEqual(p.today.map(\.task.title), ["big"])
+        XCTAssertEqual(p.today.first?.reason, .needsWork)
+        XCTAssertEqual(p.today.first?.neededToday, 480)
+        XCTAssertEqual(p.today.first?.cantFit, false)
+    }
+
+    func testForecastCountsEarlierDueTasksAsOverdue() {
+        let p = plan([task("from monday", due: "2026-10-26", effort: .s)], now: LocalDay("2026-10-28")!.interval(in: cal).start)
+        XCTAssertEqual(p.today.first?.reason, .overdue)
+        XCTAssertEqual(p.today.first?.neededToday, 120)
+    }
+
     func testEnoughTimeLaterIsComingUp() {
         let p = plan([task("small", due: "2026-10-30", effort: .s)], now: at("2026-10-26", 9))
         XCTAssertEqual(p.today, [])
