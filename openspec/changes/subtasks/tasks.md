@@ -7,7 +7,7 @@
 
 ## 2. App
 
-- [ ] 2.1 Rows "2/5" and "… left", Progress row "… left from parts", "All parts done" banner, hide "done for today" and the Remaining control with estimated parts; remove the Parts section (S4); verify manually "Break a task down", "Last part ticked off", "Ticking off a part"
+- [x] 2.1 Rows "2/5" and "… left", Progress row "… left from parts", "All parts done" banner, hide "done for today" and the Remaining control with estimated parts; remove the Parts section (S4); verify manually "Break a task down", "Last part ticked off", "Ticking off a part"
 
 ## 3. Agents
 
@@ -15,7 +15,7 @@
 
 ## 4. End to end
 
-- [ ] 4.1 Rewrite `docs/manual-checks-subtasks.md` for checklist parts (neutral test data), push it with `scripts/manual-checks.py push`; covers writing items with sizes and durations, ticking them off and the plan following, the complete prompt, and an agent changing a part via the notes; done when `pull` reports every check passed
+- [x] 4.1 Rewrite `docs/manual-checks-subtasks.md` for checklist parts (neutral test data), push it with `scripts/manual-checks.py push`; covers writing items with sizes and durations, ticking them off and the plan following, the complete prompt, and an agent changing a part via the notes; done when `pull` reports every check passed
 
 ## Workflow follow-up
 
