@@ -14,6 +14,7 @@ Neutral test data only (no real names). Setup (Claude creates these, tagged `gly
 - [ ] A3 On a later day, Coming up lists tasks due up to N days after that day, not after today ("Horizon from a later day").
 - [ ] A4 Go to yesterday → the plain "Tasks due this day" list, no overdue tasks, no Today/Coming up ("Past day").
 - [ ] A5 A later day with nothing to do says "Nothing needs work that day".
+- [ ] A6 On a later day with free time, "Demo: call venue" (2h, overdue) shows "overdue" but not "can't fit"; it says "can't fit" only on a day with less than 2h free ("Overdue but fits the day").
 
 ## B. Snoozing (tasks 2.2, 2.3)
 

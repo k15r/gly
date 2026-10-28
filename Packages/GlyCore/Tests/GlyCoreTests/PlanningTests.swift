@@ -53,6 +53,21 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(p.today.first?.neededToday, 120)
     }
 
+    func testOverdueButFitsTheDay() {
+        // specs/daily-planning "Overdue but fits the day": judged against the planned day's free time, not the past deadline.
+        let p = plan([task("call", due: "2026-10-27", effort: .s)], now: LocalDay("2026-10-29")!.interval(in: cal).start)
+        XCTAssertEqual(p.today.first?.reason, .overdue)
+        XCTAssertEqual(p.today.first?.neededToday, 120)
+        XCTAssertEqual(p.today.first?.cantFit, false)
+    }
+
+    func testOverdueAndTooBigForTheDay() {
+        // specs/daily-planning "Overdue and too big for the day": L (8 h) overdue, today from 14:00 = 3 h left.
+        let p = plan([task("big", due: "2026-10-27", effort: .l)], now: at("2026-10-28", 14))
+        XCTAssertEqual(p.today.first?.reason, .overdue)
+        XCTAssertEqual(p.today.first?.cantFit, true)
+    }
+
     func testSnoozeCost() {
         // specs/tasks "Snooze too long": XL (3 days) due Friday, Monday today, all days free.
         let big = task("big", due: "2026-10-30", effort: .xl)

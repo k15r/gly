@@ -37,6 +37,8 @@ For a displayed day D ≥ today:
 
 - **Alternative: a separate forecast routine** that simulates days up to D. Rejected: it's more logic for a less honest result, since it would invent progress.
 
+**Overdue tasks and "can't fit"** (found while checking): against the free time until the due date, every overdue task with an effort was "can't fit", because a past deadline leaves 0 minutes. On a later day with a free working day, that contradicted the header ("needs 2h · free 8h"). An overdue task is now judged against the free time left on the planned day: from now on for today, the whole day for a later day.
+
 ### F2: Upcoming is observed per displayed day
 
 `PlanningModel` observes `upcoming(today: displayedDay, …)` and restarts the observation when the displayed day changes, the way `TasksModel` already restarts its day observation. Past days don't observe it.

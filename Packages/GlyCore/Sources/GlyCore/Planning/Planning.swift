@@ -83,7 +83,8 @@ public enum Planning {
             let effort = task.effort.map { sizes[$0] }
             let reason: TodayReason? = dueDay < today ? .overdue : (dueDay == today ? .dueToday : nil)
             if let e = effort {
-                let freeUntil = free(now, deadline)
+                // An overdue task can only be done on the planned day itself, so it is judged against that day's free time.
+                let freeUntil = free(now, reason == .overdue ? tomorrowStart : deadline)
                 let needed = reason != nil ? e : max(0, e - Int(free(tomorrowStart, deadline).rounded(.down)))
                 if reason != nil || needed > 0 {
                     plan.today.append(TodayItem(task: task, reason: reason ?? .needsWork, effortMinutes: e, neededToday: needed,

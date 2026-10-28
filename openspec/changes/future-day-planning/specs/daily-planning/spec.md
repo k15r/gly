@@ -22,11 +22,19 @@ On today's day view and on the view of any later day, the system SHALL show one 
 - **THEN** Wednesday's list, titled "Wed 28 Oct", shows the task with "Wed ≥ 1 day"
 
 ### Requirement: Work needed today
-For a task with an effort, the work needed on the planned day (today, or the later day being viewed) SHALL be its effort minus the free time after that day until its due date (the end of the due day, or the due time); for tasks due that day or overdue it is the whole effort. A task SHALL be marked "can't fit" when its effort is more than the free time from the start of the planning (now for today, the start of the day for a later day) until its due date. Tasks are evaluated one by one, without sharing free time between them.
+For a task with an effort, the work needed on the planned day (today, or the later day being viewed) SHALL be its effort minus the free time after that day until its due date (the end of the due day, or the due time); for tasks due that day or overdue it is the whole effort. A task SHALL be marked "can't fit" when its effort is more than the free time from the start of the planning (now for today, the start of the day for a later day) until its due date; for an overdue task, whose due date has passed, until the end of the planned day. Tasks are evaluated one by one, without sharing free time between them.
 
 #### Scenario: Enough time later
 - **WHEN** a task with effort `S` (2 h) is due in 4 days with 20 free hours after today
 - **THEN** no work is needed today, and it is not in the Today list
+
+#### Scenario: Overdue but fits the day
+- **WHEN** a task with effort `S` (2 h) was due yesterday and 8 hours are free on the planned day
+- **THEN** it is listed as "overdue" with 2 h needed, and not as "can't fit"
+
+#### Scenario: Overdue and too big for the day
+- **WHEN** a task with effort `L` (1 working day) was due yesterday and only 3 hours are free on the planned day
+- **THEN** it is listed as "overdue" and "can't fit"
 
 ### Requirement: Today's load
 The header of the Today list SHALL show the sum of the work needed that day next to that day's free time (for today from now on, for a later day its whole working time), and SHALL warn by how much the needed work exceeds the free time. Tasks in the list without an estimate SHALL be counted separately ("+ 2 without estimate").
