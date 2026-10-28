@@ -61,8 +61,9 @@ def short(text):
 
 
 def existing(tag):
+    """Check tasks by ID; list_tasks includes tags below `tag` (e.g. demo data), which aren't checks."""
     tasks = call("list_tasks", {"tag": tag, "status": "all", "limit": 500})["tasks"]
-    return {t["title"].split(" · ")[0]: t for t in tasks}
+    return {t["title"].split(" · ")[0]: t for t in tasks if tag in t.get("tags", [])}
 
 
 def push(path):

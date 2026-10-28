@@ -65,6 +65,7 @@ struct TaskPageView: View {
                     .focused($titleFocused)
                     .onSubmit { saveTitle(task) }
                     .onChange(of: titleFocused) { _, focused in if !focused { saveTitle(task) } }
+                    .onDisappear { saveTitle(task) }          // leaving while editing: the edit belongs to this task
                 Spacer()
                 Picker("", selection: Binding(get: { editing ?? false }, set: { editing = $0 })) {
                     Text("Read").tag(false)

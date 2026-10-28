@@ -168,8 +168,9 @@ struct ContentView: View {
                 case .tasks: TaskListContainer()
                 case .pages: PagesListView()
                 case .trash: TrashView()
-                case .page(let id): PageView(id: id)
-                case .task(let id): TaskPageView(id: id)
+                // One view per item: a title being edited can't carry over into the next page or task.
+                case .page(let id): PageView(id: id).id(id)
+                case .task(let id): TaskPageView(id: id).id(id)
                 case .tag(let name): TagPageView(name: name)
                 case .meeting(let ref): MeetingPageView(ref: ref)
                 }

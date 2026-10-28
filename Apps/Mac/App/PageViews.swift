@@ -204,8 +204,9 @@ struct PageView: View {
             HStack(alignment: .firstTextBaseline) {
                 TextField("Title", text: $title).font(.title.bold()).textFieldStyle(.plain)
                     .focused($titleFocused)
-                    .onSubmit(saveTitle)
-                    .onChange(of: titleFocused) { _, focused in if !focused { saveTitle() } }
+                    .onSubmit { saveTitle(page) }
+                    .onChange(of: titleFocused) { _, focused in if !focused { saveTitle(page) } }
+                    .onDisappear { saveTitle(page) }          // leaving while editing: the edit belongs to this page
                 Spacer()
                 Picker("", selection: Binding(get: { editing ?? false }, set: { editing = $0 })) {
                     Text("Read").tag(false)
@@ -253,9 +254,9 @@ struct PageView: View {
         }
     }
 
-    private func saveTitle() {
+    /// Saves the title field into `page`, the page it was shown for (never whichever page is current by then).
+    private func saveTitle(_ page: PageItem) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let page = live.value?.page else { return }
         guard !trimmed.isEmpty else { title = page.title; return }
         guard trimmed != page.title else { return }
         Task { await app.send(.updatePage(id: page.id, PagePatch(title: trimmed))) }
