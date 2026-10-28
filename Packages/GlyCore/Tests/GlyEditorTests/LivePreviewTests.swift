@@ -52,6 +52,15 @@ final class LivePreviewTests: XCTestCase {
         XCTAssertEqual(styles(t, at: "```", caret: 1), [.codeBlock, .syntax])
     }
 
+    func testCaretInsideACodeBlockShowsBothFences() {
+        // "Inside a code block": the caret on a code line shows the opening and closing fence.
+        let t = "intro\n```\ncode\n```\nafter"
+        let onCode = (t as NSString).range(of: "code").location
+        XCTAssertEqual(styles(t, at: "```", caret: onCode), [.codeBlock, .syntax])
+        XCTAssertEqual(styles(t, at: "```", caret: onCode, occurrence: 1), [.codeBlock, .syntax])
+        XCTAssertEqual(styles(t, at: "```", caret: 0, occurrence: 1), [.codeBlock, .hidden], "caret outside the block")
+    }
+
     func testLinkSyntaxRevealedOnTheCaretLine() {
         // "Link chip": collapsed off the line, visible while editing it.
         let t = "see [Plan](gly://item/\(id)) here\nnext"

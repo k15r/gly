@@ -67,6 +67,18 @@ public enum MarkdownStyler {
             default: break
             }
         }
+        // Fenced blocks as a whole: with the caret anywhere inside, both fence lines show their backticks.
+        var blocks: [NSRange] = []
+        for run in runs.sorted(by: { $0.range.location < $1.range.location }) {
+            guard case .codeBlock = run.style else { continue }
+            // Line ranges stop before the line break, so consecutive lines of a block are up to 2 characters apart.
+            if let last = blocks.last, run.range.location - NSMaxRange(last) <= 2 {
+                blocks[blocks.count - 1] = NSUnionRange(last, run.range)
+            } else {
+                blocks.append(run.range)
+            }
+        }
+        let openBlocks = blocks.filter(isRevealed)
         var out: [StyleRun] = []
         for run in runs {
             guard case .syntax = run.style else {
@@ -77,7 +89,7 @@ public enum MarkdownStyler {
                 out.append(run); continue
             }
             let line = lineRange(run.range)
-            if isRevealed(line) { out.append(run); continue }
+            if isRevealed(line) || openBlocks.contains(where: { NSLocationInRange(line.location, $0) }) { out.append(run); continue }
             let lineKinds = kinds[line.location] ?? []
             let marker = ns.substring(with: run.range)
             let atLineStart = ns.substring(with: NSRange(location: line.location, length: run.range.location - line.location))

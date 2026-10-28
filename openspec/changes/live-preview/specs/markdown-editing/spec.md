@@ -8,7 +8,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Live preview
-The editor SHALL render markdown in place while the user types: headings larger and bold without their `#`, bold, italic and inline code without their markers, checklist items as checkboxes, list items with a bullet or number, quotes with a bar, fenced code in a monospaced block, and links as chips showing the target's title. On the lines that contain the caret or the selection, the raw syntax SHALL be shown instead. Rendering SHALL never change the stored text.
+The editor SHALL render markdown in place while the user types: headings larger and bold without their `#`, bold, italic and inline code without their markers, checklist items as checkboxes, list items with a bullet or number, quotes with a bar, fenced code in a monospaced block, and links as chips showing the target's title. On the lines that contain the caret or the selection, the raw syntax SHALL be shown instead; with the caret inside a fenced code block, both of its fence lines SHALL show their backticks. Rendering SHALL never change the stored text.
 
 #### Scenario: Heading while typing
 - **WHEN** the user types `## Decisions` on a new line and moves the caret to the next line
@@ -17,6 +17,10 @@ The editor SHALL render markdown in place while the user types: headings larger 
 #### Scenario: Back on the line
 - **WHEN** the user moves the caret back onto that heading
 - **THEN** the line shows `## Decisions` again until the caret leaves it
+
+#### Scenario: Inside a code block
+- **WHEN** the caret is on a line inside a fenced code block
+- **THEN** the opening and the closing ``` lines are shown, and they disappear again when the caret leaves the block
 
 #### Scenario: Link chip
 - **WHEN** the text contains a link to the page "Atlas architecture" and the caret is on another line

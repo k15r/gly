@@ -39,6 +39,8 @@ The styler marks every syntax character range with the line it belongs to:
 
 ### L2: Revealed lines follow the selection
 
+Fenced code blocks count as a whole: with the caret on any line of a block, both fence lines are shown, so the block's boundaries are visible while editing it (found while checking).
+
 The text view tracks the revealed set: the paragraph ranges touched by the current selection(s), and only while the editor has focus. On `textViewDidChangeSelection` and on focus changes, the text is re-styled only if the set changed, so moving within a line costs nothing. The re-style covers the whole text, with the same pass typing already uses; per-line re-styling stays an option if long notes ever make it noticeable. While typing, the edited line is revealed anyway, so nothing jumps under the cursor. Multi-line selections reveal all their lines.
 
 ### L3: Clicks

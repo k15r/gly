@@ -21,7 +21,7 @@ Intro with **bold**, *italic* and `code`, a [[Demo: live preview]] link and http
 - [ ] A4 A plain click on the link chip opens the page; on the cursor line, a click places the cursor instead (⌘-click still opens) ("Link chip").
 - [ ] A5 Type at the start and at the end of a bold word, a heading and a checklist item → the text stays correct and nothing jumps under the cursor.
 - [ ] A6 Select across several lines → all of them show their raw syntax.
-- [ ] A7 Fenced code (```) shows as a code block; the fence lines show only when the cursor is on them.
+- [ ] A7 Fenced code (```) shows as a code block; with the cursor anywhere inside the block, both ``` lines show; outside, they're hidden ("Inside a code block").
 
 ## B. Source mode and one mode (tasks 1.4, 2.1)
 
