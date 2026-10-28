@@ -1,7 +1,7 @@
 # Manual checks: task-progress
 
 Build and run: `scripts/build.sh`, quit gly, restart its agent (Claude does `launchctl kickstart`), `open build/Build/Products/Debug/gly.app`.
-Neutral test data only. Setup: "Demo: write report" (XL, due Tue 3 Nov) from the earlier demo tasks; if it's not in today's list with "today ≥ …", Claude moves its due date so it is.
+Neutral test data only. Setup: Claude set "Demo: write report" to effort L, due tomorrow 14:00, so today's list asks "today ≥ 3h".
 
 ## A. Done for today (task 2.1)
 
@@ -14,7 +14,7 @@ Neutral test data only. Setup: "Demo: write report" (XL, due Tue 3 Nov) from the
 ## B. Task page (task 2.2)
 
 - [ ] B1 Open "Demo: write report" → a "Progress" row under the fields shows what's left and the recorded days (e.g. "Wed 1d").
-- [ ] B2 "Set remaining…" → step to 1d 4h → Set → the page and its rows show "1d 4h left"; the Progress row lists today's adjustment ("Set what's left").
+- [ ] B2 "Set remaining…" → step to 5h → Set → the page and its rows show "5h left"; the Progress row lists today's adjustment ("Set what's left").
 - [ ] B3 Set it higher than what's left before → the history shows "+… left (adjusted)" ("More left than thought").
 - [ ] B4 "Reset" → back to the full effort, history gone; ⌘Z brings it back ("Reset").
 - [ ] B5 A task without effort shows no Progress row.
