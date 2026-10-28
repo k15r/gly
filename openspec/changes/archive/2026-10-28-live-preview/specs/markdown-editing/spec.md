@@ -8,7 +8,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Live preview
-The editor SHALL render markdown in place while the user types: headings larger and bold without their `#`, bold, italic and inline code without their markers, checklist items as checkboxes, list items with a bullet or number, quotes with a bar, fenced code in a monospaced block, and links as chips showing the target's title. On the lines that contain the caret or the selection, the raw syntax SHALL be shown instead; with the caret inside a fenced code block, both of its fence lines SHALL show their backticks. Rendering SHALL never change the stored text.
+The editor SHALL render markdown in place: headings larger and bold without `#`, bold, italic and inline code without their markers, checklist items as checkboxes, lists with a bullet or number, quotes with a bar, fenced code as a monospaced block, and links as chips showing the target's title. Lines with the caret or selection SHALL show their raw syntax instead, and a code block with the caret inside SHALL show both fence lines. Rendering SHALL never change the stored text.
 
 #### Scenario: Heading while typing
 - **WHEN** the user types `## Decisions` on a new line and moves the caret to the next line
