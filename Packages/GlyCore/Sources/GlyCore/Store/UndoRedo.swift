@@ -84,6 +84,24 @@ extension Database {
         return try label(ofBatch: original ?? batchID)
     }
 
+    /// Recorded work, a set remaining effort or a reset (task-progress P2), named after the task.
+    private func workLabel(_ entries: [Row]) throws -> String? {
+        guard entries.allSatisfy({ ($0["table_name"] as String) == "task_work" }), let first = entries.first,
+              let row = try Row.fetchOne(self, sql: """
+                  SELECT w.kind, i.title FROM task_work w JOIN items i ON i.id = w.item_id WHERE w.id = ?
+                  """, arguments: [first["row_id"] as String]) else { return nil }
+        let title = "“\(row["title"] as String)”"
+        if (first["op"] as String) != "insert" {
+            // Removing only "done for today" rows of one day is taking back that part; anything wider is a reset.
+            let ids = Array(Set(entries.map { $0["row_id"] as String }))
+            let marks = ids.map { _ in "?" }.joined(separator: ",")
+            let rows = try Row.fetchAll(self, sql: "SELECT kind, day FROM task_work WHERE id IN (\(marks))", arguments: StatementArguments(ids))
+            let onePart = rows.allSatisfy { ($0["kind"] as String) == WorkKind.part.rawValue } && Set(rows.map { $0["day"] as String }).count == 1
+            return onePart ? "Take back today's part of \(title)" : "Reset progress of \(title)"
+        }
+        return (row["kind"] as String) == WorkKind.adjust.rawValue ? "Set remaining effort of \(title)" : "Record work on \(title)"
+    }
+
     /// Describes a normal change batch by its entries: create / delete / status change / edit of an item.
     public func label(ofBatch batchID: String) throws -> String {
         let entries = try Row.fetchAll(self, sql: "SELECT * FROM change_log WHERE batch = ? ORDER BY seq", arguments: [batchID])
@@ -95,6 +113,7 @@ extension Database {
             return "\(Self.blockingVerb(r?["blocking"])) “\(r?["title"] as String? ?? "series")” (series)"
         }
         if let tagLabel = try tagStructureLabel(entries) { return tagLabel }
+        if let workLabel = try workLabel(entries) { return workLabel }
         // Items first, then tag assignments (→ their item), then tags (a tag page edit).
         guard var primary = entries.first(where: { ($0["table_name"] as String) == "items" })
                 ?? entries.first(where: { ($0["table_name"] as String) == "item_tags" })

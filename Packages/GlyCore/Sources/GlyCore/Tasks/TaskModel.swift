@@ -1,5 +1,22 @@
 import Foundation
 
+/// How recorded work came about (task-progress P1).
+public enum WorkKind: String, Codable, CaseIterable, Sendable {
+    /// "Done for today" in the day view.
+    case part
+    /// The remaining effort set by hand (the difference to before; negative when more is left).
+    case adjust
+    /// Recorded by an agent (`record_work`).
+    case agent
+}
+
+/// Recorded work of one task on one day, of one kind (task page history).
+public struct WorkEntry: Equatable, Sendable {
+    public let day: String
+    public let kind: WorkKind
+    public let minutes: Int
+}
+
 public enum TaskStatus: String, Codable, CaseIterable {
     case open, snoozed, done, dropped
 }
@@ -42,6 +59,11 @@ public extension TaskItem {
         snoozeEndedOn == day.description || (status == .snoozed && snoozedUntil == day.description)
     }
 
+    /// Effort minus recorded work, never below zero; nil without an effort (specs/tasks "Remaining effort").
+    func remaining(sizes: EffortSizes) -> Int? {
+        effort.map { max(0, sizes[$0] - workedMinutes) }
+    }
+
     /// The snooze date shown with the "back from snooze" mark.
     var snoozeReturnDay: String? { status == .snoozed ? snoozedUntil : snoozeEndedOn }
 }
@@ -62,6 +84,8 @@ public struct TaskItem: Equatable, Identifiable {
     public var effort: Effort?
     /// The day the task last came back from a snooze (set when the snooze ends, cleared by the next status change).
     public var snoozeEndedOn: String?
+    /// Work recorded on the task, in minutes (task-progress P1); may include negative adjustments.
+    public var workedMinutes = 0
 }
 
 extension Due {

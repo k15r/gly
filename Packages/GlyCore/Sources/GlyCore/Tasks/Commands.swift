@@ -121,6 +121,15 @@ public enum Command: Codable, Equatable {
     case undo
     case redo
     case reconcileSnoozes(today: String)
+    /// Records minutes of work on a task for a day (task-progress P2).
+    case recordWork(id: String, day: String, minutes: Int, kind: WorkKind)
+    /// Sets the remaining effort: records the difference to the current remaining as an adjustment of `day`.
+    /// `effortMinutes` is the task's effort in minutes as the caller's sizes define it.
+    case setRemaining(id: String, minutes: Int, effortMinutes: Int, day: String)
+    /// Removes all recorded work of a task (back to the full effort); undo restores it.
+    case resetRemaining(id: String)
+    /// Takes back "done for today": removes the day's `part` rows.
+    case undoTodaysPart(id: String, day: String)
     /// Agent state for the app (calendar access in the agent, design M5/M8). Answered by `AgentService`.
     case agentStatus
     /// Tells the agent that the shared settings changed (HTTP endpoint, design M7). No store change.
@@ -396,6 +405,36 @@ public struct CommandHandler {
             try requireTask(id, db)
             try batch.softDelete("items", id: id)
             return CommandOK(id: id)
+
+        case .recordWork(let id, let day, let minutes, let kind):
+            try requireTask(id, db)
+            try Validate.day(day)
+            guard minutes != 0 else { return CommandOK(id: id, changed: false) }
+            try batch.insert("task_work", ["item_id": id, "day": day, "minutes": minutes, "kind": kind.rawValue])
+            return CommandOK(id: id)
+
+        case .setRemaining(let id, let minutes, let effortMinutes, let day):
+            try requireTask(id, db)
+            try Validate.day(day)
+            guard minutes >= 0 else { throw CommandFailure(.validation, "The remaining effort can't be negative.") }
+            let worked = try Int.fetchOne(db, sql: "SELECT COALESCE(SUM(minutes), 0) FROM live_task_work WHERE item_id = ?", arguments: [id]) ?? 0
+            let delta = (effortMinutes - worked) - minutes
+            guard delta != 0 else { return CommandOK(id: id, changed: false) }
+            try batch.insert("task_work", ["item_id": id, "day": day, "minutes": delta, "kind": WorkKind.adjust.rawValue])
+            return CommandOK(id: id)
+
+        case .resetRemaining(let id):
+            try requireTask(id, db)
+            let rows = try String.fetchAll(db, sql: "SELECT id FROM live_task_work WHERE item_id = ?", arguments: [id])
+            for row in rows { try batch.softDelete("task_work", id: row) }
+            return CommandOK(id: id, changed: !rows.isEmpty)
+
+        case .undoTodaysPart(let id, let day):
+            try requireTask(id, db)
+            let rows = try String.fetchAll(db, sql: "SELECT id FROM live_task_work WHERE item_id = ? AND day = ? AND kind = 'part'",
+                                           arguments: [id, day])
+            for row in rows { try batch.softDelete("task_work", id: row) }
+            return CommandOK(id: id, changed: !rows.isEmpty)
 
         case .setTags(let id, let raw):
             try requireTask(id, db)

@@ -93,10 +93,32 @@ public enum TaskQueries {
         return tagsByItem
     }
 
+    /// Recorded work per item (task-progress P1), chunked like the tags.
+    static func workedMinutes(_ db: Database, ids: [String]) throws -> [String: Int] {
+        var worked: [String: Int] = [:]
+        for chunk in stride(from: 0, to: ids.count, by: 500).map({ Array(ids[$0..<min($0 + 500, ids.count)]) }) {
+            let marks = chunk.map { _ in "?" }.joined(separator: ",")
+            for r in try Row.fetchAll(db, sql: "SELECT item_id, SUM(minutes) AS m FROM live_task_work WHERE item_id IN (\(marks)) GROUP BY item_id",
+                                      arguments: StatementArguments(chunk)) {
+                worked[r["item_id"]] = r["m"]
+            }
+        }
+        return worked
+    }
+
+    /// Recorded work of one task per day and kind, newest first (task page history).
+    public static func work(_ db: Database, taskID: String) throws -> [WorkEntry] {
+        try Row.fetchAll(db, sql: """
+            SELECT day, kind, SUM(minutes) AS m FROM live_task_work WHERE item_id = ? GROUP BY day, kind ORDER BY day DESC, kind
+            """, arguments: [taskID]).map { WorkEntry(day: $0["day"], kind: WorkKind(rawValue: $0["kind"]) ?? .agent, minutes: $0["m"]) }
+    }
+
     static func fetchTasks(_ db: Database, sql: String, arguments: StatementArguments) throws -> [TaskItem] {
         let rows = try Row.fetchAll(db, sql: sql, arguments: arguments)
         guard !rows.isEmpty else { return [] }
-        let tagsByItem = try tagsByItem(db, ids: rows.map { $0["id"] as String })
+        let ids = rows.map { $0["id"] as String }
+        let tagsByItem = try tagsByItem(db, ids: ids)
+        let worked = try workedMinutes(db, ids: ids)
         return rows.map { r in
             let dueDay: String? = r["due_day"]
             return TaskItem(
@@ -108,7 +130,8 @@ public enum TaskQueries {
                 createdAt: r["created_at"], modifiedAt: r["modified_at"], modifiedBy: r["modified_by"],
                 completedAt: r["completed_at"],
                 effort: (r["effort"] as String?).flatMap(Effort.init(rawValue:)),
-                snoozeEndedOn: r["snooze_ended_on"])
+                snoozeEndedOn: r["snooze_ended_on"],
+                workedMinutes: worked[r["id"]] ?? 0)
         }
     }
 }

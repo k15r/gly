@@ -4,17 +4,19 @@ import GRDB
 /// (sync-ready conventions, foundation-spikes D2/D3a).
 public enum Schema {
     /// Tables that will be synced later; every one carries the sync columns.
-    public static let syncedTables = ["items", "tags", "item_tags", "series_rules"]
+    public static let syncedTables = ["items", "tags", "item_tags", "series_rules", "task_work"]
 
     /// Removes every row of user data, the change log and the derived indexes; the schema stays (Settings → Data).
     /// Dependents first, so references never point at removed rows mid-way.
     static func eraseAllData(_ db: Database) throws {
-        for table in ["item_tags", "series_rules", "items", "tags", "change_log", "link_index", "search_index"] {
+        for table in ["task_work", "item_tags", "series_rules", "items", "tags", "change_log", "link_index", "search_index"] {
             try db.execute(sql: "DELETE FROM \(table)")
         }
         try db.execute(sql: "DELETE FROM sqlite_sequence WHERE name = 'change_log'")
     }
     public static let efforts = ["XS", "S", "M", "L", "XL"]
+    /// task_work kinds: "done for today", a set remaining effort, work recorded by an agent.
+    public static let workKinds = ["part", "adjust", "agent"]
     public static let eventStates = ["active", "cancelled", "gone", "ambiguous"]
     public static let blockingValues = ["blocks", "optional", "ignore"]
 
@@ -45,6 +47,18 @@ public enum Schema {
         // The day a task came back from a snooze, for the "back from snooze" mark (future-day-planning F3).
         migrator.registerMigration("v6") { db in
             try db.alter(table: "items") { t in t.add(column: "snooze_ended_on", .text) }    // YYYY-MM-DD
+        }
+        // Work recorded on tasks; remaining effort = effort - sum (task-progress P1).
+        migrator.registerMigration("v7") { db in
+            try db.create(table: "task_work") { t in
+                syncColumns(t)
+                t.column("item_id", .text).notNull().references("items")
+                t.column("day", .text).notNull()                        // YYYY-MM-DD
+                t.column("minutes", .integer).notNull()                  // negative = more left than before (an adjustment)
+                t.column("kind", .text).notNull().check { workKinds.contains($0) }
+            }
+            try db.create(index: "task_work_item", on: "task_work", columns: ["item_id"])
+            try db.execute(sql: "CREATE VIEW live_task_work AS SELECT * FROM task_work WHERE deleted_at IS NULL")
         }
         return migrator
     }
