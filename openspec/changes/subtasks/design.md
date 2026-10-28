@@ -2,50 +2,56 @@
 
 ## Context
 
-- `task-progress` introduces `TaskItem.remaining(sizes:)` from effort and recorded work, which all planning code uses. This change extends that function.
-- Tables use sync columns and `Batch` (change log, undo per writer). `DerivedIndex` builds each item's search text when the item changes.
-- The task page shows a field row and the notes; `TaskRow` shows chips under the title.
+- **Notes checklists already work:** `- [ ]` / `- [x]` lines are styled as checkboxes in the editor and toggle by click in both the editor and the read view (`MarkdownBlocks.toggleChecklist`, specs/markdown-editing "Checklists"). Changes are notes edits: one undo step per edit session, searchable, writable by agents through `update_task notes`.
+- **Remaining effort:** `task-progress` introduced `TaskItem.remaining(sizes:)` (effort minus recorded work), which all planning code uses.
+- **A first version** of this change built a separate parts table with its own commands and UI (migration v8). This design replaces it.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Parts are lightweight. They live inside their task and never act as tasks of their own.
-- One remaining-effort function for all of planning.
+- One editing model: parts are text. No separate list, commands or controls.
+- Parts and their estimates are derived when tasks are read; nothing is stored beyond the notes.
 
 **Non-Goals:**
-- Parts with their own due dates, tags, notes or links, or parts nested in parts.
-- Parts in the day view as separate rows.
+- Links or tags per part, or nested parts counted separately (an indented item is just another part).
 - Recording work per part.
+- Writing parts through dedicated MCP parameters.
 
 ## Decisions
 
-### S1: A parts table
+### S1: Parsing (`ChecklistParts`)
 
-Migration v8 adds `task_parts`, with sync columns plus `item_id`, `position` (REAL, so a part can move between two others without renumbering), `title` (non-empty), `effort` (nullable size) and `done_at` (nullable). `fetchTasks` loads parts per task, ordered by position, the same way as tags.
+GlyCore parses the notes line by line, skipping fenced code blocks (the same fence rule as the styler).
+- **Items:** a line matching `^[ \t]*[-*+][ \t]+\[( |x|X)\][ \t]+(.*)$` is a part. Its title is the rest of the line, without a trailing estimate.
+- **Estimate:** a trailing `(<estimate>)`:
+  - a size: `XS|S|M|L|XL`, case-sensitive
+  - or a duration: `(\d+d)?\s*(\d+h)?\s*(\d+m)?` with at least one unit, lower case
+  - anything else in parentheses stays part of the title
+- **Model:** `TaskPart { title, estimate: PartEstimate?, done }`, where `PartEstimate` is `.size(Effort)` or `.duration(days:minutes:)`.
+- `TaskItem.parts` is a computed property over `body`, so every task read carries it with no extra query.
 
 ### S2: The remaining effort with parts
 
-`remaining(sizes:)`: when any part has an effort, it returns the sum of `sizes[effort]` over the open parts with an effort. Otherwise it keeps the `task-progress` rule.
-- The app hides "done for today" and the Remaining control when `hasEstimatedParts` is true.
-- The task's own effort chip stays as the overall estimate. The rows show "2/5" and "<remaining> left".
+`remaining(sizes:dayMinutes:)`: with any estimated part, the result is the sum over the open estimated parts. A size uses `sizes[effort]`; a duration is `days × dayMinutes + minutes`. Otherwise the `task-progress` rule applies.
+- `dayMinutes` is the working-day length (`WorkingHours.minutesPerDay`). Planning, the MCP encoder and the app pass it.
+- The app hides "done for today" and the remaining control while `hasEstimatedParts` is true.
 
-### S3: Commands
+### S3: The first version's parts table
 
-`addPart`, `updatePart` (title, effort, done), `movePart` (new position), `deletePart` (soft delete), and `replaceParts` for MCP (diffs by id in one batch). All of them refresh the task's derived index.
+The part commands, `PartPatch`, `PartInput`, the parts in `TaskDraft` and `TaskPatch`, the part undo labels and the derived-index hook are removed. Migration v8 stays registered (migrations are only added) and its table stays empty and unused. It's dropped from `Schema.syncedTables`, so it's never synced.
 
-### S4: Search
+### S4: App
 
-`DerivedIndex.refresh` for a task appends its part titles to the search text, so search finds the task. Results show the task, not the part.
+- Rows show "done/total" when a task has parts, and "… left" when the parts drive the remaining effort.
+- On the task page, the Progress row reads "… left from parts" (plus "N without estimate"), and an "All parts done" banner with "Complete task" appears while the task is open.
+- Editing parts is editing the notes.
 
-### S5: Task page
+### S5: MCP
 
-A "Parts" section under the field row, with a checkbox, an editable title and an effort menu per part, a "+ Add part" field, delete in the context menu, and drag to reorder. When all parts are done and the task is open, a banner reads "All parts done" with a "Complete task" button.
-
-### S6: MCP
-
-The task shape gains `parts: [{id, title, effort, done}]`. `create_task` accepts `parts: [{title, effort?, done?}]`, and `update_task` accepts `parts` as described in the spec (S3 `replaceParts`). The tool descriptions explain that estimated parts drive the remaining effort.
+The task shape has `parts: [{title, estimate_minutes, done}]` (read-only). The `create_task`/`update_task` notes descriptions explain `- [ ] Title (S)` / `(2h)`, and that estimated items drive the remaining effort.
 
 ## Risks / Trade-offs
 
-- **[Parts estimates vs. task effort disagree]** E.g. XL as a task, but parts adding up to 1 day. → The parts win for planning, and the task page shows both ("XL · 1d left from parts"), so the difference is visible.
-- **[Replacing the list over MCP]** An agent that forgets parts removes them. → The tool description says so, and undo restores them for the user.
+- **[Every checklist in task notes counts]** A to-do list written for another purpose becomes parts. → That's intended. Parts only drive planning once an item has an estimate.
+- **[Estimate syntax in the title text]** "Call (2h)" reads as an estimate. → Only a trailing, exactly matching parenthesis counts; anything else stays in the title.
+- **[Durations depend on the working day]** "(1d)" changes when the working hours change. → That's consistent with the effort sizes, which do the same.
