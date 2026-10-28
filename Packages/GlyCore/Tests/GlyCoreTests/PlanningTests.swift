@@ -82,6 +82,45 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(fits("2026-10-31"), false)
     }
 
+    func testDayTwoOfABigTask() {
+        // specs/daily-planning "Day two of a big task": today Tue 27 Oct, XL due Wed 28 Oct, 1 day recorded yesterday.
+        // 2 days left, Tuesday and Wednesday free → 1 day needed today, and it fits.
+        var big = task("big", due: "2026-10-28", effort: .xl)
+        let before = plan([big], now: at("2026-10-27", 9))
+        XCTAssertEqual(before.today.first?.cantFit, true, "without progress: 3 days into 2")
+        big.workedMinutes = 480
+        let p = plan([big], now: at("2026-10-27", 9))
+        XCTAssertEqual(p.today.first?.reason, .needsWork)
+        XCTAssertEqual(p.today.first?.neededToday, 480)
+        XCTAssertEqual(p.today.first?.cantFit, false)
+    }
+
+    func testNothingLeftButDueToday() {
+        var t = task("done-ish", due: "2026-10-27", effort: .m)
+        t.workedMinutes = 240
+        let p = plan([t], now: at("2026-10-27", 9))
+        XCTAssertEqual(p.today.first?.reason, .dueToday)
+        XCTAssertEqual(p.today.first?.neededToday, 0)
+        XCTAssertEqual(p.today.first?.cantFit, false)
+        XCTAssertEqual(p.neededMinutes, 0)
+    }
+
+    func testForecastCountsOnlyRecordedWork() {
+        // Viewing Thursday: 1 day recorded so far; nothing assumed for Tue/Wed. XL due Fri 30 Oct.
+        var big = task("big", due: "2026-10-30", effort: .xl)
+        big.workedMinutes = 480
+        let p = plan([big], now: LocalDay("2026-10-29")!.interval(in: cal).start)
+        XCTAssertEqual(p.today.first?.neededToday, 480, "2 days left, Friday free after Thursday → 1 day on Thursday")
+        XCTAssertEqual(p.today.first?.cantFit, false)
+    }
+
+    func testSnoozeCheckUsesTheRemainingEffort() {
+        var big = task("big", due: "2026-10-30", effort: .xl)
+        XCTAssertEqual(Planning.fits(big, returningOn: LocalDay("2026-10-29")!, sizes: sizes, hours: hours, busy: [], calendar: cal), false)
+        big.workedMinutes = 480
+        XCTAssertEqual(Planning.fits(big, returningOn: LocalDay("2026-10-29")!, sizes: sizes, hours: hours, busy: [], calendar: cal), true)
+    }
+
     func testSnoozeCost() {
         // specs/tasks "Snooze too long": XL (3 days) due Friday, Monday today, all days free.
         let big = task("big", due: "2026-10-30", effort: .xl)

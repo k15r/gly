@@ -3,7 +3,7 @@
 ## 1. Core
 
 - [x] 1.1 Work log (P1, P2): migration v7 `task_work`; `TaskItem.workedMinutes` loaded in `fetchTasks`, `remaining(sizes:)`; commands `recordWork`, `setRemaining`, `resetRemaining`, `undoTodaysPart`; verify with tests for "Effort changed later", "More left than thought", setting and resetting the remaining effort, undo of each command, and remaining never below zero
-- [ ] 1.2 Planning uses remaining (P3): `plan`, `startBy`, `fits` on the remaining effort; verify with tests for "Day two of a big task", remaining 0 for a task due today, a forecast counting only recorded work, and the snooze check on the remaining effort
+- [x] 1.2 Planning uses remaining (P3): `plan`, `startBy`, `fits` on the remaining effort; verify with tests for "Day two of a big task", remaining 0 for a task due today, a forecast counting only recorded work, and the snooze check on the remaining effort
 
 ## 2. App
 
