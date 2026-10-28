@@ -9,17 +9,17 @@
 
 ## 2. Day view
 
-- [ ] 2.1 Planning sections for D ≥ today (F1, F2): `PlanningModel` observes `upcoming` for the displayed day and plans from the start of a later day; `todaySections` becomes `planningSections(for:)` with the date title, "that day" empty text and weekday reasons; past days keep the plain list; verify with a clean build and manually "Forecast for a later day", "Horizon from a later day", "Future day", "Past day"
-- [ ] 2.2 Back-from-snooze mark (F3): moon icon and "back from snooze" on Today and Coming up rows when the helper says so, tooltip "Snoozed until <day> – due <day> unchanged"; verify manually "Back today" and "Forecast of the return"
-- [ ] 2.3 Snoozed summary (F5): "N snoozed" under Coming up for D ≥ today, popover with title, "until <day>" and due date, click opens the task; verify manually "See snoozed tasks"
+- [x] 2.1 Planning sections for D ≥ today (F1, F2): `PlanningModel` observes `upcoming` for the displayed day and plans from the start of a later day; `todaySections` becomes `planningSections(for:)` with the date title, "that day" empty text and weekday reasons; past days keep the plain list; verify with a clean build and manually "Forecast for a later day", "Horizon from a later day", "Future day", "Past day"
+- [x] 2.2 Back-from-snooze mark (F3): moon icon and "back from snooze" on Today and Coming up rows when the helper says so, tooltip "Snoozed until <day> – due <day> unchanged"; verify manually "Back today" and "Forecast of the return"
+- [x] 2.3 Snoozed summary (F5): "N snoozed" under Coming up for D ≥ today, popover with title, "until <day>" and due date, click opens the task; verify manually "See snoozed tasks"
 
 ## 3. Snooze menu
 
-- [ ] 3.1 Snooze cost (F4): `PlanningModel.fits(_:returningOn:)` and a small range-keyed appointment cache in `CalendarModel`; `TaskMenu` shows the "Due <day> stays" section header and the "won't fit anymore" warning on dated snooze options; verify with a `fits` test (fits tomorrow, not next Monday, after the deadline never) and manually "Snooze too long" and "No estimate"
+- [x] 3.1 Snooze cost (F4): `PlanningModel.fits(_:returningOn:)` and a small range-keyed appointment cache in `CalendarModel`; `TaskMenu` shows the "Due <day> stays" section header and the "won't fit anymore" warning on dated snooze options; verify with a `fits` test (fits tomorrow, not next Monday, after the deadline never) and manually "Snooze too long" and "No estimate"
 
 ## 4. End to end
 
-- [ ] 4.1 Write `docs/manual-checks-future-day-planning.md` (neutral test data) and push it as gly tasks with `scripts/manual-checks.py push`; covers the forecast on tomorrow and a later day, overdue from that day, the past-day list, snoozing with and without the warning, the back-from-snooze mark today and in the forecast, the snoozed popover, and midnight turning a forecast into today's plan; done when `pull` reports every check passed
+- [x] 4.1 Write `docs/manual-checks-future-day-planning.md` (neutral test data) and push it as gly tasks with `scripts/manual-checks.py push`; covers the forecast on tomorrow and a later day, overdue from that day, the past-day list, snoozing with and without the warning, the back-from-snooze mark today and in the forecast, the snoozed popover, and midnight turning a forecast into today's plan; done when `pull` reports every check passed
 
 ## Workflow follow-up
 

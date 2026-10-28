@@ -6,7 +6,7 @@
 
 ## 2. App
 
-- [ ] 2.1 Settings → Planning weekday toggles (W4) in locale order, at least one day kept, caption updated; verify with a clean build and manually: change the days, see free time and "start by" follow, Saturday/Sunday views show "free 0m"
+- [x] 2.1 Settings → Planning weekday toggles (W4) in locale order, at least one day kept, caption updated; verify with a clean build and manually: change the days, see free time and "start by" follow, Saturday/Sunday views show "free 0m"
 
 ## Workflow follow-up
 
