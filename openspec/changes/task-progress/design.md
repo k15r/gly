@@ -48,7 +48,12 @@ Each is one batch, so undo works per step.
 
 ### P5: Task page
 
-The field row shows "XL · 1d 4h left". A "Progress" section lists the recorded work per day with signed amounts, has a "Remaining" control (days, hours, minutes, like the effort sizes) that writes an `adjust` row, and a "Reset" button.
+For a task with an effort, a "Progress" row under the field row shows what's left ("1h 30m of L left") and the recorded work per day and kind ("Wed 2h by an agent · Wed 4h 30m (adjusted)", with "+… left (adjusted)" for negative adjustments).
+- **"Set remaining…"** opens a popover with a stepper in 30-minute steps, up to twice the effort. Its text has a fixed width, so the arrows stay put. "Set" writes an `adjust` row.
+- **"Reset"** (shown once work is recorded) removes the recorded work; undo brings it back.
+- Task rows show "… left" next to the effort chip once work is recorded.
+
+A stepper rather than separate day, hour and minute fields: remaining efforts are coarse, and one control is enough.
 
 ### P6: MCP
 
