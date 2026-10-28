@@ -48,7 +48,7 @@ final class ToolTests: XCTestCase {
 
     func testToolListHasAllSevenWithSchemas() {
         let names = ToolDefinitions.all.map(\.name)
-        XCTAssertEqual(names, ["get_schedule", "list_tasks", "get_task", "create_task", "update_task", "delete_task", "list_tags",
+        XCTAssertEqual(names, ["get_schedule", "list_tasks", "get_task", "create_task", "update_task", "record_work", "delete_task", "list_tags",
                                "create_page", "get_page", "update_page", "delete_page", "search", "get_context", "get_tag_page", "update_tag_page", "get_meeting_notes", "update_meeting_notes", "list_trash", "restore"])
         for tool in ToolDefinitions.all {
             XCTAssertFalse(tool.description?.isEmpty ?? true, tool.name)
@@ -65,7 +65,7 @@ final class ToolTests: XCTestCase {
         for key in ["created_at", "modified_at"] {
             json = json.replacingOccurrences(of: #""\#(key)":"[^"]*""#, with: #""\#(key)":"T""#, options: .regularExpression)
         }
-        XCTAssertEqual(json, #"{"backlinks":[],"created_at":"T","due":{"day":"2026-10-29","time":"14:00"},"effort":null,"id":"\#(id)","links":[],"modified_at":"T","modified_by":"user@mac","notes":"","priority":"high","snoozed_until":null,"status":"open","tags":["project/atlas"],"title":"Send report"}"#)
+        XCTAssertEqual(json, #"{"backlinks":[],"created_at":"T","due":{"day":"2026-10-29","time":"14:00"},"effort":null,"id":"\#(id)","links":[],"modified_at":"T","modified_by":"user@mac","notes":"","priority":"high","remaining_minutes":null,"snoozed_until":null,"status":"open","tags":["project/atlas"],"title":"Send report","worked_minutes":null}"#)
     }
 
     // MARK: 3.3 read tools

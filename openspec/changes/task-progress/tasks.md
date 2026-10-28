@@ -12,7 +12,7 @@
 
 ## 3. Agents
 
-- [ ] 3.1 MCP (P6): task shape, `update_task remaining_minutes`, `record_work`, descriptions; verify with MCP tests for "Agent records work" and "Agent sets what's left", attribution and one history step each
+- [x] 3.1 MCP (P6): task shape, `update_task remaining_minutes`, `record_work`, descriptions; verify with MCP tests for "Agent records work" and "Agent sets what's left", attribution and one history step each
 
 ## 4. End to end
 

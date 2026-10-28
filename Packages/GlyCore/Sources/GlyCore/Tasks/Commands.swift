@@ -35,6 +35,14 @@ public struct PagePatch: Codable, Equatable {
 
 /// Partial update (updateTask). `nil` = unchanged. Due is replaced as a whole: `.some(nil)` clears it.
 /// Tags and status may be changed in the same patch, so one editor save is one undo step.
+/// A remaining effort to set (task-progress P2): `effortMinutes` is the task's effort as the caller's sizes define it.
+public struct RemainingChange: Codable, Equatable {
+    public var minutes: Int
+    public var effortMinutes: Int
+    public var day: String
+    public init(minutes: Int, effortMinutes: Int, day: String) { self.minutes = minutes; self.effortMinutes = effortMinutes; self.day = day }
+}
+
 public struct TaskPatch: Codable, Equatable {
     public var title: String?
     public var body: String?
@@ -49,6 +57,8 @@ public struct TaskPatch: Codable, Equatable {
     public var session: String?
     /// `.some(nil)` removes the effort.
     public var effort: Effort??
+    /// Sets the remaining effort in the same step (agents, task-progress P6).
+    public var remaining: RemainingChange?
     public init(title: String? = nil, body: String? = nil, priority: Priority? = nil, due: Due?? = nil,
                 tags: [String]? = nil, status: TaskStatus? = nil, snoozedUntil: String? = nil, session: String? = nil,
                 effort: Effort?? = nil) {
@@ -57,7 +67,9 @@ public struct TaskPatch: Codable, Equatable {
     }
 
     // `Due??` / `Effort??` need explicit coding: JSON can't tell "unchanged" from "clear" otherwise.
-    private enum CodingKeys: String, CodingKey { case title, body, priority, due, clearDue, tags, status, snoozedUntil, session, effort, clearEffort }
+    private enum CodingKeys: String, CodingKey {
+        case title, body, priority, due, clearDue, tags, status, snoozedUntil, session, effort, clearEffort, remaining
+    }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -68,6 +80,7 @@ public struct TaskPatch: Codable, Equatable {
         status = try c.decodeIfPresent(TaskStatus.self, forKey: .status)
         snoozedUntil = try c.decodeIfPresent(String.self, forKey: .snoozedUntil)
         session = try c.decodeIfPresent(String.self, forKey: .session)
+        remaining = try c.decodeIfPresent(RemainingChange.self, forKey: .remaining)
         if try c.decodeIfPresent(Bool.self, forKey: .clearEffort) == true { effort = .some(nil) }
         else if let e = try c.decodeIfPresent(Effort.self, forKey: .effort) { effort = .some(e) }
         else { effort = nil }
@@ -89,6 +102,7 @@ public struct TaskPatch: Codable, Equatable {
         try c.encodeIfPresent(status, forKey: .status)
         try c.encodeIfPresent(snoozedUntil, forKey: .snoozedUntil)
         try c.encodeIfPresent(session, forKey: .session)
+        try c.encodeIfPresent(remaining, forKey: .remaining)
         switch effort {
         case .none: break
         case .some(.none): try c.encode(true, forKey: .clearEffort)
@@ -273,6 +287,7 @@ public struct CommandHandler {
             let written = try batch.update("items", id: id, fields)
             var changed = !written.isEmpty
             if let tagNames { changed = try replaceTags(of: id, with: tagNames, batch: batch) || changed }
+            if let remaining = patch.remaining { changed = try setRemaining(id, remaining, batch: batch) || changed }
             if written.contains("title"), let title = patch.title?.trimmingCharacters(in: .whitespacesAndNewlines) {
                 try LinkResolver.refreshLabels(item: id, batch: batch)
                 try LinkResolver.resolveMissing(title: title, batch: batch)
@@ -415,13 +430,8 @@ public struct CommandHandler {
 
         case .setRemaining(let id, let minutes, let effortMinutes, let day):
             try requireTask(id, db)
-            try Validate.day(day)
-            guard minutes >= 0 else { throw CommandFailure(.validation, "The remaining effort can't be negative.") }
-            let worked = try Int.fetchOne(db, sql: "SELECT COALESCE(SUM(minutes), 0) FROM live_task_work WHERE item_id = ?", arguments: [id]) ?? 0
-            let delta = (effortMinutes - worked) - minutes
-            guard delta != 0 else { return CommandOK(id: id, changed: false) }
-            try batch.insert("task_work", ["item_id": id, "day": day, "minutes": delta, "kind": WorkKind.adjust.rawValue])
-            return CommandOK(id: id)
+            let changed = try setRemaining(id, RemainingChange(minutes: minutes, effortMinutes: effortMinutes, day: day), batch: batch)
+            return CommandOK(id: id, changed: changed)
 
         case .resetRemaining(let id):
             try requireTask(id, db)
@@ -652,6 +662,17 @@ public struct CommandHandler {
         let batchID: String = latest["batch"]
         let touchesRow = try Bool.fetchOne(db, sql: "SELECT 1 FROM change_log WHERE batch = ? AND row_id = ? LIMIT 1", arguments: [batchID, rowID]) ?? false
         return touchesRow ? batchID : nil
+    }
+
+    /// Records the difference to the current remaining effort as an adjustment (task-progress P2). False when nothing changes.
+    private func setRemaining(_ id: String, _ change: RemainingChange, batch: Batch) throws -> Bool {
+        try Validate.day(change.day)
+        guard change.minutes >= 0 else { throw CommandFailure(.validation, "The remaining effort can't be negative.") }
+        let worked = try Int.fetchOne(batch.db, sql: "SELECT COALESCE(SUM(minutes), 0) FROM live_task_work WHERE item_id = ?", arguments: [id]) ?? 0
+        let delta = (change.effortMinutes - worked) - change.minutes
+        guard delta != 0 else { return false }
+        try batch.insert("task_work", ["item_id": id, "day": change.day, "minutes": delta, "kind": WorkKind.adjust.rawValue])
+        return true
     }
 
     private func requireTask(_ id: String, _ db: Database) throws {

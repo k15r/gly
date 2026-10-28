@@ -27,7 +27,7 @@ public enum ToolDefinitions {
         "description": "Hierarchical tag names like \"project/atlas\" or \"person/alex\" (segments separated by /, none empty). Prefer existing tags (see list_tags).",
     ])
 
-    static let taskShape = "A task is {id, title, notes, status, priority, due: {day, time?} or null, snoozed_until, effort (XS/S/M/L/XL or null), tags, created_at, modified_at, modified_by}."
+    static let taskShape = "A task is {id, title, notes, status, priority, due: {day, time?} or null, snoozed_until, effort (XS/S/M/L/XL or null), remaining_minutes and worked_minutes (effort minus recorded work, and the recorded work; null without effort — planning uses the remaining effort), tags, created_at, modified_at, modified_by}."
     static let effortSchema: Value = .object(["type": .array(["string", "null"]), "enum": ["XS", "S", "M", "L", "XL", .null],
                                               "description": "How much work the task is: XS ≈ 30 min, S ≈ 2 h, M ≈ half a day, L ≈ a day, XL ≈ several days (the user can tune these). null removes it."])
     static let linkNote = "Markdown may link to pages, tasks and tags: write [[Exact Title]] (resolved if exactly one page, task or tag has that title or name), narrow it with a prefix ([[page:Title]], [[task:Title]], [[tag:project/atlas]]) or a tag path ([[person/alex/Goals]] = the page or task titled Goals that carries the tag person/alex), or reuse the canonical form [label](gly://item/<id>) / [label](gly://tag/<id>) returned by tools. Titles may repeat (e.g. a Goals page per person). Resolution happens once; afterwards the link points to the id. Unresolved links stay as 'missing page' links and are listed in `unresolved` and `unresolved_links` (with candidates when several items matched – retry with a tag path or prefix). Ordinary web links ([text](https://…)) are fine too."
@@ -78,8 +78,18 @@ public enum ToolDefinitions {
                 "status": string("New status.", enum: statusValues),
                 "effort": effortSchema,
                 "snoozed_until": string("Day the task comes back (YYYY-MM-DD); required with status snoozed."),
+                "remaining_minutes": .object(["type": "integer", "minimum": 0,
+                                              "description": "How much work is left, in minutes (the task needs an effort). Planning uses it instead of the full effort."]),
              ], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false)),
+        Tool(name: "record_work",
+             description: "Record work done on a task, in minutes, for a day (default today). It adds to what's recorded, so the task's remaining effort (and the user's plan) shrinks by that much. Use update_task remaining_minutes to set what's left directly instead. \(dateNote) \(taskShape)",
+             inputSchema: object([
+                "id": string("Task id."),
+                "minutes": .object(["type": "integer", "description": "Minutes of work done (negative corrects an earlier entry)."]),
+                "date": string("Day the work was done (YYYY-MM-DD). Default: today."),
+             ], required: ["id", "minutes"]),
+             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
         Tool(name: "delete_task",
              description: "Delete a task. It disappears from all views and goes to the trash, from which restore brings it back. Prefer update_task with status dropped for tasks that won't be done.",
              inputSchema: object(["id": string("Task id.")], required: ["id"]),

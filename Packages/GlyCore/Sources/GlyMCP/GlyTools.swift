@@ -57,6 +57,7 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
             case "create_task": value = try createTask(args, writer: writer(client: client))
             case "update_task": value = try updateTask(args, writer: writer(client: client))
             case "delete_task": value = try deleteTask(args, writer: writer(client: client))
+            case "record_work": value = try recordWork(args, writer: writer(client: client))
             case "create_page": value = try createPage(args, writer: writer(client: client))
             case "get_page": value = try pageValue(args.requiredString("id"))
             case "update_page": value = try updatePage(args, writer: writer(client: client))
@@ -224,9 +225,25 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
             patch.status = status
             patch.snoozedUntil = try args.day("snoozed_until")?.description
         }
-        _ = try task(id)    // not found → clear error before anything else
+        let current = try task(id)    // not found → clear error before anything else
+        if let minutes = try args.int("remaining_minutes") {
+            // The effort after this call (it may change in the same call) in the user's sizes (task-progress P6).
+            let effort: Effort? = patch.effort.map { $0 } ?? current.effort
+            guard let effort else { throw ToolError("remaining_minutes needs a task with an effort; set effort first.") }
+            guard minutes >= 0 else { throw ToolError("remaining_minutes can't be negative.") }
+            patch.remaining = RemainingChange(minutes: minutes, effortMinutes: planning().1[effort], day: today.description)
+        }
         let ok = try performOK(.updateTask(id: id, patch), writer: writer)
         return withUnresolved(encode(try task(id)), ok)
+    }
+
+    func recordWork(_ args: Arguments, writer: String) throws -> Value {
+        let id = try args.requiredString("id")
+        guard let minutes = try args.int("minutes") else { throw ToolError("minutes is required.") }
+        let day = try args.day("date") ?? today
+        _ = try task(id)
+        _ = try performOK(.recordWork(id: id, day: day.description, minutes: minutes, kind: .agent), writer: writer)
+        return encode(try task(id))
     }
 
     func deleteTask(_ args: Arguments, writer: String) throws -> Value {
@@ -555,6 +572,9 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
         }
         o["snoozed_until"] = t.snoozedUntil.map { .string($0) } ?? .null
         o["effort"] = t.effort.map { .string($0.rawValue) } ?? .null
+        let remaining = t.remaining(sizes: planning().1)
+        o["remaining_minutes"] = remaining.map { .int($0) } ?? .null
+        o["worked_minutes"] = t.effort == nil ? .null : .int(t.workedMinutes)
         return .object(o)
     }
 
