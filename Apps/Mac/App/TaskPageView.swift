@@ -233,7 +233,9 @@ struct TaskProgressRow: View {
                 .popover(isPresented: $editing, arrowEdge: .bottom) {
                     VStack(alignment: .leading, spacing: 10) {
                         Stepper(value: $draft, in: 0...max(effortMinutes * 2, 60), step: 30) {
+                            // Fixed width, so the arrows stay put while the text grows ("7h" → "7h 30m").
                             Text("\(formatEffort(Double(draft), dayLength: dayLength)) left").monospacedDigit()
+                                .frame(width: 130, alignment: .leading)
                         }
                         HStack {
                             Button("Cancel") { editing = false }
