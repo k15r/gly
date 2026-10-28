@@ -86,7 +86,8 @@ struct TaskPageView: View {
             .padding([.horizontal, .top])
 
             fields(task).padding(.horizontal).padding(.top, 8)
-            if task.effort != nil { TaskProgressRow(task: task, work: work).padding(.horizontal).padding(.top, 6) }
+            if task.effort != nil || task.hasEstimatedParts { TaskProgressRow(task: task, work: work).padding(.horizontal).padding(.top, 6) }
+            TaskPartsSection(task: task).padding(.horizontal).padding(.top, 6)
             Form { TagField(tags: $tags, input: $pendingTag) }
                 .formStyle(.columns).padding(.horizontal)
                 .onChange(of: tags) { _, new in
@@ -219,6 +220,20 @@ struct TaskProgressRow: View {
         let dayLength = planning.hours.minutesPerDay
         let effortMinutes = task.effort.map { planning.sizes[$0] } ?? 0
         let left = task.remaining(sizes: planning.sizes) ?? 0
+        if task.hasEstimatedParts {
+            // Estimated parts drive what's left; recording work and setting it by hand don't apply (subtasks S2).
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("Progress").foregroundStyle(.secondary)
+                Text("\(formatEffort(Double(left), dayLength: dayLength)) left from parts").monospacedDigit()
+                if let effort = task.effort { Text("(task estimate \(effort.label))").font(.caption).foregroundStyle(.secondary) }
+                Spacer()
+            }
+        } else {
+            manualProgress(left: left, effortMinutes: effortMinutes, dayLength: dayLength)
+        }
+    }
+
+    private func manualProgress(left: Int, effortMinutes: Int, dayLength: Int) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text("Progress").foregroundStyle(.secondary)
             Text(work.isEmpty ? "nothing recorded" : "\(formatEffort(Double(left), dayLength: dayLength)) of \(task.effort?.label ?? "") left")
@@ -268,4 +283,102 @@ struct TaskProgressRow: View {
         case .part: return "\(day) \(amount)"
         }
     }
+}
+
+/// The parts of a task: tick off, rename, estimate, reorder, delete, add (specs/tasks "Parts of a task", subtasks S5).
+struct TaskPartsSection: View {
+    @Environment(AppModel.self) private var app
+    @Environment(PlanningModel.self) private var planning
+    let task: TaskItem
+    @State private var newTitle = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Parts").foregroundStyle(.secondary)
+                if !task.parts.isEmpty {
+                    Text("\(task.parts.filter(\.done).count)/\(task.parts.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                    let unestimated = task.hasEstimatedParts ? task.parts.filter { !$0.done && $0.effort == nil }.count : 0
+                    if unestimated > 0 { Text("\(unestimated) without estimate").font(.caption).foregroundStyle(.secondary) }
+                }
+            }
+            if allDone {
+                HStack {
+                    Label("All parts done", systemImage: "checkmark.seal").foregroundStyle(.green)
+                    Button("Complete task") { send(.setStatus(id: task.id, .done)) }.disabled(!app.canWrite)
+                }
+                .font(.callout)
+            }
+            if !task.parts.isEmpty {
+                List {
+                    ForEach(task.parts) { part in PartRow(part: part, count: task.parts.count, index: index(of: part)) }
+                        .onMove { from, to in
+                            guard let source = from.first else { return }
+                            // `to` counts the moved row itself; the command wants the index among the others.
+                            send(.movePart(id: task.parts[source].id, toIndex: to > source ? to - 1 : to))
+                        }
+                }
+                .listStyle(.plain).scrollDisabled(true)
+                .frame(height: CGFloat(task.parts.count) * 28)
+            }
+            TextField("Add part", text: $newTitle)
+                .textFieldStyle(.roundedBorder).frame(maxWidth: 320)
+                .onSubmit {
+                    let title = newTitle.trimmingCharacters(in: .whitespaces)
+                    guard !title.isEmpty else { return }
+                    send(.addPart(taskID: task.id, title: title, effort: nil))
+                    newTitle = ""
+                }
+                .disabled(!app.canWrite)
+        }
+    }
+
+    private var allDone: Bool { !task.parts.isEmpty && task.parts.allSatisfy(\.done) && task.status == .open }
+    private func index(of part: TaskPart) -> Int { task.parts.firstIndex(of: part) ?? 0 }
+    private func send(_ c: Command) { Task { await app.send(c) } }
+}
+
+private struct PartRow: View {
+    @Environment(AppModel.self) private var app
+    let part: TaskPart
+    let count: Int
+    let index: Int
+    @State private var title = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button { send(.updatePart(id: part.id, PartPatch(done: !part.done))) } label: {
+                Image(systemName: part.done ? "checkmark.square.fill" : "square")
+            }
+            .buttonStyle(.plain).disabled(!app.canWrite).help(part.done ? "Reopen" : "Tick off")
+            TextField("Part", text: $title).textFieldStyle(.plain)
+                .strikethrough(part.done).foregroundStyle(part.done ? .secondary : .primary)
+                .focused($focused)
+                .onSubmit(save)
+                .onChange(of: focused) { _, f in if !f { save() } }
+            Menu {
+                ForEach(Effort.allCases, id: \.self) { e in Button(e.label) { send(.updatePart(id: part.id, PartPatch(effort: .some(e)))) } }
+                Divider()
+                Button("None") { send(.updatePart(id: part.id, PartPatch(effort: .some(nil)))) }
+            } label: { Text(part.effort?.label ?? "–").font(.caption) }
+            .menuStyle(.borderlessButton).fixedSize().help("Effort of this part")
+        }
+        .contextMenu {
+            Button("Move Up") { send(.movePart(id: part.id, toIndex: index - 1)) }.disabled(index == 0)
+            Button("Move Down") { send(.movePart(id: part.id, toIndex: index + 1)) }.disabled(index >= count - 1)
+            Divider()
+            Button("Delete Part", role: .destructive) { send(.deletePart(id: part.id)) }
+        }
+        .onAppear { title = part.title }
+        .onChange(of: part.title) { _, t in if !focused { title = t } }
+    }
+
+    private func save() {
+        let trimmed = title.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { title = part.title; return }
+        guard trimmed != part.title else { return }
+        send(.updatePart(id: part.id, PartPatch(title: trimmed)))
+    }
+    private func send(_ c: Command) { Task { await app.send(c) } }
 }

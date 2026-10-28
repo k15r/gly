@@ -93,7 +93,11 @@ struct TaskRow: View {
                     if overdue { Text("overdue").font(.caption.bold()).foregroundStyle(.red) }
                     if let due = task.due { Text(Self.dueText(due)).font(.caption).foregroundStyle(.secondary) }
                     if let effort = task.effort { EffortChip(effort: effort) }
-                    if task.workedMinutes != 0, let left = task.remaining(sizes: planning.sizes) {
+                    if !task.parts.isEmpty {
+                        Text("\(task.parts.filter(\.done).count)/\(task.parts.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                            .help("Parts done")
+                    }
+                    if task.workedMinutes != 0 || task.hasEstimatedParts, let left = task.remaining(sizes: planning.sizes) {
                         // What's left once work is recorded (specs/tasks "Progress on the task page").
                         Text(left == 0 ? "nothing left" : "\(formatEffort(Double(left), dayLength: planning.hours.minutesPerDay)) left")
                             .font(.caption).foregroundStyle(.secondary).help("Effort minus the work recorded on it")
