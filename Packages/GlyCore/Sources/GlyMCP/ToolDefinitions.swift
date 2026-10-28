@@ -22,12 +22,22 @@ public enum ToolDefinitions {
     static func nullableString(_ description: String) -> Value {
         .object(["type": .array(["string", "null"]), "description": .string(description)])
     }
+    static let partsSchema: Value = .object([
+        "type": "array",
+        "description": "Parts of the task, in order: checklist items with an optional effort. On update_task the list replaces all parts: keep a part by passing its id, add one without id, leave one out to remove it. When any part has an effort, the open parts' efforts are the task's remaining effort.",
+        "items": .object(["type": "object", "required": ["title"], "properties": .object([
+            "id": .object(["type": "string", "description": "Id of an existing part (from the task); omit for a new part."]),
+            "title": .object(["type": "string"]),
+            "effort": .object(["type": .array(["string", "null"]), "enum": ["XS", "S", "M", "L", "XL", .null]]),
+            "done": .object(["type": "boolean"]),
+        ])]),
+    ])
     static let tagsSchema: Value = .object([
         "type": "array", "items": ["type": "string"],
         "description": "Hierarchical tag names like \"project/atlas\" or \"person/alex\" (segments separated by /, none empty). Prefer existing tags (see list_tags).",
     ])
 
-    static let taskShape = "A task is {id, title, notes, status, priority, due: {day, time?} or null, snoozed_until, effort (XS/S/M/L/XL or null), remaining_minutes and worked_minutes (effort minus recorded work, and the recorded work; null without effort — planning uses the remaining effort), tags, created_at, modified_at, modified_by}."
+    static let taskShape = "A task is {id, title, notes, status, priority, due: {day, time?} or null, snoozed_until, effort (XS/S/M/L/XL or null), remaining_minutes and worked_minutes (what's left and the recorded work; null without effort — planning uses the remaining effort), parts ([{id, title, effort, done}] in order; when any part has an effort, remaining_minutes is the sum of the open parts' efforts), tags, created_at, modified_at, modified_by}."
     static let effortSchema: Value = .object(["type": .array(["string", "null"]), "enum": ["XS", "S", "M", "L", "XL", .null],
                                               "description": "How much work the task is: XS ≈ 30 min, S ≈ 2 h, M ≈ half a day, L ≈ a day, XL ≈ several days (the user can tune these). null removes it."])
     static let linkNote = "Markdown may link to pages, tasks and tags: write [[Exact Title]] (resolved if exactly one page, task or tag has that title or name), narrow it with a prefix ([[page:Title]], [[task:Title]], [[tag:project/atlas]]) or a tag path ([[person/alex/Goals]] = the page or task titled Goals that carries the tag person/alex), or reuse the canonical form [label](gly://item/<id>) / [label](gly://tag/<id>) returned by tools. Titles may repeat (e.g. a Goals page per person). Resolution happens once; afterwards the link points to the id. Unresolved links stay as 'missing page' links and are listed in `unresolved` and `unresolved_links` (with candidates when several items matched – retry with a tag path or prefix). Ordinary web links ([text](https://…)) are fine too."
@@ -63,6 +73,7 @@ public enum ToolDefinitions {
                 "due_time": string("Due time (HH:mm); needs due_date. Omit for a whole-day due date."),
                 "tags": tagsSchema,
                 "effort": effortSchema,
+                "parts": partsSchema,
              ], required: ["title"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
         Tool(name: "update_task",
@@ -78,6 +89,7 @@ public enum ToolDefinitions {
                 "status": string("New status.", enum: statusValues),
                 "effort": effortSchema,
                 "snoozed_until": string("Day the task comes back (YYYY-MM-DD); required with status snoozed."),
+                "parts": partsSchema,
                 "remaining_minutes": .object(["type": "integer", "minimum": 0,
                                               "description": "How much work is left, in minutes (the task needs an effort). Planning uses it instead of the full effort."]),
              ], required: ["id"]),

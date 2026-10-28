@@ -88,4 +88,44 @@ final class ProgressToolTests: XCTestCase {
         let day = try await db.read { try String.fetchOne($0, sql: "SELECT day FROM task_work") }
         XCTAssertEqual(day, "2026-10-27")
     }
+
+    // MARK: specs/agent-access "Parts over MCP" (subtasks S6)
+
+    func parts(_ v: Value?) -> [[String: Value]] {
+        guard case .array(let a)? = field(v, "parts") else { return [] }
+        return a.compactMap { if case .object(let o) = $0 { o } else { nil } }
+    }
+
+    func testAgentBreaksATaskDown() async throws {
+        let (v, isError, text) = await call("create_task", ["title": "Trip", "effort": "XL", "parts": .array([
+            .object(["title": "Book", "effort": "S"]), .object(["title": "Pack"]), .object(["title": "Travel", "effort": "L"]),
+        ])])
+        XCTAssertFalse(isError, text)
+        XCTAssertEqual(parts(v).compactMap { if case .string(let s)? = $0["title"] { s } else { nil } }, ["Book", "Pack", "Travel"])
+        XCTAssertEqual(field(v, "remaining_minutes"), .int(120 + 480), "sum of the estimated open parts")
+    }
+
+    func testAgentTicksOffAPart() async throws {
+        let (created, _, _) = await call("create_task", ["title": "Trip", "parts": .array([
+            .object(["title": "Book", "effort": "S"]), .object(["title": "Pack", "effort": "S"]),
+        ])])
+        guard case .string(let id)? = field(created, "id") else { return XCTFail() }
+        var list = parts(created)
+        list[0]["done"] = .bool(true)
+        let (v, isError, text) = await call("update_task", ["id": .string(id), "parts": .array(list.map { .object($0) })])
+        XCTAssertFalse(isError, text)
+        XCTAssertEqual(parts(v).map { $0["done"] }, [.bool(true), .bool(false)])
+        XCTAssertEqual(parts(v).map { $0["id"] }, list.map { $0["id"] }, "same parts, by id")
+        XCTAssertEqual(field(v, "remaining_minutes"), .int(120))
+        let batches = try await db.read { try String.fetchAll($0, sql: "SELECT DISTINCT batch FROM change_log WHERE table_name = 'task_parts'") }
+        XCTAssertEqual(batches.count, 2, "create + one update step")
+        let writers = try await db.read { try String.fetchAll($0, sql: "SELECT DISTINCT writer FROM change_log WHERE table_name = 'task_parts'") }
+        XCTAssertEqual(writers, ["agent:claude-code@mac-test01"])
+    }
+
+    func testBadPartIsAClearError() async throws {
+        let (_, isError, text) = await call("create_task", ["title": "Trip", "parts": .array([.object(["effort": "S"])])])
+        XCTAssertTrue(isError)
+        XCTAssertTrue(text.contains("title"), text)
+    }
 }

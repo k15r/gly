@@ -11,7 +11,7 @@
 
 ## 3. Agents
 
-- [ ] 3.1 MCP (S6): parts in the task shape, `create_task` and `update_task` parts; verify with MCP tests for "Agent breaks a task down" and "Agent ticks off a part"
+- [x] 3.1 MCP (S6): parts in the task shape, `create_task` and `update_task` parts; verify with MCP tests for "Agent breaks a task down" and "Agent ticks off a part"
 
 ## 4. End to end
 

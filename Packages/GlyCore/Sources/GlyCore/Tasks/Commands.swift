@@ -63,6 +63,8 @@ public struct TaskPatch: Codable, Equatable {
     public var effort: Effort??
     /// Sets the remaining effort in the same step (agents, task-progress P6).
     public var remaining: RemainingChange?
+    /// Replaces the parts in the same step (agents, subtasks S6).
+    public var parts: [PartInput]?
     public init(title: String? = nil, body: String? = nil, priority: Priority? = nil, due: Due?? = nil,
                 tags: [String]? = nil, status: TaskStatus? = nil, snoozedUntil: String? = nil, session: String? = nil,
                 effort: Effort?? = nil) {
@@ -72,7 +74,7 @@ public struct TaskPatch: Codable, Equatable {
 
     // `Due??` / `Effort??` need explicit coding: JSON can't tell "unchanged" from "clear" otherwise.
     private enum CodingKeys: String, CodingKey {
-        case title, body, priority, due, clearDue, tags, status, snoozedUntil, session, effort, clearEffort, remaining
+        case title, body, priority, due, clearDue, tags, status, snoozedUntil, session, effort, clearEffort, remaining, parts
     }
 
     public init(from decoder: Decoder) throws {
@@ -85,6 +87,7 @@ public struct TaskPatch: Codable, Equatable {
         snoozedUntil = try c.decodeIfPresent(String.self, forKey: .snoozedUntil)
         session = try c.decodeIfPresent(String.self, forKey: .session)
         remaining = try c.decodeIfPresent(RemainingChange.self, forKey: .remaining)
+        parts = try c.decodeIfPresent([PartInput].self, forKey: .parts)
         if try c.decodeIfPresent(Bool.self, forKey: .clearEffort) == true { effort = .some(nil) }
         else if let e = try c.decodeIfPresent(Effort.self, forKey: .effort) { effort = .some(e) }
         else { effort = nil }
@@ -107,6 +110,7 @@ public struct TaskPatch: Codable, Equatable {
         try c.encodeIfPresent(snoozedUntil, forKey: .snoozedUntil)
         try c.encodeIfPresent(session, forKey: .session)
         try c.encodeIfPresent(remaining, forKey: .remaining)
+        try c.encodeIfPresent(parts, forKey: .parts)
         switch effort {
         case .none: break
         case .some(.none): try c.encode(true, forKey: .clearEffort)
@@ -299,6 +303,7 @@ public struct CommandHandler {
             var changed = !written.isEmpty
             if let tagNames { changed = try replaceTags(of: id, with: tagNames, batch: batch) || changed }
             if let remaining = patch.remaining { changed = try setRemaining(id, remaining, batch: batch) || changed }
+            if let parts = patch.parts { changed = try replaceParts(of: id, with: parts, batch: batch) || changed }
             if written.contains("title"), let title = patch.title?.trimmingCharacters(in: .whitespacesAndNewlines) {
                 try LinkResolver.refreshLabels(item: id, batch: batch)
                 try LinkResolver.resolveMissing(title: title, batch: batch)

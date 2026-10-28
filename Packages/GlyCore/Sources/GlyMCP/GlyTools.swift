@@ -204,7 +204,8 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
                               priority: try args.priority("priority") ?? .none,
                               due: try args.due(),
                               tags: try args.strings("tags") ?? [],
-                              effort: try args.effort("effort") ?? nil)
+                              effort: try args.effort("effort") ?? nil,
+                              parts: try args.parts("parts"))
         let ok = try performOK(.createTask(draft), writer: writer)
         return withUnresolved(encode(try task(ok.id ?? "")), ok)
     }
@@ -225,6 +226,7 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
             patch.status = status
             patch.snoozedUntil = try args.day("snoozed_until")?.description
         }
+        patch.parts = try args.parts("parts")
         let current = try task(id)    // not found → clear error before anything else
         if let minutes = try args.int("remaining_minutes") {
             // The effort after this call (it may change in the same call) in the user's sizes (task-progress P6).
@@ -575,6 +577,9 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
         let remaining = t.remaining(sizes: planning().1)
         o["remaining_minutes"] = remaining.map { .int($0) } ?? .null
         o["worked_minutes"] = t.effort == nil ? .null : .int(t.workedMinutes)
+        o["parts"] = .array(t.parts.map { p in
+            .object(["id": .string(p.id), "title": .string(p.title), "effort": p.effort.map { .string($0.rawValue) } ?? .null, "done": .bool(p.done)])
+        })
         return .object(o)
     }
 
@@ -639,6 +644,33 @@ struct Arguments {
         case .int(let i): return i
         case .double(let d) where d == d.rounded(): return Int(d)
         default: throw ToolError("\(key) must be an integer.")
+        }
+    }
+
+    /// Parts as given to create_task / update_task (subtasks S6).
+    func parts(_ key: String) throws -> [PartInput]? {
+        switch values[key] {
+        case nil, .null: return nil
+        case .array(let items):
+            return try items.map { item in
+                guard case .object(let o) = item, case .string(let title)? = o["title"] else {
+                    throw ToolError("Each part needs a title, e.g. {\"title\": \"Draft\", \"effort\": \"M\"}.")
+                }
+                var effort: Effort?
+                switch o["effort"] {
+                case nil, .null: effort = nil
+                case .string(let e)?:
+                    guard let parsed = Effort(rawValue: e) else { throw ToolError("Unknown part effort “\(e)” (use XS, S, M, L or XL).") }
+                    effort = parsed
+                default: throw ToolError("A part's effort must be XS, S, M, L, XL or null.")
+                }
+                var id: String?
+                if case .string(let s)? = o["id"] { id = s }
+                var done = false
+                if case .bool(let b)? = o["done"] { done = b }
+                return PartInput(id: id, title: title, effort: effort, done: done)
+            }
+        default: throw ToolError("\(key) must be a list of parts.")
         }
     }
 
