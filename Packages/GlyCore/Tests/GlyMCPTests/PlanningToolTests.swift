@@ -17,7 +17,10 @@ final class PlanningToolTests: XCTestCase {
         db = try StoreFactory.openInMemory()
         now = cal.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!
         source = FakeEventSource(calendars: [CalendarInfo(id: "work", title: "Calendar", sourceID: "ex", sourceTitle: "Exchange", colorHex: "#000000")])
-        tools = GlyTools(writer: db, calendar: source, hiddenCalendarIDs: { [] }, deviceID: "mac-test01", now: { [unowned self] in now })
+        // These tests run on the real date, so every day is a working day here (workweek W1 has its own tests).
+        let everyDay = WorkingHours(workdays: Set(1...7))
+        tools = GlyTools(writer: db, calendar: source, hiddenCalendarIDs: { [] }, deviceID: "mac-test01", now: { [unowned self] in now },
+                         planning: { (everyDay, .defaults(for: everyDay), 5) })
     }
 
     func call(_ name: String, _ args: [String: Value] = [:]) async -> (Value?, Bool, String) {

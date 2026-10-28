@@ -56,6 +56,15 @@ extension SharedSettingsTests {
         XCTAssertEqual(s.effortSizes[.xl], 1440)
     }
 
+    func testWorkingDays() {
+        let s = SharedSettings(defaults: suite())
+        XCTAssertEqual(s.workingHours.workdays, [2, 3, 4, 5, 6], "Monday to Friday by default")
+        s.workingHours = WorkingHours(startMinute: 480, endMinute: 960, workdays: [2, 3, 4, 5, 6, 7])
+        XCTAssertEqual(s.workingHours, WorkingHours(startMinute: 480, endMinute: 960, workdays: [2, 3, 4, 5, 6, 7]))
+        s.defaults.set([Int](), forKey: "workingDays")
+        XCTAssertEqual(s.workingHours.workdays, WorkingHours.mondayToFriday, "empty falls back to Monday to Friday")
+    }
+
     func testConfiguredSizeAndDerivedDefaults() {
         let s = SharedSettings(defaults: suite())
         s.setEffortMinutes(180, for: .m)

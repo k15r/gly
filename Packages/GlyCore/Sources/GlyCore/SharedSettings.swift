@@ -14,6 +14,7 @@ public struct SharedSettings {
         static let httpAllowedOrigins = "httpAllowedOrigins"
         static let workingStart = "workingStartMinute"
         static let workingEnd = "workingEndMinute"
+        static let workingDays = "workingDays"
         static let effortMinutes = "effortMinutes"
         static let horizonDays = "horizonDays"
     }
@@ -24,11 +25,15 @@ public struct SharedSettings {
         get {
             let s = defaults.object(forKey: Key.workingStart) as? Int ?? 9 * 60
             let e = defaults.object(forKey: Key.workingEnd) as? Int ?? 17 * 60
-            return e > s && s >= 0 && e <= 24 * 60 ? WorkingHours(startMinute: s, endMinute: e) : WorkingHours()
+            // Missing or empty: Monday to Friday (workweek W3).
+            let stored = Set((defaults.array(forKey: Key.workingDays) as? [Int] ?? []).filter { (1...7).contains($0) })
+            let days = stored.isEmpty ? WorkingHours.mondayToFriday : stored
+            return e > s && s >= 0 && e <= 24 * 60 ? WorkingHours(startMinute: s, endMinute: e, workdays: days) : WorkingHours(workdays: days)
         }
         nonmutating set {
             defaults.set(newValue.startMinute, forKey: Key.workingStart)
             defaults.set(newValue.endMinute, forKey: Key.workingEnd)
+            defaults.set(newValue.workdays.sorted(), forKey: Key.workingDays)
         }
     }
 

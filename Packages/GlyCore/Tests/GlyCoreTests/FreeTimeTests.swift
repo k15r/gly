@@ -57,8 +57,23 @@ final class FreeTimeTests: XCTestCase {
 
     func testDSTDay() {
         // 25 Oct 2026: clocks go back in Europe/Berlin; the working window is still 09–17 wall clock = 8 h.
-        XCTAssertEqual(free(at("2026-10-25", 0), at("2026-10-26", 0), []), 480)
-        XCTAssertEqual(free(at("2026-03-29", 0), at("2026-03-30", 0), []), 480)
+        // DST changes fall on Sundays, so this counts every day as a working day.
+        let everyDay = WorkingHours(workdays: Set(1...7))
+        XCTAssertEqual(free(at("2026-10-25", 0), at("2026-10-26", 0), [], hours: everyDay), 480)
+        XCTAssertEqual(free(at("2026-03-29", 0), at("2026-03-30", 0), [], hours: everyDay), 480)
+    }
+
+    func testWeekendHasNoFreeTime() {
+        // specs/daily-planning "Weekend": Fri 30 Oct to Mon 2 Nov counts Friday and Monday only.
+        XCTAssertEqual(free(at("2026-10-31", 0), at("2026-11-02", 0), []), 0, "Saturday and Sunday")
+        XCTAssertEqual(free(at("2026-10-30", 0), at("2026-11-03", 0), []), 960)
+    }
+
+    func testChangeWorkingDays() {
+        // specs/daily-planning "Change working days": Saturday counts once it's a working day.
+        let withSaturday = WorkingHours(workdays: WorkingHours.mondayToFriday.union([7]))
+        XCTAssertEqual(free(at("2026-10-31", 0), at("2026-11-01", 0), [], hours: withSaturday), 480)
+        XCTAssertEqual(free(at("2026-11-01", 0), at("2026-11-02", 0), [], hours: withSaturday), 0, "Sunday still off")
     }
 
     func testSeveralDays() {

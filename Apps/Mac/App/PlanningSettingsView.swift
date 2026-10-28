@@ -15,7 +15,9 @@ struct PlanningSettingsView: View {
                 LabeledContent("To") { timePicker(Binding(get: { planning.hours.endMinute }, set: { m in
                     if m > planning.hours.startMinute { planning.hours.endMinute = m }
                 })) }
-                Text("The same every day. Free time is only counted inside this window.").font(.caption).foregroundStyle(.secondary)
+                LabeledContent("Days") { workdayToggles }
+                Text("The same on every selected day. Free time is only counted inside this window; other days have none.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Effort sizes") {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
@@ -46,6 +48,22 @@ struct PlanningSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(width: 560, height: 560)
+    }
+
+    /// Seven weekday toggles in the locale's week order; at least one stays on (workweek W4).
+    private var workdayToggles: some View {
+        let cal = Calendar.current
+        let order = (0..<7).map { (cal.firstWeekday - 1 + $0) % 7 + 1 }      // Calendar weekday numbers, 1 = Sunday
+        return HStack(spacing: 4) {
+            ForEach(order, id: \.self) { weekday in
+                let on = planning.hours.workdays.contains(weekday)
+                Toggle(cal.shortWeekdaySymbols[weekday - 1], isOn: Binding(get: { on }, set: { isOn in
+                    if isOn { planning.hours.workdays.insert(weekday) } else if planning.hours.workdays.count > 1 { planning.hours.workdays.remove(weekday) }
+                }))
+                .toggleStyle(.button)
+                .help(on && planning.hours.workdays.count == 1 ? "At least one working day" : "")
+            }
+        }
     }
 
     /// One size as days · hours · minutes (a day is one working day).

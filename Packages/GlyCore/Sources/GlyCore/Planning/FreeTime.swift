@@ -4,11 +4,22 @@ import Foundation
 public struct WorkingHours: Equatable, Codable {
     public var startMinute: Int
     public var endMinute: Int
-    public init(startMinute: Int = 9 * 60, endMinute: Int = 17 * 60) { self.startMinute = startMinute; self.endMinute = endMinute }
+    /// Working weekdays as `Calendar` weekday numbers (1 = Sunday … 7 = Saturday); other days have no window (workweek W1).
+    public var workdays: Set<Int>
+    public static let mondayToFriday: Set<Int> = [2, 3, 4, 5, 6]
+
+    public init(startMinute: Int = 9 * 60, endMinute: Int = 17 * 60, workdays: Set<Int> = WorkingHours.mondayToFriday) {
+        self.startMinute = startMinute; self.endMinute = endMinute; self.workdays = workdays
+    }
     public var minutesPerDay: Int { max(0, endMinute - startMinute) }
 
-    /// The window on a given local day (DST-safe: built from the day's wall-clock times).
+    public func isWorkday(_ day: LocalDay, calendar: Calendar = .current) -> Bool {
+        workdays.contains(calendar.component(.weekday, from: day.interval(in: calendar).start))
+    }
+
+    /// The window on a given local day, nil on a non-working day (DST-safe: built from the day's wall-clock times).
     public func window(on day: LocalDay, calendar: Calendar = .current) -> DateInterval? {
+        guard isWorkday(day, calendar: calendar) else { return nil }
         let start = day.interval(in: calendar).start
         guard let s = calendar.date(byAdding: .minute, value: startMinute, to: start),
               let e = calendar.date(byAdding: .minute, value: endMinute, to: start), e > s else { return nil }

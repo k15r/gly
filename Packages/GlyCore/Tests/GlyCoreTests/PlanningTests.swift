@@ -68,6 +68,20 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(p.today.first?.cantFit, true)
     }
 
+    func testStartByNeverOnTheWeekend() {
+        // specs/daily-planning "Weekend": L due Monday 2 Nov, Monday fully booked → start by Friday, not Sat/Sun.
+        let p = plan([task("prep", due: "2026-11-02", effort: .l)], now: at("2026-10-26", 9), busy: [blocked("2026-11-02")])
+        XCTAssertEqual(p.comingUp.first?.startBy, LocalDay("2026-10-30"))
+    }
+
+    func testSnoozeSkipsTheWeekend() {
+        // XL (3 days) due Tuesday 3 Nov: back Friday = Fri, Mon, Tue → fits; back Saturday = Mon, Tue → doesn't.
+        let big = task("big", due: "2026-11-03", effort: .xl)
+        func fits(_ day: String) -> Bool? { Planning.fits(big, returningOn: LocalDay(day)!, sizes: sizes, hours: hours, busy: [], calendar: cal) }
+        XCTAssertEqual(fits("2026-10-30"), true)
+        XCTAssertEqual(fits("2026-10-31"), false)
+    }
+
     func testSnoozeCost() {
         // specs/tasks "Snooze too long": XL (3 days) due Friday, Monday today, all days free.
         let big = task("big", due: "2026-10-30", effort: .xl)
