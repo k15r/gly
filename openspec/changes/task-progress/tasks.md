@@ -16,7 +16,7 @@
 
 ## 4. End to end
 
-- [ ] 4.1 Write `docs/manual-checks-task-progress.md` (neutral test data), push it with `scripts/manual-checks.py push`; covers ticking off and taking back today's part, the next day's plan without "can't fit", setting and resetting the remaining effort, and an agent recording work; done when `pull` reports every check passed
+- [x] 4.1 Write `docs/manual-checks-task-progress.md` (neutral test data), push it with `scripts/manual-checks.py push`; covers ticking off and taking back today's part, the next day's plan without "can't fit", setting and resetting the remaining effort, and an agent recording work; done when `pull` reports every check passed
 
 ## Workflow follow-up
 

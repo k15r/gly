@@ -9,7 +9,7 @@ Neutral test data only. Setup: Claude set "Demo: write report" to effort L, due 
 - [x] A2 Click "today's part done" again → it's taken back: "today ≥ …" returns and "… left" disappears ("Take it back").
 - [x] A3 Tick it off again, then ⌘Z → the undo label reads "Undo Record work on “Demo: write report”" and undoes it.
 - [x] A4 Forecast: tick it off, then view tomorrow → the report is planned with what's left (no "can't fit" because of the part already done).
-- [ ] A5 Next day: the report shows "today ≥ …" for the remaining work, not "can't fit" ("Day two of a big task").
+- [x] A5 Next day: the report shows "today ≥ …" for the remaining work, not "can't fit" ("Day two of a big task").
 
 ## B. Task page (task 2.2)
 
