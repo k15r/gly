@@ -19,7 +19,7 @@ final class TaskProgressTests: XCTestCase {
         return id
     }
     func task(_ id: String) throws -> TaskItem { try XCTUnwrap(try db.read { try TaskQueries.task($0, id: id) }) }
-    func remaining(_ id: String) throws -> Int? { try task(id).remaining(sizes: sizes) }
+    func remaining(_ id: String) throws -> Int? { try task(id).remaining(sizes: sizes, dayMinutes: 480) }
     @discardableResult func run(_ c: Command) -> CommandResult { h.perform(c, writer: me) }
 
     func testMigrationAddsTheTable() throws {

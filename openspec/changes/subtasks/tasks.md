@@ -2,8 +2,8 @@
 
 ## 1. Core
 
-- [ ] 1.1 Parts from the notes (S1, S3): `ChecklistParts` parser (items outside code blocks, sizes and durations as estimates, titles without them), `TaskItem.parts` derived from the notes; remove the first version's part table code (commands, patches, drafts, labels, index hook) and drop `task_parts` from `syncedTables`; verify with tests for "Break a task down", "Item without estimate", code blocks ignored, non-estimate parentheses kept in the title, and the size/duration forms
-- [ ] 1.2 Remaining from parts (S2): `remaining(sizes:dayMinutes:)` at all call sites; verify with tests for "Ticking off a part", "Unestimated parts", durations following the working day, and planning using the parts' sum
+- [x] 1.1 Parts from the notes (S1, S3): `ChecklistParts` parser (items outside code blocks, sizes and durations as estimates, titles without them), `TaskItem.parts` derived from the notes; remove the first version's part table code (commands, patches, drafts, labels, index hook) and drop `task_parts` from `syncedTables`; verify with tests for "Break a task down", "Item without estimate", code blocks ignored, non-estimate parentheses kept in the title, and the size/duration forms
+- [x] 1.2 Remaining from parts (S2): `remaining(sizes:dayMinutes:)` at all call sites; verify with tests for "Ticking off a part", "Unestimated parts", durations following the working day, and planning using the parts' sum
 
 ## 2. App
 
@@ -11,7 +11,7 @@
 
 ## 3. Agents
 
-- [ ] 3.1 MCP (S5): read-only `parts` in the task shape, no part parameters, descriptions of the syntax; verify with MCP tests for "Agent breaks a task down" and "Agent ticks off a part"
+- [x] 3.1 MCP (S5): read-only `parts` in the task shape, no part parameters, descriptions of the syntax; verify with MCP tests for "Agent breaks a task down" and "Agent ticks off a part"
 
 ## 4. End to end
 

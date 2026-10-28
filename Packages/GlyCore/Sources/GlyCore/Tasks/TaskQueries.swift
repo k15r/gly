@@ -93,21 +93,6 @@ public enum TaskQueries {
         return tagsByItem
     }
 
-    /// Live parts per item in order (subtasks S1), chunked like the tags.
-    static func partsByItem(_ db: Database, ids: [String]) throws -> [String: [TaskPart]] {
-        var parts: [String: [TaskPart]] = [:]
-        for chunk in stride(from: 0, to: ids.count, by: 500).map({ Array(ids[$0..<min($0 + 500, ids.count)]) }) {
-            let marks = chunk.map { _ in "?" }.joined(separator: ",")
-            for r in try Row.fetchAll(db, sql: """
-                SELECT id, item_id, title, effort, done_at, position FROM live_task_parts WHERE item_id IN (\(marks)) ORDER BY position
-                """, arguments: StatementArguments(chunk)) {
-                parts[r["item_id"], default: []].append(TaskPart(id: r["id"], title: r["title"], effort: (r["effort"] as String?).flatMap(Effort.init),
-                                                                 done: (r["done_at"] as Date?) != nil, position: r["position"]))
-            }
-        }
-        return parts
-    }
-
     /// Recorded work per item (task-progress P1), chunked like the tags.
     static func workedMinutes(_ db: Database, ids: [String]) throws -> [String: Int] {
         var worked: [String: Int] = [:]
@@ -144,7 +129,6 @@ public enum TaskQueries {
         let ids = rows.map { $0["id"] as String }
         let tagsByItem = try tagsByItem(db, ids: ids)
         let worked = try workedMinutes(db, ids: ids)
-        let parts = try partsByItem(db, ids: ids)
         return rows.map { r in
             let dueDay: String? = r["due_day"]
             return TaskItem(
@@ -157,8 +141,7 @@ public enum TaskQueries {
                 completedAt: r["completed_at"],
                 effort: (r["effort"] as String?).flatMap(Effort.init(rawValue:)),
                 snoozeEndedOn: r["snooze_ended_on"],
-                workedMinutes: worked[r["id"]] ?? 0,
-                parts: parts[r["id"]] ?? [])
+                workedMinutes: worked[r["id"]] ?? 0)
         }
     }
 }

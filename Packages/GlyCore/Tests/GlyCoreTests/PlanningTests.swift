@@ -122,10 +122,9 @@ final class PlanningTests: XCTestCase {
     }
 
     func testPlanningUsesThePartsSum() {
-        // specs/daily-planning "Remaining effort from parts": XL task, open parts S + S → 4 h, due tomorrow: nothing needed today.
+        // specs/daily-planning "Remaining effort from parts": XL task, open items S + 2h → 4 h, due tomorrow: nothing needed today.
         var t = task("trip", due: "2026-10-28", effort: .xl)
-        t.parts = [TaskPart(id: "a", title: "Book", effort: .s), TaskPart(id: "b", title: "Pack", effort: .s),
-                   TaskPart(id: "c", title: "Done", effort: .l, done: true)]
+        t.body = "- [ ] Book (S)\n- [ ] Pack (2h)\n- [x] Plan (L)"
         let p = plan([t], now: at("2026-10-27", 9))
         XCTAssertTrue(p.today.isEmpty, "4 h fit into tomorrow")
         XCTAssertEqual(p.comingUp.first?.effortMinutes, 240)

@@ -63,7 +63,8 @@ public enum Planning {
     /// cost"): its effort against the free time from the start of that day. nil without due date or effort (nothing to warn).
     public static func fits(_ task: TaskItem, returningOn returnDay: LocalDay, sizes: EffortSizes, hours: WorkingHours,
                             busy: [(interval: DateInterval, weight: BlockingWeight)], calendar: Calendar = .current) -> Bool? {
-        guard let effort = task.remaining(sizes: sizes), let deadline = deadline(of: task, calendar: calendar) else { return nil }
+        guard let effort = task.remaining(sizes: sizes, dayMinutes: hours.minutesPerDay),
+              let deadline = deadline(of: task, calendar: calendar) else { return nil }
         let start = returnDay.interval(in: calendar).start
         guard start < deadline else { return false }
         return Double(effort) <= FreeTime.minutes(from: start, to: deadline, busy: busy, hours: hours, calendar: calendar)
@@ -81,7 +82,7 @@ public enum Planning {
         for task in tasks where seen.insert(task.id).inserted {
             guard let due = task.due, let dueDay = LocalDay(due.day), let deadline = deadline(of: task, calendar: calendar) else { continue }
             // The remaining effort: effort minus recorded work (specs/daily-planning "Planning uses the remaining effort").
-            let effort = task.remaining(sizes: sizes)
+            let effort = task.remaining(sizes: sizes, dayMinutes: hours.minutesPerDay)
             let reason: TodayReason? = dueDay < today ? .overdue : (dueDay == today ? .dueToday : nil)
             if let e = effort {
                 // An overdue task can only be done on the planned day itself, so it is judged against that day's free time.

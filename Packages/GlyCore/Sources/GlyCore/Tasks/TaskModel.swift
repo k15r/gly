@@ -1,28 +1,5 @@
 import Foundation
 
-/// One part of a task: a checklist item with an optional effort (subtasks S1).
-public struct TaskPart: Equatable, Identifiable, Codable, Sendable {
-    public let id: String
-    public var title: String
-    public var effort: Effort?
-    public var done: Bool
-    public var position: Double
-    public init(id: String, title: String, effort: Effort? = nil, done: Bool = false, position: Double = 0) {
-        self.id = id; self.title = title; self.effort = effort; self.done = done; self.position = position
-    }
-}
-
-/// A part as given to `replaceParts`/`createTask`: an existing id keeps and updates that part, no id adds one (subtasks S3).
-public struct PartInput: Equatable, Codable, Sendable {
-    public var id: String?
-    public var title: String
-    public var effort: Effort?
-    public var done: Bool
-    public init(id: String? = nil, title: String, effort: Effort? = nil, done: Bool = false) {
-        self.id = id; self.title = title; self.effort = effort; self.done = done
-    }
-}
-
 /// How recorded work came about (task-progress P1).
 public enum WorkKind: String, Codable, CaseIterable, Sendable {
     /// "Done for today" in the day view.
@@ -82,14 +59,19 @@ public extension TaskItem {
         snoozeEndedOn == day.description || (status == .snoozed && snoozedUntil == day.description)
     }
 
-    /// At least one part has an effort: the parts drive the remaining effort (subtasks S2).
-    var hasEstimatedParts: Bool { parts.contains { $0.effort != nil } }
+    /// The checklist items of the notes (subtasks S1).
+    var parts: [TaskPart] { ChecklistParts.parse(body) }
 
-    /// The remaining effort: with estimated parts the sum of the open ones' efforts (specs/daily-planning "Remaining effort
+    /// At least one part has an estimate: the parts drive the remaining effort (subtasks S2).
+    var hasEstimatedParts: Bool { parts.contains { $0.estimate != nil } }
+
+    /// The remaining effort: with estimated parts the sum of the open ones' estimates (specs/daily-planning "Remaining effort
     /// from parts"); otherwise effort minus recorded work, never below zero; nil without either (specs/tasks "Remaining effort").
-    func remaining(sizes: EffortSizes) -> Int? {
-        if hasEstimatedParts {
-            return parts.filter { !$0.done }.compactMap(\.effort).reduce(0) { $0 + sizes[$1] }
+    /// `dayMinutes` is the working-day length, for estimates in days.
+    func remaining(sizes: EffortSizes, dayMinutes: Int) -> Int? {
+        let parts = self.parts
+        if parts.contains(where: { $0.estimate != nil }) {
+            return parts.filter { !$0.done }.compactMap(\.estimate).reduce(0) { $0 + $1.minutes(sizes: sizes, dayMinutes: dayMinutes) }
         }
         return effort.map { max(0, sizes[$0] - workedMinutes) }
     }
@@ -116,8 +98,6 @@ public struct TaskItem: Equatable, Identifiable {
     public var snoozeEndedOn: String?
     /// Work recorded on the task, in minutes (task-progress P1); may include negative adjustments.
     public var workedMinutes = 0
-    /// Parts in order (subtasks S1).
-    public var parts: [TaskPart] = []
 }
 
 extension Due {

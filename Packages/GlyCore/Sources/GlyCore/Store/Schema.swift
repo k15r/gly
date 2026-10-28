@@ -4,7 +4,7 @@ import GRDB
 /// (sync-ready conventions, foundation-spikes D2/D3a).
 public enum Schema {
     /// Tables that will be synced later; every one carries the sync columns.
-    public static let syncedTables = ["items", "tags", "item_tags", "series_rules", "task_work", "task_parts"]
+    public static let syncedTables = ["items", "tags", "item_tags", "series_rules", "task_work"]
 
     /// Removes every row of user data, the change log and the derived indexes; the schema stays (Settings → Data).
     /// Dependents first, so references never point at removed rows mid-way.
@@ -60,12 +60,13 @@ public enum Schema {
             try db.create(index: "task_work_item", on: "task_work", columns: ["item_id"])
             try db.execute(sql: "CREATE VIEW live_task_work AS SELECT * FROM task_work WHERE deleted_at IS NULL")
         }
-        // Parts of a task: checklist items with an optional effort (subtasks S1).
+        // A first version of subtasks stored parts in a table; parts are now the checklist items of the notes
+        // (subtasks S3). Kept because migrations are additive; the table stays empty and isn't synced.
         migrator.registerMigration("v8") { db in
             try db.create(table: "task_parts") { t in
                 syncColumns(t)
                 t.column("item_id", .text).notNull().references("items")
-                t.column("position", .double).notNull()                  // REAL: a part can move between two others
+                t.column("position", .double).notNull()
                 t.column("title", .text).notNull().check { length($0) > 0 }
                 t.column("effort", .text).check { $0 == nil || efforts.contains($0) }
                 t.column("done_at", .datetime)
