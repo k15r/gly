@@ -144,7 +144,8 @@ struct DayView: View {
                     ForEach(plan.today) { item in
                         TaskRow(task: item.task, overdue: item.reason == .overdue, onEdit: { nav.go(.task(item.task.id)) },
                                 note: todayNote(item, dayLength: dayLength, isToday: isToday),
-                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil)
+                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil,
+                                todaysPart: isToday ? todaysPart(item.task, needed: item.neededToday ?? 0) : nil)
                     }
                 }
             }
@@ -165,12 +166,20 @@ struct DayView: View {
                 } else {
                     ForEach(plan.comingUp) { item in
                         TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, note: comingUpNote(item),
-                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil)
+                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil,
+                                todaysPart: isToday ? todaysPart(item.task, needed: 0) : nil)
                     }
                 }
                 if !planning.snoozed.isEmpty { snoozedSummary }
             }
         }
+    }
+
+    /// "Done for today" when today asks for work, or to take back what was ticked off today (task-progress P4).
+    private func todaysPart(_ task: TaskItem, needed: Int) -> TodaysPart? {
+        let recorded = planning.partsToday[task.id]
+        guard needed > 0 || recorded != nil else { return nil }
+        return TodaysPart(neededMinutes: needed, recordedMinutes: recorded)
     }
 
     /// "N snoozed": tasks still snoozed on this day, so they aren't forgotten (specs/daily-planning "Snoozed tasks summary").
@@ -224,6 +233,7 @@ struct DayView: View {
 
     private func comingUpNote(_ item: ComingUpItem) -> PlanNote {
         guard let start = item.startBy else { return PlanNote(text: "no estimate", color: .secondary, help: "Set an effort to plan it") }
+        if item.effortMinutes == 0 { return PlanNote(text: "", color: .secondary, help: "") }      // nothing left: the row says so
         let text = start == clock.today.adding(days: 1) ? "start by tomorrow" : "start by " + DayView.weekday(start)
         return PlanNote(text: text, color: .secondary, help: "The last day to start and still finish")
     }

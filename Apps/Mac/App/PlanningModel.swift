@@ -17,6 +17,8 @@ final class PlanningModel {
     private(set) var upcoming: [TaskItem] = []
     /// Tasks still snoozed on the planned day (future-day-planning F5).
     private(set) var snoozed: [TaskItem] = []
+    /// Minutes ticked off as "done for today" today, per task (task-progress P4).
+    private(set) var partsToday: [String: Int] = [:]
 
     @ObservationIgnored private var store: ReadOnlyStore?
     /// The day planned for: the displayed day if it is today or later (a forecast), else nothing to plan (F1, F2).
@@ -24,6 +26,8 @@ final class PlanningModel {
     @ObservationIgnored private var overridesObservation: AnyDatabaseCancellable?
     @ObservationIgnored private var upcomingObservation: AnyDatabaseCancellable?
     @ObservationIgnored private var snoozedObservation: AnyDatabaseCancellable?
+    @ObservationIgnored private var partsObservation: AnyDatabaseCancellable?
+    @ObservationIgnored private var today = LocalDay(date: Date())
 
     init(settings: SharedSettings = .shared()) {
         self.settings = settings
@@ -41,9 +45,19 @@ final class PlanningModel {
                                              onError: { print("overrides observation: \($0)") },
                                              onChange: { [weak self] in self?.overrides = $0.0; self?.ambiguous = $0.1 })
         observeUpcoming()
+        observeParts()
+    }
+
+    private func observeParts() {
+        guard let store else { return }
+        let today = self.today
+        partsObservation = store.observe(ValueObservation.tracking { try TaskQueries.partsRecorded($0, on: today) },
+                                         onError: { print("parts observation: \($0)") },
+                                         onChange: { [weak self] in self?.partsToday = $0 })
     }
 
     func set(day: LocalDay, today: LocalDay) {
+        if today != self.today { self.today = today; observeParts() }
         let planDay = day >= today ? day : nil
         guard planDay != self.planDay else { return }
         self.planDay = planDay

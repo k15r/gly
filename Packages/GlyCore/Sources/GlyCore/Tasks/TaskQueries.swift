@@ -106,6 +106,16 @@ public enum TaskQueries {
         return worked
     }
 
+    /// Minutes recorded as "done for today" on `day`, per task (the row's recorded state, task-progress P4).
+    public static func partsRecorded(_ db: Database, on day: LocalDay) throws -> [String: Int] {
+        var parts: [String: Int] = [:]
+        for r in try Row.fetchAll(db, sql: "SELECT item_id, SUM(minutes) AS m FROM live_task_work WHERE day = ? AND kind = 'part' GROUP BY item_id",
+                                  arguments: [day.description]) {
+            parts[r["item_id"]] = r["m"]
+        }
+        return parts
+    }
+
     /// Recorded work of one task per day and kind, newest first (task page history).
     public static func work(_ db: Database, taskID: String) throws -> [WorkEntry] {
         try Row.fetchAll(db, sql: """

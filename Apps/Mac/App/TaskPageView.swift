@@ -4,6 +4,8 @@ import GlyCore
 struct TaskDetail: Equatable {
     var task: TaskItem?
     var backlinks: [Backlink]
+    /// Recorded work per day and kind, newest first (task-progress P5).
+    var work: [WorkEntry] = []
 }
 
 /// A task in the main area, laid out like a page (specs/tasks "Task page"): title, field row, notes, backlinks.
@@ -13,6 +15,7 @@ struct TaskPageView: View {
     @Environment(WikiModel.self) private var wiki
     @Environment(Navigation.self) private var nav
     @Environment(Clock.self) private var clock
+    @Environment(PlanningModel.self) private var planning
     let id: String
 
     @State private var live = Live<TaskDetail>()
@@ -27,7 +30,7 @@ struct TaskPageView: View {
     var body: some View {
         Group {
             if let detail = live.value, let task = detail.task {
-                content(task, backlinks: detail.backlinks)
+                content(task, backlinks: detail.backlinks, work: detail.work)
             } else if live.loaded {
                 ContentUnavailableView("Task not found", systemImage: "checkmark.circle.badge.questionmark",
                                        description: Text("It may have been deleted."))
@@ -39,7 +42,8 @@ struct TaskPageView: View {
             editing = nil
             let id = self.id
             live.observe(wiki.store) { db in
-                TaskDetail(task: try TaskQueries.task(db, id: id), backlinks: try LinkQueries.backlinks(db, to: id))
+                TaskDetail(task: try TaskQueries.task(db, id: id), backlinks: try LinkQueries.backlinks(db, to: id),
+                           work: try TaskQueries.work(db, taskID: id))
             }
         }
         .onChange(of: live.value?.task) { _, task in
@@ -51,7 +55,7 @@ struct TaskPageView: View {
         }
     }
 
-    private func content(_ task: TaskItem, backlinks: [Backlink]) -> some View {
+    private func content(_ task: TaskItem, backlinks: [Backlink], work: [WorkEntry]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Button {
@@ -82,6 +86,7 @@ struct TaskPageView: View {
             .padding([.horizontal, .top])
 
             fields(task).padding(.horizontal).padding(.top, 8)
+            if task.effort != nil { TaskProgressRow(task: task, work: work).padding(.horizontal).padding(.top, 6) }
             Form { TagField(tags: $tags, input: $pendingTag) }
                 .formStyle(.columns).padding(.horizontal)
                 .onChange(of: tags) { _, new in
@@ -199,4 +204,66 @@ struct TaskPageView: View {
     }
 
     private func send(_ command: Command) { Task { await app.send(command) } }
+}
+
+/// Remaining effort and recorded work of a task, with "Set remaining…" and "Reset" (specs/tasks "Progress on the task page").
+struct TaskProgressRow: View {
+    @Environment(AppModel.self) private var app
+    @Environment(PlanningModel.self) private var planning
+    let task: TaskItem
+    let work: [WorkEntry]
+    @State private var editing = false
+    @State private var draft = 0
+
+    var body: some View {
+        let dayLength = planning.hours.minutesPerDay
+        let effortMinutes = task.effort.map { planning.sizes[$0] } ?? 0
+        let left = task.remaining(sizes: planning.sizes) ?? 0
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text("Progress").foregroundStyle(.secondary)
+            Text(work.isEmpty ? "nothing recorded" : "\(formatEffort(Double(left), dayLength: dayLength)) of \(task.effort?.label ?? "") left")
+                .monospacedDigit()
+            if !work.isEmpty {
+                Text(work.map { entry in Self.describe(entry, dayLength: dayLength) }.joined(separator: " · "))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            }
+            Spacer()
+            Button("Set remaining…") { draft = left; editing = true }
+                .buttonStyle(.borderless).disabled(!app.canWrite)
+                .popover(isPresented: $editing, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Stepper(value: $draft, in: 0...max(effortMinutes * 2, 60), step: 30) {
+                            Text("\(formatEffort(Double(draft), dayLength: dayLength)) left").monospacedDigit()
+                        }
+                        HStack {
+                            Button("Cancel") { editing = false }
+                            Spacer()
+                            Button("Set") {
+                                editing = false
+                                let day = LocalDay(date: Date()).description
+                                Task { await app.send(.setRemaining(id: task.id, minutes: draft, effortMinutes: effortMinutes, day: day)) }
+                            }
+                            .keyboardShortcut(.defaultAction)
+                        }
+                    }
+                    .padding().frame(width: 240)
+                }
+            if !work.isEmpty {
+                Button("Reset") { Task { await app.send(.resetRemaining(id: task.id)) } }
+                    .buttonStyle(.borderless).disabled(!app.canWrite)
+                    .help("Back to the full effort (undo brings the recorded work back)")
+            }
+        }
+    }
+
+    /// "Tue 1d", "Wed +2h left (adjusted)" for negative adjustments, "by an agent" for agent records.
+    static func describe(_ entry: WorkEntry, dayLength: Int) -> String {
+        let day = LocalDay(entry.day).map(DayView.weekday) ?? entry.day
+        let amount = formatEffort(Double(abs(entry.minutes)), dayLength: dayLength)
+        switch entry.kind {
+        case .adjust: return entry.minutes < 0 ? "\(day) +\(amount) left (adjusted)" : "\(day) \(amount) (adjusted)"
+        case .agent: return "\(day) \(entry.minutes < 0 ? "−" : "")\(amount) by an agent"
+        case .part: return "\(day) \(amount)"
+        }
+    }
 }

@@ -32,8 +32,15 @@ extension Priority {
 }
 
 /// One task line, used in the day view and the task list. Completion and priority are inline edits.
+/// "Done for today" on a planning row of today's view (task-progress P4): what today asks for and what's ticked off.
+struct TodaysPart: Equatable {
+    let neededMinutes: Int
+    let recordedMinutes: Int?
+}
+
 struct TaskRow: View {
     @Environment(AppModel.self) private var app
+    @Environment(PlanningModel.self) private var planning
     let task: TaskItem
     var overdue = false
     var onEdit: () -> Void
@@ -41,6 +48,8 @@ struct TaskRow: View {
     var note: PlanNote? = nil
     /// The day view's day when the task comes back from a snooze that day (future-day-planning F3).
     var backFromSnoozeOn: LocalDay?
+    /// Offers "done for today" (today's planning rows only).
+    var todaysPart: TodaysPart?
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
 
@@ -84,6 +93,11 @@ struct TaskRow: View {
                     if overdue { Text("overdue").font(.caption.bold()).foregroundStyle(.red) }
                     if let due = task.due { Text(Self.dueText(due)).font(.caption).foregroundStyle(.secondary) }
                     if let effort = task.effort { EffortChip(effort: effort) }
+                    if task.workedMinutes != 0, let left = task.remaining(sizes: planning.sizes) {
+                        // What's left once work is recorded (specs/tasks "Progress on the task page").
+                        Text(left == 0 ? "nothing left" : "\(formatEffort(Double(left), dayLength: planning.hours.minutesPerDay)) left")
+                            .font(.caption).foregroundStyle(.secondary).help("Effort minus the work recorded on it")
+                    }
                     if let note, !note.text.isEmpty { Text(note.text).font(.caption.bold()).foregroundStyle(note.color).help(note.help) }
                     if backFromSnoozeOn != nil {
                         Label("back from snooze", systemImage: "moon.zzz").font(.caption).foregroundStyle(.purple).help(backFromSnoozeHelp)
@@ -94,6 +108,7 @@ struct TaskRow: View {
                 }
             }
             Spacer()
+            if let todaysPart { todaysPartButton(todaysPart) }
             Menu {
                 ForEach(Priority.allCases.reversed(), id: \.self) { p in
                     Button(p.label) { Task { await app.send(.updateTask(id: task.id, TaskPatch(priority: p))) } }
@@ -108,6 +123,29 @@ struct TaskRow: View {
         .onTapGesture(perform: onEdit)          // single click opens, like page rows; the circle, priority and tags keep their own clicks
         .contextMenu { TaskActions(task: task, onEdit: onEdit) }
         .padding(.vertical, 2)
+    }
+
+    /// Records what today asks for as worked today, or takes it back (specs/daily-planning "Record today's part").
+    private func todaysPartButton(_ part: TodaysPart) -> some View {
+        let today = LocalDay(date: Date()).description
+        let dayLength = planning.hours.minutesPerDay
+        return Button {
+            if part.recordedMinutes != nil {
+                Task { await app.send(.undoTodaysPart(id: task.id, day: today)) }
+            } else {
+                Task { await app.send(.recordWork(id: task.id, day: today, minutes: part.neededMinutes, kind: .part)) }
+            }
+        } label: {
+            if let recorded = part.recordedMinutes {
+                Label("today's part done", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    .help("\(formatEffort(Double(recorded), dayLength: dayLength)) recorded for today – click to take it back")
+            } else {
+                Label("done for today", systemImage: "checkmark.circle")
+                    .help("Record today's \(formatEffort(Double(part.neededMinutes), dayLength: dayLength)) as done; the plan continues with what's left")
+            }
+        }
+        .buttonStyle(.borderless).font(.caption)
+        .disabled(!app.canWrite)
     }
 
     private var backFromSnoozeHelp: String {
