@@ -9,8 +9,12 @@ public struct TaskDraft: Codable, Equatable {
     public var due: Due?
     public var tags: [String] = []
     public var effort: Effort?
-    public init(title: String, body: String = "", priority: Priority = .none, due: Due? = nil, tags: [String] = [], effort: Effort? = nil) {
+    /// Parts to create with the task (subtasks S6).
+    public var parts: [PartInput]?
+    public init(title: String, body: String = "", priority: Priority = .none, due: Due? = nil, tags: [String] = [], effort: Effort? = nil,
+                parts: [PartInput]? = nil) {
         self.title = title; self.body = body; self.priority = priority; self.due = due; self.tags = tags; self.effort = effort
+        self.parts = parts
     }
 }
 
@@ -144,6 +148,12 @@ public enum Command: Codable, Equatable {
     case resetRemaining(id: String)
     /// Takes back "done for today": removes the day's `part` rows.
     case undoTodaysPart(id: String, day: String)
+    /// Parts of a task (subtasks S3): add at the end, change, move to an index, delete, or replace the whole list (agents).
+    case addPart(taskID: String, title: String, effort: Effort?)
+    case updatePart(id: String, PartPatch)
+    case movePart(id: String, toIndex: Int)
+    case deletePart(id: String)
+    case replaceParts(taskID: String, [PartInput])
     /// Agent state for the app (calendar access in the agent, design M5/M8). Answered by `AgentService`.
     case agentStatus
     /// Tells the agent that the shared settings changed (HTTP endpoint, design M7). No store change.
@@ -263,6 +273,7 @@ public struct CommandHandler {
                 "effort": draft.effort?.rawValue,
             ])
             try replaceTags(of: id, with: names, batch: batch)
+            if let parts = draft.parts { _ = try replaceParts(of: id, with: parts, batch: batch) }
             // Like a new page: `[[title]]` (or `[[tag/path/title]]`) elsewhere now points to the task (design P3).
             try LinkResolver.resolveMissing(title: title, batch: batch)
             return CommandOK(id: id, unresolved: unresolved)
@@ -438,6 +449,51 @@ public struct CommandHandler {
             let rows = try String.fetchAll(db, sql: "SELECT id FROM live_task_work WHERE item_id = ?", arguments: [id])
             for row in rows { try batch.softDelete("task_work", id: row) }
             return CommandOK(id: id, changed: !rows.isEmpty)
+
+        case .addPart(let taskID, let title, let effort):
+            try requireTask(taskID, db)
+            let position = (try Double.fetchOne(db, sql: "SELECT MAX(position) FROM live_task_parts WHERE item_id = ?", arguments: [taskID]) ?? 0) + 1
+            let id = try batch.insert("task_parts", ["item_id": taskID, "position": position, "title": try Validate.title(title),
+                                                     "effort": effort?.rawValue])
+            return CommandOK(id: id)
+
+        case .updatePart(let id, let patch):
+            try requirePart(id, db)
+            var fields: Fields = [:]
+            if let t = patch.title { fields["title"] = try Validate.title(t) }
+            if let e = patch.effort { fields.updateValue(e?.rawValue, forKey: "effort") }
+            if let done = patch.done { fields.updateValue(done ? now : nil, forKey: "done_at") }
+            return CommandOK(id: id, changed: !(try batch.update("task_parts", id: id, fields)).isEmpty)
+
+        case .movePart(let id, let toIndex):
+            try requirePart(id, db)
+            let item = try String.fetchOne(db, sql: "SELECT item_id FROM task_parts WHERE id = ?", arguments: [id]) ?? ""
+            var others = try Row.fetchAll(db, sql: "SELECT id, position FROM live_task_parts WHERE item_id = ? AND id != ? ORDER BY position",
+                                          arguments: [item, id]).map { (id: $0["id"] as String, position: $0["position"] as Double) }
+            let index = max(0, min(toIndex, others.count))
+            let before = index > 0 ? others[index - 1].position : nil, after = index < others.count ? others[index].position : nil
+            // Between the neighbours; renumber all when they're too close to split again.
+            if let b = before, let a = after, a - b < 1e-9 {
+                others.insert((id: id, position: 0), at: index)
+                for (i, p) in others.enumerated() { try batch.update("task_parts", id: p.id, ["position": Double(i + 1)]) }
+                return CommandOK(id: id)
+            }
+            let position = switch (before, after) {
+            case let (b?, a?): (b + a) / 2
+            case let (b?, nil): b + 1
+            case let (nil, a?): a - 1
+            case (nil, nil): 1.0
+            }
+            return CommandOK(id: id, changed: !(try batch.update("task_parts", id: id, ["position": position])).isEmpty)
+
+        case .deletePart(let id):
+            try requirePart(id, db)
+            try batch.softDelete("task_parts", id: id)
+            return CommandOK(id: id)
+
+        case .replaceParts(let taskID, let parts):
+            try requireTask(taskID, db)
+            return CommandOK(id: taskID, changed: try replaceParts(of: taskID, with: parts, batch: batch))
 
         case .undoTodaysPart(let id, let day):
             try requireTask(id, db)

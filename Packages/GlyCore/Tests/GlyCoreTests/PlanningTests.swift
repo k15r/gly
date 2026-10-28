@@ -121,6 +121,16 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(Planning.fits(big, returningOn: LocalDay("2026-10-29")!, sizes: sizes, hours: hours, busy: [], calendar: cal), true)
     }
 
+    func testPlanningUsesThePartsSum() {
+        // specs/daily-planning "Remaining effort from parts": XL task, open parts S + S → 4 h, due tomorrow: nothing needed today.
+        var t = task("trip", due: "2026-10-28", effort: .xl)
+        t.parts = [TaskPart(id: "a", title: "Book", effort: .s), TaskPart(id: "b", title: "Pack", effort: .s),
+                   TaskPart(id: "c", title: "Done", effort: .l, done: true)]
+        let p = plan([t], now: at("2026-10-27", 9))
+        XCTAssertTrue(p.today.isEmpty, "4 h fit into tomorrow")
+        XCTAssertEqual(p.comingUp.first?.effortMinutes, 240)
+    }
+
     func testSnoozeCost() {
         // specs/tasks "Snooze too long": XL (3 days) due Friday, Monday today, all days free.
         let big = task("big", due: "2026-10-30", effort: .xl)

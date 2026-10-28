@@ -84,6 +84,26 @@ extension Database {
         return try label(ofBatch: original ?? batchID)
     }
 
+    /// One part added, changed, ticked off, moved or removed, or several at once (subtasks S3), named after part and task.
+    private func partLabel(_ entries: [Row]) throws -> String? {
+        guard !entries.isEmpty, entries.allSatisfy({ ($0["table_name"] as String) == "task_parts" }) else { return nil }
+        let ids = Set(entries.map { $0["row_id"] as String })
+        guard let row = try Row.fetchOne(self, sql: """
+            SELECT p.title, i.title AS task FROM task_parts p JOIN items i ON i.id = p.item_id WHERE p.id = ?
+            """, arguments: [entries[0]["row_id"] as String]) else { return nil }
+        let part = "“\(row["title"] as String)”", task = "“\(row["task"] as String)”"
+        if ids.count > 1 { return "Change parts of \(task)" }
+        let fields = Set(entries.compactMap { $0["field"] as String? })
+        if entries.contains(where: { ($0["op"] as String) == "insert" }) { return "Add part \(part) to \(task)" }
+        if (entries.first?["op"] as String?) == "delete" { return "Remove part \(part)" }
+        if fields == ["done_at"] {
+            let done = !ChangeValue.decode(entries.first { ($0["field"] as String?) == "done_at" }?["new_value"]).isNull
+            return done ? "Tick off \(part)" : "Reopen \(part)"
+        }
+        if fields == ["position"] { return "Move part \(part)" }
+        return "Edit part \(part)"
+    }
+
     /// Recorded work, a set remaining effort or a reset (task-progress P2), named after the task.
     private func workLabel(_ entries: [Row]) throws -> String? {
         guard entries.allSatisfy({ ($0["table_name"] as String) == "task_work" }), let first = entries.first,
@@ -114,6 +134,7 @@ extension Database {
         }
         if let tagLabel = try tagStructureLabel(entries) { return tagLabel }
         if let workLabel = try workLabel(entries) { return workLabel }
+        if let partLabel = try partLabel(entries) { return partLabel }
         // Items first, then tag assignments (→ their item), then tags (a tag page edit).
         guard var primary = entries.first(where: { ($0["table_name"] as String) == "items" })
                 ?? entries.first(where: { ($0["table_name"] as String) == "item_tags" })

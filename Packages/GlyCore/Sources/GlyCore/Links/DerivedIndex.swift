@@ -8,6 +8,7 @@ public enum DerivedIndex {
     static let watched: [String: Set<String>] = [
         "items": ["title", "body", "deleted_at", "kind"],
         "tags": ["name", "page_body", "deleted_at"],
+        "task_parts": ["title", "deleted_at"],          // refreshes the part's task (subtasks S4)
     ]
 
     static func needsRefresh(_ table: String, columns: some Sequence<String>) -> Bool {
@@ -32,6 +33,9 @@ public enum DerivedIndex {
         let row: Row?
         let kind: String, title: String, text: String
         switch table {
+        case "task_parts":
+            guard let item = try String.fetchOne(db, sql: "SELECT item_id FROM task_parts WHERE id = ?", arguments: [id]) else { return }
+            return try refresh(db, table: "items", id: item)
         case "items":
             row = try Row.fetchOne(db, sql: "SELECT kind, title, body, deleted_at FROM items WHERE id = ?", arguments: [id])
             guard let row else { return }
@@ -61,8 +65,15 @@ public enum DerivedIndex {
         let rowid = rowid(for: id)
         try db.execute(sql: "DELETE FROM search_index WHERE rowid = ?", arguments: [rowid])
         guard (row?["deleted_at"] as Date?) == nil else { return }
+        // A task's parts are searchable as part of its text (subtasks S4); links are only taken from the notes above.
+        var searchText = LinkParser.plainText(text)
+        // Migrations before v8 (the v3 rebuild) run without the parts table.
+        if table == "items", kind == "task", try db.tableExists("task_parts") {
+            let parts = try String.fetchAll(db, sql: "SELECT title FROM live_task_parts WHERE item_id = ? ORDER BY position", arguments: [id])
+            if !parts.isEmpty { searchText += "\n" + parts.joined(separator: "\n") }
+        }
         try db.execute(sql: "INSERT INTO search_index (rowid, owner_table, owner_id, kind, title, text) VALUES (?, ?, ?, ?, ?, ?)",
-                       arguments: [rowid, table, id, kind, title, LinkParser.plainText(text)])
+                       arguments: [rowid, table, id, kind, title, searchText])
     }
 
     /// Rebuilds both indexes from scratch (migration backfill; later after sync).

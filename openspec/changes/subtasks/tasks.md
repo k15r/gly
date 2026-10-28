@@ -2,8 +2,8 @@
 
 ## 1. Core
 
-- [ ] 1.1 Parts (S1, S3, S4): migration v8 `task_parts`; `TaskItem.parts`; commands `addPart`, `updatePart`, `movePart`, `deletePart`, `replaceParts`; part titles in the task's search text; verify with tests for "Break a task down" (order, counts), moving between two parts, undo of each command, `replaceParts` keeping/adding/removing by id, and "Find by part"
-- [ ] 1.2 Remaining from parts (S2): `remaining(sizes:)` with estimated parts; verify with tests for "Ticking off a part", "Unestimated parts", and planning using the parts' sum
+- [x] 1.1 Parts (S1, S3, S4): migration v8 `task_parts`; `TaskItem.parts`; commands `addPart`, `updatePart`, `movePart`, `deletePart`, `replaceParts`; part titles in the task's search text; verify with tests for "Break a task down" (order, counts), moving between two parts, undo of each command, `replaceParts` keeping/adding/removing by id, and "Find by part"
+- [x] 1.2 Remaining from parts (S2): `remaining(sizes:)` with estimated parts; verify with tests for "Ticking off a part", "Unestimated parts", and planning using the parts' sum
 
 ## 2. App
 

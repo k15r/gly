@@ -4,12 +4,12 @@ import GRDB
 /// (sync-ready conventions, foundation-spikes D2/D3a).
 public enum Schema {
     /// Tables that will be synced later; every one carries the sync columns.
-    public static let syncedTables = ["items", "tags", "item_tags", "series_rules", "task_work"]
+    public static let syncedTables = ["items", "tags", "item_tags", "series_rules", "task_work", "task_parts"]
 
     /// Removes every row of user data, the change log and the derived indexes; the schema stays (Settings → Data).
     /// Dependents first, so references never point at removed rows mid-way.
     static func eraseAllData(_ db: Database) throws {
-        for table in ["task_work", "item_tags", "series_rules", "items", "tags", "change_log", "link_index", "search_index"] {
+        for table in ["task_parts", "task_work", "item_tags", "series_rules", "items", "tags", "change_log", "link_index", "search_index"] {
             try db.execute(sql: "DELETE FROM \(table)")
         }
         try db.execute(sql: "DELETE FROM sqlite_sequence WHERE name = 'change_log'")
@@ -59,6 +59,19 @@ public enum Schema {
             }
             try db.create(index: "task_work_item", on: "task_work", columns: ["item_id"])
             try db.execute(sql: "CREATE VIEW live_task_work AS SELECT * FROM task_work WHERE deleted_at IS NULL")
+        }
+        // Parts of a task: checklist items with an optional effort (subtasks S1).
+        migrator.registerMigration("v8") { db in
+            try db.create(table: "task_parts") { t in
+                syncColumns(t)
+                t.column("item_id", .text).notNull().references("items")
+                t.column("position", .double).notNull()                  // REAL: a part can move between two others
+                t.column("title", .text).notNull().check { length($0) > 0 }
+                t.column("effort", .text).check { $0 == nil || efforts.contains($0) }
+                t.column("done_at", .datetime)
+            }
+            try db.create(index: "task_parts_item", on: "task_parts", columns: ["item_id", "position"])
+            try db.execute(sql: "CREATE VIEW live_task_parts AS SELECT * FROM task_parts WHERE deleted_at IS NULL")
         }
         return migrator
     }
