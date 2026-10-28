@@ -51,7 +51,9 @@ The text view tracks the revealed set: the paragraph ranges touched by the curre
 
 ### L4: Source mode
 
-`GlyTextView` has a `showsSource` flag. When it's set, every line counts as revealed, giving today's visible-syntax styling. The Edit menu item "Show Markdown Source" is a checkmark item. It's sent through the responder chain to the focused editor, so it applies per editor and isn't persisted.
+`MarkdownEditor` has a `showsSource` parameter. When it's set, every line counts as revealed, giving today's visible-syntax styling. The Edit menu item "Show Markdown Source" is a checkmark toggle of one app-wide, unsaved flag (`AppModel.showMarkdownSource`). `GlyMarkdownEditor` passes that flag to every editor, so all open editors switch together and the app starts in live preview again.
+
+- **Alternative: per editor, through the responder chain to the focused editor.** Not taken: a SwiftUI menu can't show a per-responder checkmark without extra plumbing. In practice raw markdown is wanted "for a moment, here", and one switch is easier to understand.
 
 ### L5: One mode in the app
 
