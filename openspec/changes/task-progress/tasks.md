@@ -7,8 +7,8 @@
 
 ## 2. App
 
-- [ ] 2.1 "Done for today" (P4) on today's planning rows, recorded state and take-back; remaining next to the effort chip; verify manually "Tick off today's part" and "Take it back"
-- [ ] 2.2 Task page progress (P5): remaining in the field row, Progress section with history, Remaining control and Reset; verify manually "Set what's left" and "Reset"
+- [x] 2.1 "Done for today" (P4) on today's planning rows, recorded state and take-back; remaining next to the effort chip; verify manually "Tick off today's part" and "Take it back"
+- [x] 2.2 Task page progress (P5): remaining in the field row, Progress section with history, Remaining control and Reset; verify manually "Set what's left" and "Reset"
 
 ## 3. Agents
 
