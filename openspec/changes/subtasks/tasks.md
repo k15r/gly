@@ -7,7 +7,7 @@
 
 ## 2. App
 
-- [ ] 2.1 Task page Parts section and "All parts done" banner (S5); "2/5" in rows; hide "done for today" and the Remaining control with estimated parts; verify manually "Break a task down", "All parts done", "Ticking off a part"
+- [ ] 2.1 Task page Parts section and "All parts done" banner (S5); "2/5" in rows; hide "done for today" and the Remaining control with estimated parts; verify manually "Break a task down", "Last part ticked off", "Ticking off a part"
 
 ## 3. Agents
 
