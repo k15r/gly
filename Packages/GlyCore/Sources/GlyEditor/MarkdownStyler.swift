@@ -37,6 +37,11 @@ public struct StyleRun: Equatable {
         case hidden                       // collapsed `[` and `](gly://…)` of a glyash link
         case missingLink(title: String)   // title inside `[[…]]`
         case webLink(url: String)         // label of a web link or a bare URL
+        // Live preview (live-preview L1): syntax off the caret lines.
+        case bullet                       // a list marker drawn as a bullet (keeps its width)
+        case quoteBar                     // a quote marker drawn as a bar (keeps its width)
+        case invisible                    // keeps its width, not drawn (the `- ` before a checkbox)
+        case checkboxGlyph(checked: Bool) // the `[ ]` / `[x]` drawn as a box (keeps its width)
     }
     public let range: NSRange
     public let style: Style
@@ -45,6 +50,52 @@ public struct StyleRun: Equatable {
 
 /// Line-oriented markdown styling (headings, emphasis, code, lists, checklists, quotes, links). Never changes the text.
 public enum MarkdownStyler {
+    /// Live preview (specs/markdown-editing "Live preview", design L1): syntax on lines outside `revealed` is hidden or
+    /// drawn as a bullet, bar or box; on revealed lines (caret, selection, source mode) it stays visible, including link syntax.
+    public static func livePreview(_ runs: [StyleRun], text: String, revealed: [NSRange]) -> [StyleRun] {
+        let ns = text as NSString
+        func lineRange(_ r: NSRange) -> NSRange { ns.lineRange(for: NSRange(location: min(r.location, ns.length), length: 0)) }
+        func isRevealed(_ line: NSRange) -> Bool {
+            revealed.contains { NSIntersectionRange($0, line).length > 0 || NSLocationInRange($0.location, line)
+                || ($0.location == NSMaxRange(line) && $0.location == ns.length) }
+        }
+        // Line kinds, by line start.
+        var kinds: [Int: [StyleRun.Style]] = [:]
+        for run in runs {
+            switch run.style {
+            case .listItem, .quote, .codeBlock, .checkbox: kinds[lineRange(run.range).location, default: []].append(run.style)
+            default: break
+            }
+        }
+        var out: [StyleRun] = []
+        for run in runs {
+            guard case .syntax = run.style else {
+                if case .hidden = run.style, isRevealed(lineRange(run.range)) { out.append(StyleRun(run.range, .syntax)); continue }
+                if case .checkbox(let checked) = run.style, !isRevealed(lineRange(run.range)) {
+                    out.append(run); out.append(StyleRun(run.range, .checkboxGlyph(checked: checked))); continue
+                }
+                out.append(run); continue
+            }
+            let line = lineRange(run.range)
+            if isRevealed(line) { out.append(run); continue }
+            let lineKinds = kinds[line.location] ?? []
+            let marker = ns.substring(with: run.range)
+            let atLineStart = ns.substring(with: NSRange(location: line.location, length: run.range.location - line.location))
+                .allSatisfy { $0 == " " || $0 == "\t" }
+            if lineKinds.contains(where: { if case .checkbox = $0 { true } else { false } }), atLineStart {
+                out.append(StyleRun(run.range, .invisible))
+            } else if lineKinds.contains(where: { if case .listItem = $0 { true } else { false } }), atLineStart {
+                // Bullets for -, *, +; numbers stay as written (no dimming).
+                if ["-", "*", "+"].contains(marker) { out.append(StyleRun(run.range, .bullet)) }
+            } else if lineKinds.contains(where: { if case .quote = $0 { true } else { false } }), atLineStart {
+                out.append(StyleRun(run.range, .quoteBar))
+            } else {
+                out.append(StyleRun(run.range, .hidden))    // headings, emphasis, code ticks, fences, link brackets
+            }
+        }
+        return out
+    }
+
     static func re(_ p: String, _ o: NSRegularExpression.Options = []) -> NSRegularExpression { .constant(p, options: o) }
     static let heading = re(#"^(#{1,6})[ \t]+\S.*$"#)
     static let fence = re(#"^[ \t]*(```|~~~)"#)

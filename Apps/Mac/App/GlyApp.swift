@@ -33,6 +33,9 @@ struct GlyApp: App {
         }
         .commands {
             // Store undo/redo via the agent; while a text field is focused, the text's own undo applies (design L6).
+            CommandGroup(after: .textEditing) {
+                Toggle("Show Markdown Source", isOn: Binding(get: { app.showMarkdownSource }, set: { app.showMarkdownSource = $0 }))
+            }
             CommandGroup(replacing: .undoRedo) {
                 Button(tasks.undoLabel.map { "Undo \($0)" } ?? "Undo") { undoRedo(store: .undo, text: Selector(("undo:"))) }
                     .keyboardShortcut("z")

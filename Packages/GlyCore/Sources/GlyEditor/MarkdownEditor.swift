@@ -16,7 +16,8 @@ public struct LinkSuggestion: Identifiable, Equatable {
     }
 }
 
-/// Markdown editor with light live styling, link chips, checklists and the `[[` picker (design P8).
+/// Markdown editor with live preview (markdown rendered in place, raw syntax only on the caret's lines, live-preview L1–L4),
+/// link chips, checklists and the `[[` picker (design P8).
 ///
 /// `text` is the latest known source (store or binding). Local edits go to `onChange` immediately and to
 /// `onCommit` debounced (1 s), on focus loss and when the view goes away, with an edit-session id (design P6).
@@ -33,6 +34,8 @@ public struct MarkdownEditor: NSViewRepresentable {
     public var linkMenu: (ParsedLink.Target) -> LinkMenuModel?
     /// Where the caret goes when the editor appears (UTF-16 offset), scrolled into view and focused; nil = start.
     public var initialCaret: Int?
+    /// Edit → Show Markdown Source: every line shows its raw syntax (live-preview L4).
+    public var showsSource: Bool
 
     public init(text: String,
                 onChange: ((String) -> Void)? = nil,
@@ -41,10 +44,11 @@ public struct MarkdownEditor: NSViewRepresentable {
                 onOpenLink: @escaping (URL) -> Void,
                 suggestions: @escaping (String) -> [LinkSuggestion],
                 linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard,
-                initialCaret: Int? = nil) {
+                initialCaret: Int? = nil,
+                showsSource: Bool = false) {
         self.text = text; self.onChange = onChange; self.onCommit = onCommit
         self.appearance = appearance; self.onOpenLink = onOpenLink; self.suggestions = suggestions; self.linkMenu = linkMenu
-        self.initialCaret = initialCaret
+        self.initialCaret = initialCaret; self.showsSource = showsSource
     }
 
     public func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -87,8 +91,10 @@ public struct MarkdownEditor: NSViewRepresentable {
     }
 
     public func updateNSView(_ scroll: NSScrollView, context: Context) {
+        let sourceChanged = context.coordinator.parent.showsSource != showsSource
         context.coordinator.parent = self
         context.coordinator.externalUpdate(text)
+        if sourceChanged { context.coordinator.restyle() }
     }
 
     public static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
@@ -123,10 +129,28 @@ public struct MarkdownEditor: NSViewRepresentable {
             else if !dirty && parent.onCommit == nil { setText(text) }   // binding mode: binding is the truth
         }
 
+        /// Lines shown with their raw syntax: those touched by the selection while editing, or all in source mode (L2, L4).
+        private(set) var revealed: [NSRange] = []
+
+        func currentRevealed() -> [NSRange] {
+            guard let tv = textView else { return [] }
+            let ns = tv.string as NSString
+            if parent.showsSource { return [NSRange(location: 0, length: ns.length)] }
+            guard tv.window?.firstResponder === tv else { return [] }
+            var ranges = tv.selectedRanges.map(\.rangeValue)
+            if tv.hasMarkedText() { ranges.append(tv.markedRange()) }       // composition never touches hidden runs
+            return ranges.map { r in
+                let clamped = NSRange(location: min(r.location, ns.length), length: min(r.length, ns.length - min(r.location, ns.length)))
+                return ns.paragraphRange(for: clamped)
+            }
+        }
+
         func restyle() {
             guard let tv = textView, let storage = tv.textStorage else { return }
             let selection = tv.selectedRanges
-            let runs = MarkdownStyler.runs(for: tv.string, appearance: parent.appearance)
+            revealed = currentRevealed()
+            let runs = MarkdownStyler.livePreview(MarkdownStyler.runs(for: tv.string, appearance: parent.appearance),
+                                                  text: tv.string, revealed: revealed)
             storage.beginEditing()
             MarkdownAttributes.apply(runs, to: storage)
             storage.endEditing()
@@ -138,6 +162,16 @@ public struct MarkdownEditor: NSViewRepresentable {
         // MARK: Editing
 
         public func textDidBeginEditing(_ notification: Notification) { session = UUID().uuidString }
+
+        /// The caret moved: re-style when it enters or leaves lines (L2).
+        public func textViewDidChangeSelection(_ notification: Notification) {
+            if currentRevealed() != revealed { restyle() }
+        }
+
+        /// Focus changes reveal or conceal the caret's line.
+        func focusChanged() {
+            if currentRevealed() != revealed { restyle() }
+        }
 
         public func textDidChange(_ notification: Notification) {
             guard let tv = textView else { return }
@@ -151,6 +185,7 @@ public struct MarkdownEditor: NSViewRepresentable {
         public func textDidEndEditing(_ notification: Notification) {
             picker.close()
             commitNow()
+            DispatchQueue.main.async { [weak self] in self?.focusChanged() }
         }
 
         private func scheduleCommit() {
@@ -196,7 +231,9 @@ public struct MarkdownEditor: NSViewRepresentable {
                     replace(range, with: checked ? "[ ]" : "[x]")
                     return true
                 }
-                if command, let url = storage.attribute(.wdLink, at: i, effectiveRange: &range) as? String, let u = URL(string: url) {
+                // A plain click follows a link on a line shown rendered; on a revealed line it places the caret (L3).
+                let lineShown = revealed.contains { NSLocationInRange(i, $0) }
+                if command || !lineShown, let url = storage.attribute(.wdLink, at: i, effectiveRange: &range) as? String, let u = URL(string: url) {
                     // A link without live target (missing or deleted) opens its menu instead (trash-bin T5).
                     if let link = LinkParser.links(in: tv.string).first(where: { NSLocationInRange(i, $0.range) }),
                        let model = parent.linkMenu(link.target) {
@@ -327,6 +364,7 @@ public final class GlyTextView: NSTextView {
     public override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         guard let storage = textStorage, storage.length > 0 else { return }
+        drawLivePreviewMarks(storage)
         storage.enumerateAttribute(.wdDecoration, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
             guard let deco = value as? LinkDecoration else { return }
             let rects = segmentRects(for: range)
@@ -347,6 +385,38 @@ public final class GlyTextView: NSTextView {
                 (q as NSString).draw(at: NSPoint(x: last.maxX + 1, y: last.midY - size.height / 2), withAttributes: attrs)
             }
         }
+    }
+
+    /// Bullets, quote bars and checkboxes in place of markers that keep their width (live-preview L1).
+    private func drawLivePreviewMarks(_ storage: NSTextStorage) {
+        let all = NSRange(location: 0, length: storage.length)
+        let font = MarkdownAttributes.baseFont
+        storage.enumerateAttribute(.wdBullet, in: all) { value, range, _ in
+            guard value != nil, let rect = segmentRects(for: range).first else { return }
+            let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.secondaryLabelColor]
+            let size = ("•" as NSString).size(withAttributes: attrs)
+            ("•" as NSString).draw(at: NSPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2), withAttributes: attrs)
+        }
+        storage.enumerateAttribute(.wdQuoteBar, in: all) { value, range, _ in
+            guard value != nil, let rect = segmentRects(for: range).first else { return }
+            NSColor.tertiaryLabelColor.setFill()
+            NSBezierPath(roundedRect: NSRect(x: rect.minX + 1, y: rect.minY, width: 3, height: rect.height), xRadius: 1.5, yRadius: 1.5).fill()
+        }
+        storage.enumerateAttribute(.wdCheckboxGlyph, in: all) { value, range, _ in
+            guard let checked = value as? Bool, let rect = segmentRects(for: range).first,
+                  let image = NSImage(systemSymbolName: checked ? "checkmark.square.fill" : "square", accessibilityDescription: nil)?
+                    .withSymbolConfiguration(.init(pointSize: font.pointSize, weight: .regular)) else { return }
+            let color: NSColor = checked ? .controlAccentColor : .secondaryLabelColor
+            let size = image.size
+            let tinted = NSImage(size: size, flipped: false) { r in image.draw(in: r); color.set(); r.fill(using: .sourceAtop); return true }
+            tinted.draw(in: NSRect(x: rect.minX + (rect.width - size.width) / 2, y: rect.midY - size.height / 2, width: size.width, height: size.height))
+        }
+    }
+
+    public override func becomeFirstResponder() -> Bool {
+        let ok = super.becomeFirstResponder()
+        DispatchQueue.main.async { [weak self] in self?.coordinator?.focusChanged() }
+        return ok
     }
 
     /// Line-fragment rectangles of a character range, in view coordinates (TextKit 2, with a TextKit 1 fallback).

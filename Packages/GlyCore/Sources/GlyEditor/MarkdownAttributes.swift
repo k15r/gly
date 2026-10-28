@@ -11,6 +11,10 @@ public extension NSAttributedString.Key {
     static let wdHidden = NSAttributedString.Key("wdHidden")
     /// Icon / qualifier drawn around a link label (`LinkDecoration`), link-disambiguation K3.
     static let wdDecoration = NSAttributedString.Key("wdDecoration")
+    /// Live preview marks (live-preview L1): what `GlyTextView` draws in place of a marker that keeps its width.
+    static let wdBullet = NSAttributedString.Key("wdBullet")
+    static let wdQuoteBar = NSAttributedString.Key("wdQuoteBar")
+    static let wdCheckboxGlyph = NSAttributedString.Key("wdCheckboxGlyph")
 }
 
 /// What `GlyTextView` draws around a link label, in space reserved by kerning (never part of the text).
@@ -49,7 +53,7 @@ public enum MarkdownAttributes {
         let order: (StyleRun.Style) -> Int = { s in
             switch s {
             case .heading, .codeBlock, .listItem, .quote: return 0
-            case .syntax, .hidden: return 2
+            case .syntax, .hidden, .bullet, .quoteBar, .invisible, .checkboxGlyph: return 2
             default: return 1
             }
         }
@@ -109,6 +113,17 @@ public enum MarkdownAttributes {
                 case .missing:
                     text.addAttribute(.foregroundColor, value: NSColor.systemRed, range: r)
                 }
+            case .bullet:
+                text.addAttribute(.foregroundColor, value: NSColor.clear, range: r)
+                text.addAttribute(.wdBullet, value: true, range: r)
+            case .quoteBar:
+                text.addAttribute(.foregroundColor, value: NSColor.clear, range: r)
+                text.addAttribute(.wdQuoteBar, value: true, range: r)
+            case .invisible:
+                text.addAttribute(.foregroundColor, value: NSColor.clear, range: r)
+            case .checkboxGlyph(let checked):
+                text.addAttribute(.foregroundColor, value: NSColor.clear, range: r)
+                text.addAttribute(.wdCheckboxGlyph, value: checked, range: r)
             case .hidden:
                 text.addAttribute(.font, value: NSFont.systemFont(ofSize: 0.01), range: r)
                 text.addAttribute(.foregroundColor, value: NSColor.clear, range: r)

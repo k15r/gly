@@ -8,6 +8,7 @@ import GlyEditor
 /// The markdown editor wired to gly: link appearance, `[[` suggestions and link opening (design P8).
 struct GlyMarkdownEditor: View {
     @Environment(WikiModel.self) private var wiki
+    @Environment(AppModel.self) private var app
     @Environment(\.linkOpener) private var opener
     let text: String
     var onChange: ((String) -> Void)?
@@ -21,7 +22,8 @@ struct GlyMarkdownEditor: View {
                        onOpenLink: { opener?.open($0) },
                        suggestions: { wiki.suggestions($0) },
                        linkMenu: { wiki.linkMenu($0) },
-                       initialCaret: initialCaret)
+                       initialCaret: initialCaret,
+                       showsSource: app.showMarkdownSource)
     }
 }
 
@@ -168,8 +170,7 @@ struct PageView: View {
     @State private var title = ""
     @State private var tags: [String] = []
     @State private var pendingTag = ""
-    @State private var editing: Bool?
-    /// Opened for editing (quick capture ⌘Return): edit mode, cursor in the text.
+    /// Opened for writing (quick capture ⌘Return): the cursor goes into the text (live-preview L5).
     @State private var focusText = false
     @FocusState private var titleFocused: Bool
 
@@ -184,7 +185,6 @@ struct PageView: View {
             }
         }
         .task(id: id) {
-            editing = nil
             let id = self.id
             live.observe(wiki.store) { db in
                 PageDetail(page: try PageQueries.page(db, id: id), backlinks: try LinkQueries.backlinks(db, to: id))
@@ -194,8 +194,7 @@ struct PageView: View {
             guard let page else { return }
             if !titleFocused { title = page.title }
             tags = page.tags
-            if nav.editRequest == page.id { editing = true; focusText = true; nav.editRequest = nil }
-            if editing == nil { editing = page.body.isEmpty }
+            if nav.editRequest == page.id { focusText = true; nav.editRequest = nil }
         }
     }
 
@@ -208,13 +207,6 @@ struct PageView: View {
                     .onChange(of: titleFocused) { _, focused in if !focused { saveTitle(page) } }
                     .onDisappear { saveTitle(page) }          // leaving while editing: the edit belongs to this page
                 Spacer()
-                Picker("", selection: Binding(get: { editing ?? false }, set: { editing = $0 })) {
-                    Text("Read").tag(false)
-                    Text("Edit").tag(true)
-                }
-                .pickerStyle(.segmented).fixedSize()
-                .help("Switch between reading and editing (⌘E)")
-                Button("") { editing = !(editing ?? false) }.keyboardShortcut("e").hidden().frame(width: 0)
                 Menu {
                     Button("Delete Page", role: .destructive) { Task { await app.send(.deletePage(id: page.id)); nav.back() } }
                 } label: { Image(systemName: "ellipsis.circle") }
@@ -228,29 +220,13 @@ struct PageView: View {
                     Task { await app.send(.updatePage(id: page.id, PagePatch(tags: new))) }
                 }
             Divider().padding(.top, 8)
-            if editing == true {
-                GlyMarkdownEditor(text: page.body, onCommit: { text, session in
-                    Task { await app.send(.updatePage(id: page.id, PagePatch(body: text, session: session))) }
-                }, initialCaret: focusText ? (page.body as NSString).length : nil)
-                .frame(maxHeight: .infinity)
-                Divider()
-                BacklinksView(backlinks: backlinks).padding().frame(maxHeight: 180, alignment: .top)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        if page.body.isEmpty {
-                            Text("Empty page – switch to Edit (⌘E) to write.").foregroundStyle(.secondary)
-                        } else {
-                            GlyMarkdownReadView(text: page.body) { new in
-                                Task { await app.send(.updatePage(id: page.id, PagePatch(body: new))) }
-                            }
-                        }
-                        Divider()
-                        BacklinksView(backlinks: backlinks)
-                    }
-                    .padding()
-                }
-            }
+            // One mode: the live-preview editor, rendered and editable in place (specs/markdown-editing "Live preview").
+            GlyMarkdownEditor(text: page.body, onCommit: { text, session in
+                Task { await app.send(.updatePage(id: page.id, PagePatch(body: text, session: session))) }
+            }, initialCaret: focusText ? (page.body as NSString).length : nil)
+            .frame(maxHeight: .infinity)
+            Divider()
+            BacklinksView(backlinks: backlinks).padding().frame(maxHeight: 180, alignment: .top)
         }
     }
 
@@ -281,7 +257,6 @@ struct TagPageView: View {
     let name: String
 
     @State private var live = Live<TagPageDetail>()
-    @State private var editing = false
     @State private var showFinished = false
     @State private var newSubtag = false
     @State private var renaming = false
@@ -292,7 +267,6 @@ struct TagPageView: View {
             if let detail = live.value { content(detail) } else { ProgressView() }
         }
         .task(id: name) {
-            editing = false
             guard let tag = try? TagName(name) else { return }
             let today = clock.today
             live.observe(wiki.store) { db in
@@ -321,7 +295,6 @@ struct TagPageView: View {
                     }
                     Button { newSubtag = true } label: { Label("New Subtag", systemImage: "tag") }.disabled(!app.canWrite)
                     Button { nav.showNewPage = true } label: { Label("New Page", systemImage: "plus") }.disabled(!app.canWrite)
-                    Toggle("Edit", isOn: $editing).toggleStyle(.button).keyboardShortcut("e")
                     Menu {
                         Button("Rename…") { renaming = true }
                         Button("Delete…") { deleting = true }.disabled(data.tagID == nil)
@@ -330,19 +303,14 @@ struct TagPageView: View {
                 }
                 .modifier(NewSubtagPrompt(parent: data.name, isPresented: $newSubtag))
                 .modifier(TagManagementPrompts(name: data.name, renaming: $renaming, deleting: $deleting))
-                if editing {
-                    GlyMarkdownEditor(text: data.body, onCommit: { text, session in
-                        Task { await app.send(.updateTagPage(name: data.name, body: text, session: session)) }
-                    })
-                    .frame(minHeight: 160)
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(.secondary.opacity(0.3)))
-                } else if data.body.isEmpty {
-                    Text("No description – click Edit to describe this \(data.name.contains("/") ? "tag" : "group").").foregroundStyle(.secondary)
-                } else {
-                    GlyMarkdownReadView(text: data.body) { new in
-                        Task { await app.send(.updateTagPage(name: data.name, body: new)) }
-                    }
+                // One mode: the description in the live-preview editor (live-preview L5).
+                if data.body.isEmpty {
+                    Text("Describe this \(data.name.contains("/") ? "tag" : "group") – click below to write.").font(.caption).foregroundStyle(.secondary)
                 }
+                GlyMarkdownEditor(text: data.body, onCommit: { text, session in
+                    Task { await app.send(.updateTagPage(name: data.name, body: text, session: session)) }
+                })
+                .frame(minHeight: data.body.isEmpty ? 60 : 160)
 
                 section("Open tasks", count: data.openTasks.count) {
                     ForEach(data.openTasks) { task in

@@ -64,7 +64,7 @@ final class CaptureController {
                 NSApp.activate(ignoringOtherApps: true)
                 if !NSApp.windows.contains(where: { $0.isVisible && !($0 is NSPanel) && $0.canBecomeMain }) { openMainWindow() }
                 NSApp.windows.first { !($0 is NSPanel) && $0.canBecomeMain }?.makeKeyAndOrderFront(nil)
-                nav?.editRequest = id      // open in edit mode with the cursor in the text
+                nav?.editRequest = id      // open with the cursor in the text
                 nav?.go(d.kind == .task ? .task(id) : .page(id))
             }
         }

@@ -2,7 +2,7 @@
 
 ## 1. Editor
 
-- [ ] 1.1 Reveal-able syntax (L1): styler marks syntax ranges per line for headings, emphasis, code spans, list markers, checkboxes, quotes, fences and links; `MarkdownAttributes.apply` hides them outside a given set of revealed lines; verify with tests that each construct is hidden off the revealed lines and visible on them, and that the stored text never changes
+- [x] 1.1 Reveal-able syntax (L1): styler marks syntax ranges per line for headings, emphasis, code spans, list markers, checkboxes, quotes, fences and links; `MarkdownAttributes.apply` hides them outside a given set of revealed lines; verify with tests that each construct is hidden off the revealed lines and visible on them, and that the stored text never changes
 - [ ] 1.2 Decorations (L1): `GlyTextView` draws bullets, numbers, checkboxes, quote bars and code-block backgrounds for hidden markers; checkbox clicks toggle as before; verify manually headings, lists, checklists, quotes and code blocks render without syntax
 - [ ] 1.3 Revealed lines follow the selection (L2) and clicks (L3): re-style only the lines leaving/entering the revealed set; plain click follows a link chip on unrevealed lines; marked text keeps its line revealed; verify with tests for the revealed-set computation and manually "Back on the line" and "Link chip"
 - [ ] 1.4 Source mode (L4): Edit → "Show Markdown Source" (checkmark) per focused editor; verify manually "See the raw text"

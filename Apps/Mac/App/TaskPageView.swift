@@ -22,8 +22,7 @@ struct TaskPageView: View {
     @State private var title = ""
     @State private var tags: [String] = []
     @State private var pendingTag = ""
-    @State private var editing: Bool?
-    /// Opened for editing (quick capture ⌘Return): edit mode, cursor in the text.
+    /// Opened for writing (quick capture ⌘Return): the cursor goes into the notes (live-preview L5).
     @State private var focusText = false
     @FocusState private var titleFocused: Bool
 
@@ -39,7 +38,6 @@ struct TaskPageView: View {
             }
         }
         .task(id: id) {
-            editing = nil
             let id = self.id
             live.observe(wiki.store) { db in
                 TaskDetail(task: try TaskQueries.task(db, id: id), backlinks: try LinkQueries.backlinks(db, to: id),
@@ -50,8 +48,7 @@ struct TaskPageView: View {
             guard let task else { return }
             if !titleFocused { title = task.title }
             tags = task.tags
-            if nav.editRequest == task.id { editing = true; focusText = true; nav.editRequest = nil }
-            if editing == nil { editing = task.body.isEmpty }
+            if nav.editRequest == task.id { focusText = true; nav.editRequest = nil }
         }
     }
 
@@ -71,13 +68,6 @@ struct TaskPageView: View {
                     .onChange(of: titleFocused) { _, focused in if !focused { saveTitle(task) } }
                     .onDisappear { saveTitle(task) }          // leaving while editing: the edit belongs to this task
                 Spacer()
-                Picker("", selection: Binding(get: { editing ?? false }, set: { editing = $0 })) {
-                    Text("Read").tag(false)
-                    Text("Edit").tag(true)
-                }
-                .pickerStyle(.segmented).fixedSize()
-                .help("Switch between reading and editing the notes (⌘E)")
-                Button("") { editing = !(editing ?? false) }.keyboardShortcut("e").hidden().frame(width: 0)
                 Menu {
                     TaskActions(task: task, onEdit: nil)
                 } label: { Image(systemName: "ellipsis.circle") }
@@ -103,29 +93,13 @@ struct TaskPageView: View {
                 }
             Divider().padding(.top, 8)
 
-            if editing == true {
-                GlyMarkdownEditor(text: task.body, onCommit: { text, session in
-                    send(.updateTask(id: task.id, TaskPatch(body: text, session: session)))
-                }, initialCaret: focusText ? (task.body as NSString).length : nil)
-                .frame(maxHeight: .infinity)
-                Divider()
-                BacklinksView(backlinks: backlinks).padding().frame(maxHeight: 180, alignment: .top)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        if task.body.isEmpty {
-                            Text("No notes – switch to Edit (⌘E) to write.").foregroundStyle(.secondary)
-                        } else {
-                            GlyMarkdownReadView(text: task.body) { new in
-                                send(.updateTask(id: task.id, TaskPatch(body: new)))
-                            }
-                        }
-                        Divider()
-                        BacklinksView(backlinks: backlinks)
-                    }
-                    .padding()
-                }
-            }
+            // One mode: the notes in the live-preview editor (specs/markdown-editing "Same editor everywhere").
+            GlyMarkdownEditor(text: task.body, onCommit: { text, session in
+                send(.updateTask(id: task.id, TaskPatch(body: text, session: session)))
+            }, initialCaret: focusText ? (task.body as NSString).length : nil)
+            .frame(maxHeight: .infinity)
+            Divider()
+            BacklinksView(backlinks: backlinks).padding().frame(maxHeight: 180, alignment: .top)
         }
     }
 

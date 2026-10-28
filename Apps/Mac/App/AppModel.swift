@@ -25,6 +25,8 @@ final class AppModel {
     private(set) var store: ReadOnlyStore?
     /// Last error from a command, shown as a dismissible message.
     var lastError: String?
+    /// Edit → Show Markdown Source: editors show the raw markdown of every line (live-preview L4). Not persisted.
+    var showMarkdownSource = false
     /// Short overlay after a store undo/redo, saying what was reverted.
     private(set) var undoNotice: UndoNotice?
 

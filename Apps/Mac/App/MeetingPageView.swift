@@ -22,7 +22,6 @@ struct MeetingPageView: View {
 
     @State private var live = Live<MeetingPageData>()
     @State private var appointment: Appointment?
-    @State private var editing: Bool?
     @State private var tags: [String] = []
     @State private var pendingTag = ""
 
@@ -38,7 +37,6 @@ struct MeetingPageView: View {
             }
         }
         .task(id: ref) {
-            editing = nil
             switch ref {
             case .appointment(let a):
                 appointment = a
@@ -60,9 +58,6 @@ struct MeetingPageView: View {
         .onChange(of: live.value) { _, data in
             guard let data else { return }
             tags = data.item?.tags ?? []
-            if editing == nil {
-                if case .appointment = ref { editing = true } else { editing = data.body.isEmpty }
-            }
             if appointment == nil, case .notes = ref { appointment = liveOccurrence(for: data) }
         }
     }
@@ -79,28 +74,14 @@ struct MeetingPageView: View {
                     save(data, body: nil, tags: new, session: nil)
                 }
             Divider().padding(.top, 8)
-            if editing == true {
-                let (text, caret) = editorText(data)
-                GlyMarkdownEditor(text: text, onCommit: { new, session in save(data, body: new, tags: nil, session: session) },
-                                 initialCaret: caret)
-                    .id(ref)
-                    .frame(maxHeight: .infinity)
-                Divider()
-                BacklinksView(backlinks: data.backlinks).padding().frame(maxHeight: 160, alignment: .top)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        if data.body.isEmpty {
-                            Text("No notes yet – switch to Edit (⌘E) to write.").foregroundStyle(.secondary)
-                        } else {
-                            GlyMarkdownReadView(text: data.body) { new in save(data, body: new, tags: nil, session: nil) }
-                        }
-                        Divider()
-                        BacklinksView(backlinks: data.backlinks)
-                    }
-                    .padding()
-                }
-            }
+            // One mode: the live-preview editor; opened from an appointment, the caret starts in that meeting's section.
+            let (text, caret) = editorText(data)
+            GlyMarkdownEditor(text: text, onCommit: { new, session in save(data, body: new, tags: nil, session: session) },
+                             initialCaret: caret)
+                .id(ref)
+                .frame(maxHeight: .infinity)
+            Divider()
+            BacklinksView(backlinks: data.backlinks).padding().frame(maxHeight: 160, alignment: .top)
         }
     }
 
@@ -115,12 +96,6 @@ struct MeetingPageView: View {
                 if recurring { Text("series notes").font(.caption).foregroundStyle(.secondary).help("One document for every meeting of this series") }
                 stateBadge(data)
                 Spacer()
-                Picker("", selection: Binding(get: { editing ?? false }, set: { editing = $0 })) {
-                    Text("Read").tag(false)
-                    Text("Edit").tag(true)
-                }
-                .pickerStyle(.segmented).fixedSize()
-                Button("") { editing = !(editing ?? false) }.keyboardShortcut("e").hidden().frame(width: 0)
                 Menu {
                     Button("Delete Notes", role: .destructive) { deleteNotes(data) }.disabled(data.itemID == nil || data.body.isEmpty)
                 } label: { Image(systemName: "ellipsis.circle") }
