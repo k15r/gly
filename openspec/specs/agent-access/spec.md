@@ -7,15 +7,19 @@ Lets AI agents (MCP clients such as Claude Code) read the day's schedule and tas
 ## Requirements
 
 ### Requirement: Read the schedule of a day
-The system SHALL provide an MCP tool `get_schedule` that returns, for a given date (default: today, local time), the appointments of all visible calendars and the tasks the day view shows for that date.
+The system SHALL provide an MCP tool `get_schedule` that returns, for a given date (default: today, local time), the appointments of all visible calendars and the tasks the day view shows for that date: for today and later dates the open tasks due that day and those overdue as seen from that date; for past dates the open tasks due that day.
 
 #### Scenario: Today's schedule
 - **WHEN** an agent calls `get_schedule` without arguments
 - **THEN** it receives today's appointments in start order and today's due and overdue open tasks, matching the day view
 
 #### Scenario: Another day
-- **WHEN** an agent calls `get_schedule` with `date: "2026-10-28"`
-- **THEN** it receives the appointments and tasks due on 28 October, without overdue tasks
+- **WHEN** a task due today is still open and an agent calls `get_schedule` with tomorrow's date
+- **THEN** it receives tomorrow's appointments, the tasks due tomorrow, and the task due today flagged as overdue, matching tomorrow's day view
+
+#### Scenario: Past day
+- **WHEN** an agent calls `get_schedule` with yesterday's date
+- **THEN** it receives yesterday's appointments and the open tasks due yesterday, without overdue tasks and without planning data
 
 #### Scenario: No calendar access
 - **WHEN** the agent process has no calendar access
@@ -29,11 +33,15 @@ Each appointment returned by `get_schedule` SHALL include title, start, end, all
 - **THEN** that appointment counts as free with the reason override, and the other appointments carry their automatic classification
 
 ### Requirement: Planning data in the schedule
-The `get_schedule` response SHALL include the day's free time and, for today, the Today list (with why each task is there, the work needed today and whether it can't fit) and the Coming up list (with each task's start-by day).
+The `get_schedule` response SHALL include the day's free time and, for today and later dates, the Today list of that day (with why each task is there, the work needed that day and whether it can't fit) and its Coming up list (with each task's start-by day), computed as in the day view: for today from now on, for a later date from the start of that day.
 
 #### Scenario: Planning data
 - **WHEN** an agent calls `get_schedule` for today
 - **THEN** it receives the free time left today, the Today tasks with reason, effort, work needed today and can't-fit flag, and the Coming up tasks with start-by day
+
+#### Scenario: Planning data for a later day
+- **WHEN** an agent calls `get_schedule` for Wednesday while it is Monday
+- **THEN** it receives Wednesday's whole free working time, Wednesday's Today tasks with the work needed that day, and the Coming up tasks for the days after Wednesday
 
 ### Requirement: List tasks
 The system SHALL provide an MCP tool `list_tasks` that returns tasks filtered by any combination of: status (`open`, `snoozed`, `done`, `dropped`, or `all`; default `open`, which includes snoozed tasks), tag (including descendants), due on or before / on or after a date, and text contained in the title (case-insensitive). Results SHALL be sorted like the task list and limited to a maximum count (default 50), and SHALL say when more results exist.

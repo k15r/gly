@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Today list
-On today's day view and on the view of any later day, the system SHALL show one list with the open tasks that are overdue, due that day, or need work that day so that they can be finished by their due date, seen from that day and assuming nothing is done before it. The list SHALL be titled "Today" on today's view and with the date (e.g. "Thu 29 Oct") on a later day; when it is empty it SHALL say that nothing needs work today or that day. Each row SHALL say why it is there (overdue, due that day, or the minimum work needed that day, e.g. "today ≥ 1 day" or "Wed ≥ 1 day"). The list SHALL be sorted: tasks that can't fit first, then overdue, due that day, needs work that day; within each group by priority (urgent first), then due date.
+On the view of today or a later day, the system SHALL show one list of the open tasks that are overdue, due that day, or need work that day, seen from that day and assuming nothing is done before it. It SHALL be titled "Today", or with the date on a later day. Each row SHALL say why it is there (overdue, due that day, or the minimum work needed that day). Sorted: can't fit first, then overdue, due that day, needs work; within each group by priority (urgent first), then due date.
 
 #### Scenario: Task needing work today
 - **WHEN** a task with effort `XL` (3 working days) is due on Friday and there are 2 free working days after today until then
@@ -21,8 +21,12 @@ On today's day view and on the view of any later day, the system SHALL show one 
 - **WHEN** a task with effort `XL` (3 working days) is due on Friday, today is Monday, and the user views Wednesday, which has a free working day followed by a fully free Thursday and Friday
 - **THEN** Wednesday's list, titled "Wed 28 Oct", shows the task with "Wed ≥ 1 day"
 
+#### Scenario: Nothing to do on a later day
+- **WHEN** no task is overdue, due or needs work on a later day the user views
+- **THEN** the list is titled with that day's date and says that nothing needs work that day
+
 ### Requirement: Work needed today
-For a task with an effort, the work needed on the planned day (today, or the later day being viewed) SHALL be its effort minus the free time after that day until its due date (the end of the due day, or the due time); for tasks due that day or overdue it is the whole effort. A task SHALL be marked "can't fit" when its effort is more than the free time from the start of the planning (now for today, the start of the day for a later day) until its due date; for an overdue task, whose due date has passed, until the end of the planned day. Tasks are evaluated one by one, without sharing free time between them.
+For a task with an effort, the work needed on the planned day (today or a later day) SHALL be its effort minus the free time after that day until its due date; for tasks due that day or overdue it is the whole effort. A task SHALL be "can't fit" when its effort exceeds the free time from the start of planning (now for today, else the start of the day) until its due date, or for an overdue task until the end of the planned day. Tasks are evaluated one by one, without sharing free time.
 
 #### Scenario: Enough time later
 - **WHEN** a task with effort `S` (2 h) is due in 4 days with 20 free hours after today
