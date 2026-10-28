@@ -86,7 +86,15 @@ struct TaskPageView: View {
             .padding([.horizontal, .top])
 
             fields(task).padding(.horizontal).padding(.top, 8)
-            if task.effort != nil { TaskProgressRow(task: task, work: work).padding(.horizontal).padding(.top, 6) }
+            if task.effort != nil || task.hasEstimatedParts { TaskProgressRow(task: task, work: work).padding(.horizontal).padding(.top, 6) }
+            if allPartsDone(task) {
+                // specs/tasks "All parts done": offered, never automatic.
+                HStack {
+                    Label("All parts done", systemImage: "checkmark.seal").foregroundStyle(.green)
+                    Button("Complete task") { send(.setStatus(id: task.id, .done)) }.disabled(!app.canWrite)
+                }
+                .font(.callout).padding(.horizontal).padding(.top, 6)
+            }
             Form { TagField(tags: $tags, input: $pendingTag) }
                 .formStyle(.columns).padding(.horizontal)
                 .onChange(of: tags) { _, new in
@@ -196,6 +204,11 @@ struct TaskPageView: View {
         }
     }
 
+    private func allPartsDone(_ task: TaskItem) -> Bool {
+        let parts = task.parts
+        return task.status == .open && !parts.isEmpty && parts.allSatisfy(\.done)
+    }
+
     private func saveTitle(_ task: TaskItem) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { title = task.title; return }
@@ -219,6 +232,23 @@ struct TaskProgressRow: View {
         let dayLength = planning.hours.minutesPerDay
         let effortMinutes = task.effort.map { planning.sizes[$0] } ?? 0
         let left = task.remaining(sizes: planning.sizes, dayMinutes: planning.hours.minutesPerDay) ?? 0
+        if task.hasEstimatedParts {
+            // Estimated checklist items drive what's left; recording work and setting it by hand don't apply (subtasks S2).
+            let parts = task.parts
+            let unestimated = parts.filter { !$0.done && $0.estimate == nil }.count
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("Progress").foregroundStyle(.secondary)
+                Text("\(formatEffort(Double(left), dayLength: dayLength)) left from \(parts.filter(\.done).count)/\(parts.count) parts").monospacedDigit()
+                if unestimated > 0 { Text("\(unestimated) without estimate").font(.caption).foregroundStyle(.secondary) }
+                if let effort = task.effort { Text("task estimate \(effort.label)").font(.caption).foregroundStyle(.secondary) }
+                Spacer()
+            }
+        } else {
+            manualProgress(left: left, effortMinutes: effortMinutes, dayLength: dayLength)
+        }
+    }
+
+    private func manualProgress(left: Int, effortMinutes: Int, dayLength: Int) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text("Progress").foregroundStyle(.secondary)
             Text(work.isEmpty ? "nothing recorded" : "\(formatEffort(Double(left), dayLength: dayLength)) of \(task.effort?.label ?? "") left")

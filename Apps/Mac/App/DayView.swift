@@ -178,7 +178,8 @@ struct DayView: View {
     /// "Done for today" when today asks for work, or to take back what was ticked off today (task-progress P4).
     private func todaysPart(_ task: TaskItem, needed: Int) -> TodaysPart? {
         let recorded = planning.partsToday[task.id]
-        guard needed > 0 || recorded != nil else { return nil }
+        // With estimated checklist items, ticking them off is the progress; only a part already recorded today can be taken back.
+        guard (needed > 0 && !task.hasEstimatedParts) || recorded != nil else { return nil }
         return TodaysPart(neededMinutes: needed, recordedMinutes: recorded)
     }
 
