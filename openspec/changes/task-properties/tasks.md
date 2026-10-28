@@ -2,7 +2,7 @@
 
 ## 1. Core
 
-- [ ] 1.1 `DateWords` (T3): day words and an optional trailing time as a public parser, used by `CaptureParser`; verify with tests for weekdays, "today"/"tomorrow", "3 nov", "fri 14:00", nonsense → nil, and the existing capture tests unchanged
+- [x] 1.1 `DateWords` (T3): day words and an optional trailing time as a public parser, used by `CaptureParser`; verify with tests for weekdays, "today"/"tomorrow", "3 nov", "fri 14:00", nonsense → nil, and the existing capture tests unchanged
 
 ## 2. App
 
