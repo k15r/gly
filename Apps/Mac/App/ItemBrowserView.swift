@@ -42,6 +42,7 @@ struct ItemBrowserView<Header: View>: View {
         .onAppear { browser.activeViewID = viewID; collapsed = [] }
         .onDisappear { if browser.activeViewID == viewID { browser.activeViewID = nil } }
         .sheet(item: $newTask) { TaskEditor(target: $0) }
+        .onChange(of: nav.saveViewRequest) { startSaving() }
         // ⌘N (Navigation.requestNew): a task with the view's tags, as "New Task".
         .onChange(of: nav.newTaskRequest) { newTask = .new(due: nil, tags: browser.view(viewID).query.tags) }
         .alert("Save View", isPresented: $savingView) {
@@ -92,11 +93,25 @@ struct ItemBrowserView<Header: View>: View {
                 }
                 Button("Reset") { browser.reset(viewID) }.help("Back to the view's own filter")
             }
-            Button { viewName = ""; savingView = true } label: { Image(systemName: "star") }
-                .help("Save View…").buttonStyle(.borderless)
+            // Prominent once the filter was changed: that is when there is something to save (⌘S).
+            if browser.isModified(viewID) {
+                Button { startSaving() } label: { Label("Save View…", systemImage: "star") }
+                    .buttonStyle(.borderedProminent).help("Save this filter, grouping and sorting as a view in the sidebar (⌘S)")
+            } else {
+                Button { startSaving() } label: { Label("Save View…", systemImage: "star") }
+                    .help("Save this filter, grouping and sorting as a view in the sidebar (⌘S)")
+            }
             newMenu(view)
         }
         .padding()
+    }
+
+    /// Suggests a name from the filter ("Tasks #project/atlas due:week"), editable before saving.
+    private func startSaving() {
+        let view = browser.view(viewID)
+        let base = view.isTagView ? "" : view.name + " "
+        viewName = (base + view.query.description).trimmingCharacters(in: .whitespaces)
+        savingView = true
     }
 
     private func binding<T>(_ path: WritableKeyPath<ItemView, T>) -> Binding<T> {

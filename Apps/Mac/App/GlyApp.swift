@@ -63,6 +63,8 @@ struct GlyApp: App {
                 Button("Pages") { nav.go(.items(ItemView.pages.id)) }.keyboardShortcut("3")
                 Button("Bookmarks") { nav.go(.items(ItemView.bookmarks.id)) }.keyboardShortcut("4")
                 Button("All Items") { nav.go(.items(ItemView.all.id)) }.keyboardShortcut("0")
+                Divider()
+                Button("Save View…") { nav.saveViewRequest += 1 }.keyboardShortcut("s").disabled(!nav.showsBrowser)
             }
             CommandMenu("Developer") {
                 Button("Re-check Agent") { Task { await app.refreshAgentState() } }

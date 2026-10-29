@@ -38,6 +38,13 @@ final class Navigation {
 
     /// Incremented to ask the visible view to open a new-task editor (⌘N).
     private(set) var newTaskRequest = 0
+    /// Incremented to ask the visible browser view to save itself as a view (⌘S).
+    var saveViewRequest = 0
+
+    /// Whether the main area shows the item browser (a view or a tag view).
+    var showsBrowser: Bool {
+        switch current { case .items, .tag: true; default: false }
+    }
 
     private var mouseMonitor: Any?
 

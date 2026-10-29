@@ -15,7 +15,7 @@ All are created by an agent (Claude), so `by:agent` finds them.
 - [ ] A2 In Tasks add `#gly/checks/item-browser/demo/atlas`, open a task, go back → still filtered; "Reset" brings back the preset ("Back to a view").
 - [ ] A3 In Tasks remove the status chips and add `status:done` → "Demo: finished" (and other done tasks), most recently completed first ("Show completed tasks").
 - [ ] A4 Pages lists pages, most recently changed first; editing an older page moves it to the top ("Recently changed first"); filtering by `#gly/checks/item-browser/demo` shows only the demo pages ("Filter by tag").
-- [ ] A5 In Tasks filter by the demo tag and `due:week`, click ☆ "Save View…", name it "Demo this week" → it appears under Saved Views and opens with that filter; quit and reopen gly → still there ("Save a view"); right-click → Rename…, Delete View work; a changed saved view offers "Update View".
+- [ ] A5 In Tasks filter by the demo tag and `due:week`, click "Save View…" (highlighted once the filter is changed) or press ⌘S, name it "Demo this week" (the field suggests a name from the filter) → it appears under Saved Views and opens with that filter; quit and reopen gly → still there ("Save a view"); right-click → Rename…, Delete View work; a changed saved view offers "Update View".
 - [ ] A6 ⌘1–⌘4 and ⌘0 open Day, Tasks, Pages, Bookmarks and All items; ⌘N in Tasks opens the new-task form, in Pages the new-page sheet.
 
 ## B. Filter bar (task 2.2)
