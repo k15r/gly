@@ -77,18 +77,18 @@ The sidebar SHALL show all tags as a hierarchy, including tags without items, wi
 - **THEN** Pages shows the pages without tags
 
 ### Requirement: Clicks in the tag tree
-In a browser view, clicking a tag SHALL set the view's tag filter to it, and ⇧-click SHALL add it to or remove it from the filter. ⌘-click, and a click outside a browser view, SHALL open the tag page. A click SHALL also expand the tag.
+In a browser view, clicking a tag SHALL set the view's tag filter to it, and ⌘-click SHALL add it to or remove it from the filter. ⌥-click, and a click outside a browser view, SHALL open the tag page. A click SHALL also expand the tag; Control-click SHALL open its context menu.
 
 #### Scenario: Click filters the view
 - **WHEN** the user is in Pages and clicks `project`
 - **THEN** Pages shows only pages tagged `project` or below, and `project` expands, showing `atlas` below it
 
-#### Scenario: ⇧-click adds and removes
-- **WHEN** the user is in Bookmarks, clicks `project/atlas`, ⇧-clicks `ops`, then ⇧-clicks `project/atlas` again
+#### Scenario: ⌘-click adds and removes
+- **WHEN** the user is in Bookmarks, clicks `project/atlas`, ⌘-clicks `ops`, then ⌘-clicks `project/atlas` again
 - **THEN** Bookmarks first shows bookmarks tagged both `project/atlas` and `ops`, then only those tagged `ops`
 
-#### Scenario: ⌘-click opens the tag page
-- **WHEN** the user ⌘-clicks `project/atlas` in the tag tree
+#### Scenario: ⌥-click opens the tag page
+- **WHEN** the user ⌥-clicks `project/atlas` in the tag tree
 - **THEN** the tag page of `project/atlas` opens
 
 ### Requirement: Tag rows accept drops

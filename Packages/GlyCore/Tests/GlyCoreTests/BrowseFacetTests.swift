@@ -2,7 +2,7 @@ import GRDB
 import XCTest
 @testable import GlyCore
 
-/// specs/item-browser "Refine by tags", "Grouping and sorting"; specs/tags "Tag tree" counts (item-browser I2, I5).
+/// specs/item-browser "Grouping and sorting"; specs/tags "Tag tree" counts (item-browser I2, I5).
 final class BrowseFacetTests: XCTestCase {
     var db: DatabaseQueue!
     var h: CommandHandler!
@@ -20,19 +20,6 @@ final class BrowseFacetTests: XCTestCase {
     }
     func items(_ q: String, sort: ItemSort = .title) throws -> [BrowseItem] {
         try db.read { try BrowseQueries.items($0, ItemQuery.parse(q), sort: sort, now: now, calendar: cal) }
-    }
-
-    func testWhoIsInvolved() throws {
-        for n in 1...4 { task("A\(n)", tags: ["project/atlas", n <= 2 ? "person/sam" : "person/x"]) }
-        for n in 1...4 { task("Alex \(n)", tags: ["project/atlas", "person/alex"]) }
-        task("Elsewhere", tags: ["person/alex"])
-        let q = ItemQuery.parse("is:task #project/atlas")
-        let refine = BrowseFacets.refine(try items(q.description), query: q)
-        XCTAssertEqual(refine.map(\.tag), ["person/alex", "person/sam", "person/x"])
-        XCTAssertEqual(refine.map(\.count), [4, 2, 2])
-        XCTAssertFalse(refine.contains { $0.tag.hasPrefix("project") }, "the filtered tag and those above it are left out")
-        let narrowed = q.adding(.tag("person/alex"))
-        XCTAssertEqual(try items(narrowed.description).count, 4)
     }
 
     func testTagCountsFollowTheView() throws {

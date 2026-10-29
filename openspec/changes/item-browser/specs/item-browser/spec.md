@@ -53,13 +53,6 @@ The filter bar's add-filter menu SHALL offer kind, tags (nested like the tag hie
 - **WHEN** the view is limited to pages
 - **THEN** the add-filter menu doesn't offer status, due date, priority or effort, and the Group and Sort menus don't offer task groupings or task order
 
-### Requirement: Refine by tags
-Above the results, the browser SHALL show the tags that occur among the current results, most frequent first, each with the number of results carrying it or a tag below it, leaving out tags already in the filter. Clicking one SHALL add it to the filter.
-
-#### Scenario: Who is involved
-- **WHEN** Tasks is filtered by `#project/atlas` and four of its tasks are tagged `person/alex`, two `person/sam`
-- **THEN** the refine row shows `person/alex 4` before `person/sam 2`, and clicking `person/alex` leaves the four tasks
-
 ### Requirement: Grouping and sorting
 The browser SHALL group results by nothing, kind, due date (overdue, today, this week, later, no due date), status, priority, effort, last change or tag (the next level below a filtered tag, else top-level tags), and sort by relevance (when searching text), last change, due date, title or task-list order. Each preset view SHALL have a sensible default: Tasks in task-list order, Pages and All items by last change, Bookmarks by title, tag views grouped by kind.
 

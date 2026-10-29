@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import GlyCore
 
-/// The item browser (specs/item-browser): a view's filter bar, refine row, group and sort menus, and its results.
+/// The item browser (specs/item-browser): a view's filter bar, group and sort menus, and its results.
 /// Presets, saved views and tag views (with `header`) all use it.
 struct ItemBrowserView<Header: View>: View {
     @Environment(BrowserModel.self) private var browser
@@ -32,7 +32,6 @@ struct ItemBrowserView<Header: View>: View {
             toolbar(view, count: items.count)
             FilterBar(query: Binding(get: { browser.view(viewID).query }, set: { browser.setQuery(viewID, $0) }))
                 .padding(.horizontal).padding(.bottom, 6)
-            refineRow(items, query: view.query)
             Divider()
             results(view, items: items)
         }
@@ -163,33 +162,6 @@ struct ItemBrowserView<Header: View>: View {
         }
         .disabled(!app.canWrite)
         .popover(isPresented: $newBookmark, arrowEdge: .bottom) { BookmarkEditor(tags: tags, wiki: wiki) { newBookmark = false } }
-    }
-
-    // MARK: Refine row (specs/item-browser "Refine by tags")
-
-    @ViewBuilder
-    private func refineRow(_ items: [BrowseItem], query: ItemQuery) -> some View {
-        let tags = BrowseFacets.refine(items, query: query)
-        if !tags.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    Text("Refine").font(.caption).foregroundStyle(.secondary)
-                    ForEach(tags, id: \.tag) { t in
-                        Button { browser.setQuery(viewID, query.adding(.tag(t.tag))) } label: {
-                            HStack(spacing: 3) {
-                                Text("#" + t.tag)
-                                Text("\(t.count)").foregroundStyle(.secondary).monospacedDigit()
-                            }
-                            .font(.callout).padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.1), in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                        .help("Only items tagged \(t.tag) (\(t.count))")
-                    }
-                }
-                .padding(.horizontal).padding(.bottom, 6)
-            }
-        }
     }
 
     // MARK: Results

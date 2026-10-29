@@ -18,7 +18,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
-- One query model shared by every list, the tag tree counts and the refine row, so all of them agree.
+- One query model shared by every list and the tag tree counts, so they agree.
 - The query is plain data (parseable from and printable to text), so saved views, ⌘K "Show all results" and a later MCP tool use the same thing.
 
 **Non-Goals:**
@@ -60,7 +60,7 @@ It returns `[BrowseItem]`:
 
 ### I2: Facets from the same results
 
-`BrowseFacets.of(results)` counts, per tag path including ancestors, how many results carry it or a tag below it. It's computed in memory from the results' tag lists (no second query), so the refine row and the result count can't disagree.
+`BrowseFacets.of(results)` counts, per tag path including ancestors, how many results carry it or a tag below it. It's computed in memory from the results' tag lists (no second query), so the tag tree and the result count can't disagree.
 
 The tag tree's counts use the view's query **without its tag filters** (`query.droppingTags()`). Otherwise every tag outside the filter would show 0 while you filter. That's one extra query per view change, observed like the results.
 
@@ -80,9 +80,9 @@ A token field:
 
 The bar edits the view's `ItemQuery` and never a string, so chips and text stay in sync. The ⊕ menu shows only filters that can match: task filters when tasks can be among the results; tags as nested menus (`TagField.tree`). Exclusions (`-#tag`) and hosts (`host:`) stay typed tokens but aren't in the menu (rarely needed, clutter). `due:Nwd` counts working days from `WorkingHours.workdays`, passed into `BrowseQueries` by the app and the MCP tools.
 
-### I5: Refine row, grouping, sorting
+### I5: Grouping, sorting
 
-- **Refine row:** up to 8 tags from the facets, leaving out tags in the filter and their ancestors, most frequent first. A click adds `#tag`.
+- **No refine row:** a first version showed the tags among the results above the list; the tag tree with per-view counts, pruning and ⌘-click to add made it redundant, so it was removed.
 - **Group and sort:** menus in the toolbar; task groupings (due, status, priority, effort) and orders (due, task order) only when tasks can be among the results, Kind only with several kinds; "Last change" groups by today / yesterday / 7 days / earlier. Grouping is done in memory on the results:
   - **kind:** in tag views, with "Finished tasks" as its own collapsed group
   - **due:** overdue / today / this week / later / none, based on the local day
@@ -100,7 +100,7 @@ The bar edits the view's `ItemQuery` and never a string, so chips and text stay 
 
 - `TagTreeView` loses its leaves (`TreeLeafRow`, `untaggedItems`), and gains a filter field (case-insensitive substring on the full path; matches keep their parents and are expanded) and view-relative counts (I2).
 - **Counts and pruning:** `BrowserModel` observes the counts for the shown view (in a model, not in a lazily rendered sidebar row whose task stopped updating), and in browser views the tree hides tags without items there (filtered tags and their parents stay), with "Show all tags".
-- **Click:** in a browser view (not a tag view) it sets the view's tag filter to this tag; ⇧-click adds or removes it; ⌘-click opens the tag view, as does any click outside a browser view. A click also expands the tag. (Tried "click opens the tag page" in between; filtering the view you're in is what a click on a tag is for.)
+- **Click:** in a browser view (not a tag view) it sets the view's tag filter to this tag; ⌘-click adds or removes it (as ⌘ toggles an entry in Mac lists); ⌥-click opens the tag view (⌥ = the alternative action, as when dragging), as does any click outside a browser view; Control-click is the context menu. A click also expands the tag. (Tried "click opens the tag page" in between; filtering the view you're in is what a click on a tag is for.)
 - **Tag chips in rows:** `TagChipLine` shows as many chips as fit on one line and "+N" with the rest in a hover popup (`ViewThatFits` over the prefixes; a plain tooltip does not show inside rows with their own hover and tap handling), replacing a wrapping layout that clipped tags when the row's width wasn't known yet.
 - **Context menu:** "Open Tag Page" plus the existing color/rename/delete/new subtag.
 - "Untagged" sets `untagged`.

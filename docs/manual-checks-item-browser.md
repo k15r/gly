@@ -30,7 +30,6 @@ All are created by an agent (Claude), so `by:agent` finds them.
 
 - [ ] C1 In All items click "Demo: dashboard" → its page; back, ⌘-click it → https://example.com/dashboard opens in the browser ("Open a bookmark from the browser"). ⌘-click on a page or task opens its page.
 - [ ] C2 Task rows in the browser have the status bar (red for the overdue one) and, on hover, snooze, due date, priority, effort and open buttons; right-click shows the task actions ("Task row keeps its actions").
-- [ ] C3 Tasks filtered by `#gly/checks/item-browser/demo/atlas`: the Refine row shows `…/people/alex 2` before `…/people/sam 1`; clicking `…/people/alex` leaves the two tasks ("Who is involved").
 - [ ] C4 Group ▸ Due date in Tasks (demo-filtered) → "Overdue", "This week", "Later", "No due date" in that order; Group ▸ Tag and Status group accordingly; Sort menus reorder ("Group by due date").
 - [ ] C5 In Tasks filtered by `#gly/checks/item-browser/demo/atlas` choose New Task → the form already has that tag; New in All items offers task, page and bookmark, each with the view's tags ("New task in a tag view").
 - [ ] C7 Give a demo task eight tags (or narrow the window): its row shows the tags that fit and "+N"; hovering "+N" opens a small popup with the others (a click keeps it open; its chips open tag pages); nothing is cut off or overlaps ("Many tags").
@@ -39,7 +38,7 @@ All are created by an agent (Claude), so `by:agent` finds them.
 ## D. Tag tree (task 3.2)
 
 - [ ] D1 The tag tree shows tags only (no items below them); in Tasks `demo/atlas` counts its open tasks, in Bookmarks it counts 1 ("Tag hierarchy with counts", "Counts follow the view"); an unused tag shows no number ("Empty tag").
-- [ ] D2 In Pages click `…/demo` → only demo pages, and the tag expands ("Click filters the view"). In Bookmarks click `demo/atlas`, ⇧-click `demo/ops` → both in the filter (nothing left); ⇧-click `demo/atlas` again → only `demo/ops` bookmarks ("⇧-click adds and removes"). ⌘-click a tag → its tag page ("⌘-click opens the tag page"); in the Day view a plain click opens the tag page.
+- [ ] D2 In Pages click `…/demo` → only demo pages, and the tag expands ("Click filters the view"). In Bookmarks click `demo/atlas`, ⌘-click `demo/ops` → both in the filter (nothing left); ⌘-click `demo/atlas` again → only `demo/ops` bookmarks ("⌘-click adds and removes"). ⌥-click a tag → its tag page ("⌥-click opens the tag page"); Control-click → its menu; in the Day view a plain click opens the tag page.
 - [ ] D3 Type `peop` into "Filter tags" → only `…/demo/people` with `alex` and `sam` (and their parents) remain, expanded ("Find a tag").
 - [ ] D4 In Pages click "Untagged" → "Demo: untagged page" (among other untagged pages) ("Untagged").
 - [ ] D5 In Pages filtered by `#gly/checks/item-browser/demo/ops`, drag "Demo: ops runbook" onto `demo/atlas` → moved (only `demo/atlas` now); drag it back with ⌥ → both tags ("Move a page", "Alias a page"); from an unfiltered view a drop adds the tag ("Tag from a list"); a task moves the same way ("Move a task").

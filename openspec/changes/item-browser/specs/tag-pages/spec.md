@@ -22,7 +22,7 @@ Every tag SHALL have a tag view: the item browser filtered by the tag (items tag
 - **THEN** it shows only the items due this week, still grouped by kind, with the description above
 
 ### Requirement: Open the tag page
-⌘-clicking a tag in the tag tree (or clicking it outside a browser view), clicking a tag chip or a tag link SHALL open the tag's view. The tag view SHALL offer to show only one kind, like the Tasks or Pages view filtered by the tag.
+⌥-clicking a tag in the tag tree (or clicking it outside a browser view), clicking a tag chip or a tag link SHALL open the tag's view. The tag view SHALL offer to show only one kind, like the Tasks or Pages view filtered by the tag.
 
 #### Scenario: From a chip
 - **WHEN** the user clicks the chip `project/atlas` on a task row

@@ -1,7 +1,7 @@
 import Foundation
 
-/// Counts over a result list (item-browser I2): computed from the results themselves, so the refine row, the tag tree
-/// and the result count agree.
+/// Counts over a result list (item-browser I2): computed from the results themselves, so the tag tree and the result
+/// count agree.
 public enum BrowseFacets {
     /// Per tag key, how many items carry the tag or a tag below it (ancestors included: `person/alex` counts for `person`).
     public static func tagCounts(_ items: [BrowseItem]) -> [String: Int] {
@@ -19,23 +19,6 @@ public enum BrowseFacets {
 
     /// Items without any tag ("Untagged" in the tag tree).
     public static func untaggedCount(_ items: [BrowseItem]) -> Int { items.filter { $0.tags.isEmpty }.count }
-
-    /// The refine row (specs/item-browser "Refine by tags"): tags assigned among the results, most frequent first
-    /// (counting the results carrying the tag or one below it), leaving out the filtered tags and the tags above them.
-    public static func refine(_ items: [BrowseItem], query: ItemQuery, limit: Int = 8) -> [(tag: String, count: Int)] {
-        let counts = tagCounts(items)
-        let filtered = (query.tags + query.excludedTags).map { TagName.key(for: $0) }
-        var display: [String: String] = [:]
-        for item in items { for t in item.tags { display[TagName.key(for: t)] = display[TagName.key(for: t)] ?? t } }
-        func related(_ key: String) -> Bool { filtered.contains { $0 == key || $0.hasPrefix(key + "/") } }
-        var offered: [(tag: String, count: Int)] = []
-        for (key, name) in display where !related(key) { offered.append((tag: name, count: counts[key] ?? 0)) }
-        offered.sort { a, b in
-            if a.count != b.count { return a.count > b.count }
-            return a.tag.localizedCaseInsensitiveCompare(b.tag) == .orderedAscending
-        }
-        return Array(offered.prefix(limit))
-    }
 }
 
 /// How results are grouped (item-browser I5).
