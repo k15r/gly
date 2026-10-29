@@ -552,14 +552,16 @@ struct TagField: View {
         }
     }
 
-    /// A submenu for a group (with "use this tag" if it is one, its children and "New tag in …"), a button for a leaf.
+    /// A submenu for a group (the group itself first, its children and "New tag in …"), a button for a leaf.
+    /// A group is a usable tag even when only tags below it exist (as in the sidebar): choosing it creates it.
     private func nodeMenu(_ node: Node) -> AnyView {
         let taken = tags.contains { TagName.key(for: $0) == TagName.key(for: node.path) }
         if node.children.isEmpty {
             return AnyView(Button(node.segment) { add(node.path) }.disabled(taken))
         }
         return AnyView(Menu(node.segment) {
-            if node.isTag { Button("\(node.path)") { add(node.path) }.disabled(taken); Divider() }
+            Button("Tag with “\(node.path)”") { add(node.path) }.disabled(taken)
+            Divider()
             ForEach(node.children) { child in nodeMenu(child) }
             Divider()
             Button("New tag in \(node.path)/…") { newTagPrefix = node.path }
