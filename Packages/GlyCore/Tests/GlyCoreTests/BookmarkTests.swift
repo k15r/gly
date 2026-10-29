@@ -23,6 +23,7 @@ final class BookmarkTests: XCTestCase {
     func list(tag: String? = nil, text: String? = nil) throws -> [String] {
         try db.read { db in try BookmarkQueries.list(db, tag: try tag.map(TagName.init), text: text).map(\.title) }
     }
+    @discardableResult
     func create(_ title: String, _ url: String, description: String = "", tags: [String] = []) -> String {
         ok(.createBookmark(BookmarkDraft(url: url, title: title, description: description, tags: tags))).id!
     }

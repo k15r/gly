@@ -19,6 +19,7 @@ final class Navigation {
         case tag(String)        // tag path (display)
         case meeting(MeetingRef)    // meeting-pages N7
         case bookmark(String)       // bookmark id (bookmark page)
+        case items(String)          // item browser view id (item-browser I3)
     }
 
     private(set) var current: Destination = .day
@@ -32,6 +33,8 @@ final class Navigation {
     /// Sheets shown above everything.
     var showQuickOpen = false
     var showNewPage = false
+    /// Tags for the next new page (the browser view's tag filters).
+    var newPageTags: [String] = []
 
     /// Incremented to ask the visible view to open a new-task editor (⌘N).
     private(set) var newTaskRequest = 0

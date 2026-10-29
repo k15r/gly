@@ -3,10 +3,11 @@ import GlyCore
 
 /// The new-task form's preset (tasks are edited on their task page, specs/tasks "Task page").
 enum TaskEditorTarget: Identifiable {
-    case new(due: Due?)
+    /// `tags`: the browser view's tag filters (specs/item-browser "Create from a view").
+    case new(due: Due?, tags: [String] = [])
     var id: String {
         switch self {
-        case .new(let due): return "new-\(due?.day ?? "")"
+        case .new(let due, let tags): return "new-\(due?.day ?? "")-\(tags.joined(separator: ","))"
         }
     }
 }
@@ -420,8 +421,9 @@ struct TaskEditor: View {
 
     private func load() {
         switch target {
-        case .new(let due):
+        case .new(let due, let tags):
             if let due, let date = due.date() { hasDue = true; dueDate = date; dueHasTime = due.time != nil }
+            if tagNames.isEmpty { tagNames = tags }
         }
     }
 

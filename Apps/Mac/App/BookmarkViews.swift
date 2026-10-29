@@ -21,9 +21,10 @@ struct BookmarkEditor: View {
     @FocusState private var titleFocused: Bool
 
     /// Adding from a link (prefilled with its label and URL) or with empty fields; an existing bookmark of the URL opens instead.
-    init(url: String = "", label: String = "", wiki: WikiModel, onDone: @escaping () -> Void) {
+    init(url: String = "", label: String = "", tags: [String] = [], wiki: WikiModel, onDone: @escaping () -> Void) {
         let existing = url.isEmpty ? nil : wiki.bookmark(for: url)
         self.init(existing: existing, url: url, title: label, onDone: onDone)
+        if existing == nil { _tags = State(initialValue: tags) }
     }
 
     init(bookmark: BookmarkItem, onDone: @escaping () -> Void) { self.init(existing: bookmark, url: bookmark.url, title: bookmark.title, onDone: onDone) }

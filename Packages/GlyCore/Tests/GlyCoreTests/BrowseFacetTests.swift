@@ -14,6 +14,7 @@ final class BrowseFacetTests: XCTestCase {
 
     @discardableResult
     func ok(_ c: Command) -> String { if case .ok(let r) = h.perform(c, writer: "u", now: now) { return r.id ?? "" }; XCTFail("\(c)"); return "" }
+    @discardableResult
     func task(_ title: String, tags: [String] = [], due: Int? = nil) -> String {
         ok(.createTask(TaskDraft(title: title, due: due.map { Due(day: today.adding(days: $0, calendar: cal).description) }, tags: tags)))
     }

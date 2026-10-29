@@ -14,6 +14,7 @@ struct GlyApp: App {
     @State private var tagColors = TagColorModel()
     @State private var meetingMarks = MeetingMarksModel()
     @State private var capture = CaptureController()
+    @State private var browser = BrowserModel()
     @AppStorage("showMenuBarIcon") private var showMenuBarIcon = true
 
     var body: some Scene {
@@ -21,7 +22,7 @@ struct GlyApp: App {
             let opener = LinkOpener(app: app, wiki: wiki, nav: nav)
             ContentView()
                 .environment(app).environment(calendars).environment(tasks).environment(clock).environment(nav).environment(wiki).environment(planning)
-                .environment(tagColors).environment(meetingMarks).environment(capture)
+                .environment(tagColors).environment(meetingMarks).environment(capture).environment(browser)
                 .background(OpenWindowHook(capture: capture))
                 .environment(\.linkOpener, opener)
                 .environment(\.openURL, OpenURLAction { url in opener.open(url); return .handled })
@@ -180,6 +181,8 @@ struct ContentView: View {
                 case .page(let id): PageView(id: id).id(id)
                 case .task(let id): TaskPageView(id: id).id(id)
                 case .bookmark(let id): BookmarkPageView(id: id).id(id)
+                // One browser per view: each keeps its own results and collapsed groups.
+                case .items(let viewID): ItemBrowserView(viewID: viewID).id(viewID)
                 case .tag(let name): TagPageView(name: name)
                 case .meeting(let ref): MeetingPageView(ref: ref)
                 }

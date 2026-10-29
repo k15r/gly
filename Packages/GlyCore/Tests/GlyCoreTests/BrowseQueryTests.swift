@@ -21,6 +21,7 @@ final class BrowseQueryTests: XCTestCase {
         }
     }
     func day(_ n: Int) -> String { today.adding(days: n, calendar: cal).description }
+    @discardableResult
     func task(_ title: String, due: Int? = nil, tags: [String] = [], priority: Priority = .none, effort: Effort? = nil, body: String = "") -> String {
         ok(.createTask(TaskDraft(title: title, body: body, priority: priority, due: due.map { Due(day: day($0)) }, tags: tags, effort: effort)))
     }

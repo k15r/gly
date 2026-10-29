@@ -48,6 +48,7 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.application-groups: [DB33H6YGK7.dev.k15r.gly, DB33H6YGK7.dev.k15r.workdash]   # old group: read once for the takeover (rename-to-gly R2)
         com.apple.security.personal-information.calendars: true
+        com.apple.security.network.client: true   # quick capture fetches a bookmark's page title (bookmarks B6)
     postCompileScripts:
       - name: Copy launch agent plist
         script: |

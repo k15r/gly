@@ -532,8 +532,9 @@ struct NewPageSheet: View {
         let t = title.trimmingCharacters(in: .whitespaces)
         guard !t.isEmpty else { return }
         // A new page from a tag page gets that tag.
-        var tags: [String] = []
-        if case .tag(let name) = nav.current { tags = [name] }
+        var tags = nav.newPageTags
+        nav.newPageTags = []
+        if tags.isEmpty, case .tag(let name) = nav.current { tags = [name] }
         dismiss()
         Task { await opener?.createPage(title: t, tags: tags) }
     }
