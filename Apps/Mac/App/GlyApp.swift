@@ -532,7 +532,10 @@ struct TagTreeNode: View {
             if count > 0 { Text("\(count)").foregroundStyle(.secondary).monospacedDigit() }
         }
         .help("Click: show only items tagged \(node.path) · ⇧-click: add to the filter")
-        .treeRow(group: .tag(node.path), state: drop, onTap: { TagTreeClick.tag(node.path, browser: browser, nav: nav) }) { items in
+        .treeRow(group: .tag(node.path), state: drop, onTap: {
+            TagTreeClick.tag(node.path, browser: browser, nav: nav)
+            if !node.children.isEmpty { withAnimation { expanded = true } }     // the click also shows the tag's subtags
+        }) { items in
             ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks)
         }
         .contextMenu {
