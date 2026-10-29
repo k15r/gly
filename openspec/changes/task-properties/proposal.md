@@ -7,8 +7,8 @@ The task page's field row is a line of standard macOS pickers ("Priority [None �
 ## What Changes
 
 - **Property chips** under the title: priority, effort (with what's left), due date, snooze and tags. Each shows its value, or a faded "+ Due" / "+ Effort" when empty, and opens a small popover.
-- **Due date popover:** quick picks (Today, Tomorrow, Next Monday, In a week), a text field that understands quick capture's date words ("fri", "tomorrow", "3 nov", optionally a time "14:00"), a calendar, add/remove time, and remove.
-- **Snooze chip:** "Snoozed until Mon" while snoozed (with "Wake now"), otherwise faded "+ Snooze". The popover has Tomorrow, Next Monday and a date, with the existing "won't fit anymore" warnings.
+- **Due date and snooze popovers share one layout:** quick picks (Today/Tomorrow, Next Monday, In a week), a calendar, and actions (due: add/remove time, remove; snooze: "Wake now"). Snooze shows "Due … stays" and the existing "won't fit anymore" warnings.
+- **Snooze chip:** "Snoozed until Mon" while snoozed, otherwise faded "+ Snooze".
 - **Priority and effort popovers** list the values; number keys pick them. The effort popover also offers "Set remaining…" when that applies.
 - **The status picker is removed:** done is the completion button, snooze has its chip, and drop/reopen live in the ⋯ menu.
 - **Same chip style** for the tag rows of pages and meeting pages.

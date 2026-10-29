@@ -129,7 +129,7 @@ struct TaskPropertyRow: View {
     private var snoozeChip: some View {
         let until = task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil
         return PropertyChip(symbol: "moon.zzz", text: until.map { "Snoozed until \(DayView.weekday($0))" } ?? "Snooze",
-                            tint: .blue, isEmpty: until == nil, help: "Hide the task until a day; its due date stays") { close in
+                            isEmpty: until == nil, help: "Hide the task until a day; its due date stays") { close in
             SnoozePicker(task: task, until: until, today: clock.today, onDone: close)
         }
     }
@@ -174,66 +174,85 @@ struct PriorityPicker: View {
     }
 }
 
-/// Quick picks, typed date words, a calendar, time and removal (T2, T3).
+/// One layout for the due date and snooze popovers: a caption, quick picks, the calendar, and actions (task-properties T2).
+struct DatePopover<Actions: View>: View {
+    let caption: String?
+    let quickPicks: [(title: String, day: LocalDay, warning: String?)]
+    let selected: LocalDay?
+    let earliest: LocalDay?
+    let pick: (LocalDay) -> Void
+    @ViewBuilder let actions: () -> Actions
+    @State private var date: Date
+
+    init(caption: String?, quickPicks: [(title: String, day: LocalDay, warning: String?)], selected: LocalDay?, earliest: LocalDay? = nil,
+         today: LocalDay, pick: @escaping (LocalDay) -> Void, @ViewBuilder actions: @escaping () -> Actions) {
+        self.caption = caption; self.quickPicks = quickPicks; self.selected = selected; self.earliest = earliest
+        self.pick = pick; self.actions = actions
+        // Set at creation, so only a real click in the calendar counts as a pick.
+        _date = State(initialValue: (selected ?? today).interval().start)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let caption { Text(caption).font(.caption).foregroundStyle(.secondary) }
+            HStack(spacing: 6) {
+                ForEach(quickPicks, id: \.title) { q in
+                    Button { pick(q.day) } label: {
+                        if q.warning != nil { Label(q.title, systemImage: "exclamationmark.triangle.fill") } else { Text(q.title) }
+                    }
+                    .buttonStyle(.bordered).controlSize(.small)
+                    .tint(q.warning != nil ? .orange : nil)
+                    .help(q.warning ?? DayView.title(for: q.day))
+                }
+            }
+            if let warning = quickPicks.compactMap(\.warning).first {
+                Text(warning).font(.caption).foregroundStyle(.orange)
+            }
+            Group {
+                if let earliest {
+                    DatePicker("", selection: $date, in: earliest.interval().start..., displayedComponents: [.date])
+                } else {
+                    DatePicker("", selection: $date, displayedComponents: [.date])
+                }
+            }
+            .datePickerStyle(.graphical).labelsHidden()
+            .onChange(of: date) { _, d in pick(LocalDay(date: d)) }
+            HStack { actions() }.buttonStyle(.borderless)
+        }
+        .frame(width: 260)
+    }
+}
+
+/// Due date: quick picks, the calendar, time and removal (T2).
 struct DuePicker: View {
     let task: TaskItem
     let today: LocalDay
     let apply: (Due?) -> Void
-    @State private var typed = ""
-    /// Starts at the current due date, set at creation so only a real pick in the calendar counts as a change.
-    @State private var date: Date
-    @FocusState private var fieldFocused: Bool
-
-    init(task: TaskItem, today: LocalDay, apply: @escaping (Due?) -> Void) {
-        self.task = task; self.today = today; self.apply = apply
-        _date = State(initialValue: task.due?.date() ?? today.interval().start)
-    }
 
     var body: some View {
-        let parsed = DateWords.parse(typed, today: today)
-        VStack(alignment: .leading, spacing: 8) {
-            TextField("fri, tomorrow, 3 nov 14:00", text: $typed)
-                .textFieldStyle(.roundedBorder).focused($fieldFocused)
-                .onSubmit { if let parsed { apply(Due(day: parsed.day.description, time: parsed.time)) } }
-            if !typed.isEmpty {
-                Text(parsed.map { "→ " + TaskPropertyRow.shortDue(Due(day: $0.day.description, time: $0.time)) } ?? "Not a date")
-                    .font(.caption).foregroundStyle(parsed == nil ? .red : .secondary)
-            }
-            HStack {
-                quick("Today", today)
-                quick("Tomorrow", today.adding(days: 1))
-                quick("Mon", TaskActions.nextMonday(after: today))
-                quick("+1 week", today.adding(days: 7))
-            }
-            DatePicker("", selection: $date, displayedComponents: [.date]).datePickerStyle(.graphical).labelsHidden()
-                .onChange(of: date) { _, d in apply(Due(day: LocalDay(date: d).description, time: task.due?.time)) }
-            HStack {
-                if let due = task.due {
-                    if due.time == nil {
-                        Button("Add time") { apply(Due(day: due.day, time: "09:00")) }
-                    } else {
-                        DatePicker("Time", selection: Binding(get: { due.date() ?? Date() }, set: { d in
-                            let c = Calendar.current.dateComponents([.hour, .minute], from: d)
-                            apply(Due(day: due.day, time: String(format: "%02d:%02d", c.hour ?? 9, c.minute ?? 0)))
-                        }), displayedComponents: [.hourAndMinute]).fixedSize()
-                        Button("Remove time") { apply(Due(day: due.day)) }
-                    }
-                    Spacer()
-                    Button("Remove", role: .destructive) { apply(nil) }
+        DatePopover(caption: nil,
+                    quickPicks: [("Today", today, nil), ("Tomorrow", today.adding(days: 1), nil),
+                                 ("Mon", TaskActions.nextMonday(after: today), nil), ("+1 week", today.adding(days: 7), nil)],
+                    selected: task.due.flatMap { LocalDay($0.day) }, today: today,
+                    pick: { apply(Due(day: $0.description, time: task.due?.time)) }) {
+            if let due = task.due {
+                if due.time == nil {
+                    Button("Add time") { apply(Due(day: due.day, time: "09:00")) }
+                } else {
+                    DatePicker("Time", selection: Binding(get: { due.date() ?? Date() }, set: { d in
+                        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+                        apply(Due(day: due.day, time: String(format: "%02d:%02d", c.hour ?? 9, c.minute ?? 0)))
+                    }), displayedComponents: [.hourAndMinute]).labelsHidden().fixedSize()
+                    Button("Remove time") { apply(Due(day: due.day)) }
                 }
+                Spacer()
+                Button("Remove", role: .destructive) { apply(nil) }
             }
-            .buttonStyle(.borderless)
         }
-        .frame(width: 260)
-        .onAppear { fieldFocused = true }
-    }
-
-    private func quick(_ title: String, _ day: LocalDay) -> some View {
-        Button(title) { apply(Due(day: day.description, time: task.due?.time)) }.buttonStyle(.bordered).controlSize(.small)
     }
 }
 
-/// Snooze until a day, with the "won't fit anymore" warnings, or wake the task (T2).
+/// Snooze: the same layout, quick picks warning when the task won't fit anymore, and "Wake now" (T2).
 struct SnoozePicker: View {
     @Environment(AppModel.self) private var app
     @Environment(PlanningModel.self) private var planning
@@ -242,38 +261,19 @@ struct SnoozePicker: View {
     let until: LocalDay?
     let today: LocalDay
     let onDone: () -> Void
-    @State private var date = Date()
 
     var body: some View {
         let base = TaskActions.snoozeBase(for: task, today: today)
-        VStack(alignment: .leading, spacing: 4) {
-            if let due = task.due.flatMap({ LocalDay($0.day) }) {
-                Text("Due \(DayView.shortTitle(for: due)) stays").font(.caption).foregroundStyle(.secondary)
-            }
-            option(until == nil ? "Tomorrow" : "1 more day", base.adding(days: 1))
-            option("Next Monday", TaskActions.nextMonday(after: base))
-            HStack {
-                DatePicker("", selection: $date, in: today.adding(days: 1).interval().start..., displayedComponents: [.date])
-                    .labelsHidden().fixedSize()
-                Button("Snooze") { snooze(LocalDay(date: date)) }
-            }
-            .padding(.top, 4)
+        let picks = [(until == nil ? "Tomorrow" : "+1 day", base.adding(days: 1)), ("Mon", TaskActions.nextMonday(after: base)),
+                     ("+1 week", base.adding(days: 7))]
+        DatePopover(caption: task.due.flatMap { LocalDay($0.day) }.map { "Due \(DayView.shortTitle(for: $0)) stays" },
+                    quickPicks: picks.map { ($0.0, $0.1, planning.fits(task, returningOn: $0.1, calendars: calendars) == false
+                                             ? "Won't fit anymore after this snooze" : nil) },
+                    selected: until, earliest: today.adding(days: 1), today: today, pick: snooze) {
             if until != nil {
-                Divider().padding(.vertical, 4)
-                popoverRow("Wake now", symbol: "sun.max", selected: false) {
-                    Task { await app.send(.setStatus(id: task.id, .open)) }; onDone()
-                }
+                Button("Wake now") { Task { await app.send(.setStatus(id: task.id, .open)) }; onDone() }
             }
         }
-        .frame(width: 240)
-        .onAppear { date = (until ?? today.adding(days: 1)).interval().start }
-    }
-
-    private func option(_ title: String, _ day: LocalDay) -> some View {
-        let fits = planning.fits(task, returningOn: day, calendars: calendars)
-        return popoverRow(fits == false ? "\(title) – won't fit anymore" : title,
-                          symbol: fits == false ? "exclamationmark.triangle" : "moon.zzz", tint: fits == false ? .orange : .blue,
-                          selected: false) { snooze(day) }
     }
 
     private func snooze(_ day: LocalDay) {

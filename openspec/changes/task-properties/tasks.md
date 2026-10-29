@@ -7,7 +7,7 @@
 ## 2. App
 
 - [ ] 2.1 `PropertyChip` and the chip row (T1, T4): priority, effort, due, snooze, tags; empty chips faded with "+"; status picker removed (Reopen/Drop in the ⋯ menu); verify manually "Empty properties"
-- [ ] 2.2 Popovers (T2): priority with 0–4 keys, effort with sizes and "Set remaining…", due with quick picks, text field, calendar, time and remove, snooze with warnings and "Wake now"; verify manually "Set a due date by typing", "Snooze from the chip", "Set effort on the task page", undo of each
+- [ ] 2.2 Popovers (T2): priority with 0–4 keys, effort with sizes and "Set remaining…", due and snooze in one layout (quick picks, calendar, actions; snooze warnings and "Wake now"); verify manually "Set a due date in the calendar", "Snooze from the chip", "Set effort on the task page", undo of each
 - [ ] 2.3 Tag chips on pages and meeting pages (T5); verify manually
 
 ## 3. End to end

@@ -26,21 +26,16 @@ A reusable capsule: SF Symbol, text and optional tint, with a faded style and "+
 
 - **Priority:** five rows (Urgent … None) with their symbols; keys 0–4 pick them and close the popover.
 - **Effort:** sizes XS–XL with their configured durations ("M · 4h"), "None", and "Set remaining…" when the task has an effort and no estimated parts (reusing the stepper from `TaskProgressRow`).
-- **Due:**
-  - quick picks: Today, Tomorrow, Next Monday, In a week
-  - a text field parsed live with `DateWords` (preview below it, Return applies)
-  - a graphical `DatePicker`
-  - "Add time" (a time field) or "Remove time"
-  - "Remove due date"
-- **Snooze:**
-  - not snoozed: "Tomorrow", "Next Monday" and a date, each with the `Planning.fits` warning as in `TaskActions`, under a "Due … stays" heading
-  - snoozed: the date, "Snooze 1 more day" and "Wake now" (status open)
+- **Due and snooze share one layout (`DatePopover`):** an optional caption, a row of quick-pick buttons, a graphical calendar, and a row of actions. Both use the neutral chip colors; orange only marks the "won't fit" warning.
+  - **Due:** quick picks Today, Tomorrow, Mon, +1 week; the calendar; "Add time" (a time field) or "Remove time"; "Remove".
+  - **Snooze:** caption "Due … stays"; quick picks Tomorrow (or +1 day), Mon, +1 week, each with the `Planning.fits` warning; the calendar from tomorrow on; "Wake now" while snoozed.
+  - A typed-date field was tried first and dropped after checks: the calendar is enough.
 
 Every choice sends one command, so it's one undo step.
 
 ### T3: `DateWords`
 
-The day words move from `CaptureParser` into a public `DateWords.parse(_ text:, today:) -> (day: LocalDay, time: String?)?`, which also accepts a trailing `HH:mm`. `CaptureParser` calls it, so capture's behavior is unchanged (its tests keep passing).
+The day words move from `CaptureParser` into a public `DateWords.parse(_ text:, today:) -> (day: LocalDay, time: String?)?`, which also accepts a trailing `HH:mm`. `CaptureParser` calls it, so capture's behavior is unchanged (its tests keep passing). The due popover no longer uses it (see T2); it stays as capture's parser and for a future typed-date input.
 
 ### T4: Layout
 

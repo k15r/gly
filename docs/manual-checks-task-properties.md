@@ -8,9 +8,9 @@ Neutral test data only. Setup: "Demo: properties" (no priority, effort, due date
 - [ ] A1 Open "Demo: properties" → under the title a row of faded chips "+ Priority", "+ Effort", "+ Due", "+ Snooze", "+ Tag"; no Priority/Effort/Status pickers ("Empty properties").
 - [ ] A2 Priority chip → popover Urgent … None; press 3 → High is set, the chip shows it, the popover closes; ⌘Z undoes it.
 - [ ] A3 Effort chip → pick M → chip "M"; with an effort, the popover also offers the remaining stepper ("Set effort on the task page").
-- [ ] A4 Due chip → type "fri" → preview shows the date, Return sets it, the chip reads e.g. "Fri 30. Oct"; ⌘Z undoes it ("Set a due date by typing").
+- [ ] A4 Due chip → pick a Friday in the calendar → the chip reads e.g. "Fri 30. Oct"; ⌘Z undoes it ("Set a due date in the calendar").
 - [ ] A5 Due chip → quick picks, the calendar, "Add time" / time field / "Remove time", and "Remove" all work; an overdue date shows the chip in red.
-- [ ] A6 Snooze chip → "Due … stays" heading, Tomorrow / Next Monday (warning when it won't fit) → chip "Snoozed until Mon"; reopen → "Wake now" makes it open again ("Snooze from the chip").
+- [ ] A6 Snooze chip → same layout as the due popover: "Due … stays", quick picks (orange with a warning when it won't fit) and a calendar → pick Monday → chip "Snoozed until Mon"; reopen → "Wake now" makes it open again ("Snooze from the chip").
 - [ ] A7 The ⋯ menu still has Drop and (for done/dropped tasks) Reopen.
 
 ## B. Tags everywhere (task 2.3)

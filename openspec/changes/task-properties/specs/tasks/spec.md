@@ -17,12 +17,12 @@ Opening a task (from a list, the day view, the tag tree, a link, a backlink or s
 - **WHEN** the user picks `L` in the effort control of the task page
 - **THEN** the effort is saved at once as one undo step
 
-#### Scenario: Set a due date by typing
-- **WHEN** the user opens the due date chip and types "fri"
+#### Scenario: Set a due date in the calendar
+- **WHEN** the user opens the due date chip and picks next Friday in its calendar
 - **THEN** the task is due next Friday, the chip reads that date, and the change is one undo step
 
 #### Scenario: Snooze from the chip
-- **WHEN** the user opens the snooze chip of a task due Friday and chooses "Next Monday"
+- **WHEN** the user opens the snooze chip of a task due Friday and picks next Monday (a quick pick or the calendar)
 - **THEN** the task is snoozed until next Monday, the chip reads "Snoozed until Mon", and the due date is unchanged
 
 #### Scenario: Empty properties
