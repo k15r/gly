@@ -100,7 +100,7 @@ struct DayView: View {
                     Text("No tasks").foregroundStyle(.secondary)
                 } else {
                     ForEach(model.tasks) { dayTask in
-                        TaskRow(task: dayTask.task, overdue: dayTask.isOverdue, onEdit: { nav.go(.task(dayTask.task.id)) })
+                        TaskRow(task: dayTask.task, day: day, onEdit: { nav.go(.task(dayTask.task.id)) })
                     }
                 }
             }
@@ -142,9 +142,8 @@ struct DayView: View {
                     Text(isToday ? "Nothing needs work today" : "Nothing needs work that day").foregroundStyle(.secondary)
                 } else {
                     ForEach(plan.today) { item in
-                        TaskRow(task: item.task, overdue: item.reason == .overdue, onEdit: { nav.go(.task(item.task.id)) },
+                        TaskRow(task: item.task, day: day, plan: item, onEdit: { nav.go(.task(item.task.id)) },
                                 note: todayNote(item, dayLength: dayLength, isToday: isToday),
-                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil,
                                 todaysPart: isToday ? todaysPart(item.task, needed: item.neededToday ?? 0) : nil)
                     }
                 }
@@ -165,8 +164,7 @@ struct DayView: View {
                     Text("Nothing else due in the next \(planning.horizon) days").foregroundStyle(.secondary)
                 } else {
                     ForEach(plan.comingUp) { item in
-                        TaskRow(task: item.task, onEdit: { nav.go(.task(item.task.id)) }, note: comingUpNote(item),
-                                backFromSnoozeOn: item.task.isBackFromSnooze(on: day) ? day : nil,
+                        TaskRow(task: item.task, day: day, onEdit: { nav.go(.task(item.task.id)) }, note: comingUpNote(item),
                                 todaysPart: isToday ? todaysPart(item.task, needed: 0) : nil)
                     }
                 }
@@ -218,25 +216,25 @@ struct DayView: View {
     }
 
     private func todayNote(_ item: TodayItem, dayLength: Int, isToday: Bool) -> PlanNote {
-        if item.cantFit { return PlanNote(text: "can't fit", color: .red, help: "Even all free time until the due date isn't enough – move the due date or cut scope") }
+        if item.cantFit { return PlanNote(text: "can't fit", status: .cantFit, help: "Even all free time until the due date isn't enough – move the due date or cut scope") }
         let when = isToday ? "today" : Self.weekday(day)
         guard let needed = item.neededToday else {
-            return PlanNote(text: item.reason == .overdue ? "no estimate" : "due \(when) · no estimate", color: .secondary, help: "Set an effort to plan it")
+            return PlanNote(text: item.reason == .overdue ? "no estimate" : "due \(when) · no estimate", status: nil, help: "Set an effort to plan it")
         }
         switch item.reason {
-        case .needsWork: return PlanNote(text: "\(when) ≥ \(formatEffort(Double(needed), dayLength: dayLength))", color: .blue,
+        case .needsWork: return PlanNote(text: "\(when) ≥ \(formatEffort(Double(needed), dayLength: dayLength))", status: .needsWork,
                                          help: isToday ? "At least this much today, or it won't be done by its due date"
                                                        : "At least this much that day, if nothing is done before, or it won't be done by its due date")
-        case .dueToday: return PlanNote(text: "due \(when)", color: .orange, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
-        case .overdue: return PlanNote(text: "", color: .red, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
+        case .dueToday: return PlanNote(text: "due \(when)", status: .dueToday, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
+        case .overdue: return PlanNote(text: "", status: .overdue, help: "Needs ~\(formatEffort(Double(needed), dayLength: dayLength))")
         }
     }
 
     private func comingUpNote(_ item: ComingUpItem) -> PlanNote {
-        guard let start = item.startBy else { return PlanNote(text: "no estimate", color: .secondary, help: "Set an effort to plan it") }
-        if item.effortMinutes == 0 { return PlanNote(text: "", color: .secondary, help: "") }      // nothing left: the row says so
+        guard let start = item.startBy else { return PlanNote(text: "no estimate", status: nil, help: "Set an effort to plan it") }
+        if item.effortMinutes == 0 { return PlanNote(text: "", status: nil, help: "") }      // nothing left: the row says so
         let text = start == clock.today.adding(days: 1) ? "start by tomorrow" : "start by " + DayView.weekday(start)
-        return PlanNote(text: text, color: .secondary, help: "The last day to start and still finish")
+        return PlanNote(text: text, status: nil, help: "The last day to start and still finish")
     }
 
     /// "Thu 29 Oct": the planning list's title on a later day.
@@ -319,7 +317,8 @@ struct AppointmentRow: View {
     var body: some View {
         let a = entry.appointment
         HStack(alignment: .top, spacing: 8) {
-            RoundedRectangle(cornerRadius: 2).fill(Color(hex: entry.calendar?.colorHex ?? "#888888")).frame(width: 4)
+            // Calendar color as a bar, aligned with the task rows' status bar (status-colors C4).
+            RoundedRectangle(cornerRadius: 1.5).fill(Color(hex: entry.calendar?.colorHex ?? "#888888")).frame(width: 3)
             if !allDay {
                 Text(timeRange).font(.system(.body, design: .monospaced)).frame(width: 120, alignment: .leading)
             }

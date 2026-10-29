@@ -41,17 +41,22 @@ struct TodaysPart: Equatable {
 struct TaskRow: View {
     @Environment(AppModel.self) private var app
     @Environment(PlanningModel.self) private var planning
+    @Environment(Clock.self) private var clock
     let task: TaskItem
-    var overdue = false
+    /// The day the row is shown for (the day view's day); nil = today.
+    var day: LocalDay?
+    /// The task's Today-list entry for that day, if any (for can't fit / needs work).
+    var plan: TodayItem?
     var onEdit: () -> Void
     /// Planning note (day view).
     var note: PlanNote? = nil
-    /// The day view's day when the task comes back from a snooze that day (future-day-planning F3).
-    var backFromSnoozeOn: LocalDay?
     /// Offers "done for today" (today's planning rows only).
     var todaysPart: TodaysPart?
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
+    @State private var hovering = false
+    @State private var snoozing = false
+    @State private var estimating = false
 
     private var showsDone: Bool { task.status == .done || pendingCompletion != nil }
 
@@ -73,62 +78,115 @@ struct TaskRow: View {
         }
     }
 
+    /// Status bar, title line with the plan note, compact chips, hover quick actions (specs/appearance "Task rows", status-colors C3).
     var body: some View {
-        HStack(spacing: 8) {
+        let shownDay = day ?? clock.today
+        let status = RowStatus.of(task, day: shownDay, today: clock.today, plan: plan, dayLength: planning.hours.minutesPerDay)
+        HStack(alignment: .top, spacing: 8) {
+            RoundedRectangle(cornerRadius: 1.5).fill(status?.kind.color ?? .clear).frame(width: 3)
+                .help(status?.tooltip ?? "")
             Button(action: toggleDone) {
                 Image(systemName: showsDone ? "checkmark.circle.fill" : "circle").imageScale(.large)
-                    .foregroundStyle(pendingCompletion != nil ? Color.accentColor : .primary)
+                    .foregroundStyle(showsDone ? StatusKind.done.color : (pendingCompletion != nil ? Color.accentColor : .primary))
             }
             .buttonStyle(.plain)
             .disabled(!app.canWrite)
             .help(task.status == .done ? "Reopen" : (pendingCompletion != nil ? "Click again to keep it open" : "Complete"))
 
-            if let symbol = task.priority.symbol {
-                Image(systemName: symbol).foregroundStyle(task.priority.tint)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(task.title).strikethrough(showsDone || task.status == .dropped)
-                    .foregroundStyle(pendingCompletion != nil ? .secondary : .primary)
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    if overdue { Text("overdue").font(.caption.bold()).foregroundStyle(.red) }
-                    if let due = task.due { Text(Self.dueText(due)).font(.caption).foregroundStyle(.secondary) }
-                    if let effort = task.effort { EffortChip(effort: effort) }
-                    let parts = task.parts
-                    if !parts.isEmpty {
-                        Text("\(parts.filter(\.done).count)/\(parts.count)").font(.caption).monospacedDigit().foregroundStyle(.secondary)
-                            .help("Checklist items done")
+                    if let symbol = task.priority.symbol {
+                        Image(systemName: symbol).foregroundStyle(task.priority.tint).help("Priority \(task.priority.label)")
                     }
-                    if task.workedMinutes != 0 || parts.contains(where: { $0.estimate != nil }),
-                       let left = task.remaining(sizes: planning.sizes, dayMinutes: planning.hours.minutesPerDay) {
-                        // What's left once work is recorded (specs/tasks "Progress on the task page").
-                        Text(left == 0 ? "nothing left" : "\(formatEffort(Double(left), dayLength: planning.hours.minutesPerDay)) left")
-                            .font(.caption).foregroundStyle(.secondary).help("Effort minus the work recorded on it")
+                    Text(task.title).strikethrough(showsDone || task.status == .dropped)
+                        .foregroundStyle(pendingCompletion != nil ? .secondary : .primary)
+                    if let note, !note.text.isEmpty {
+                        Label(note.text, systemImage: note.status?.symbol ?? "clock")
+                            .labelStyle(.titleAndIcon).font(.caption.bold()).foregroundStyle(note.color).help(note.help)
+                    } else if let status, status.kind != .done {
+                        Label(Self.shortReason(status.kind), systemImage: status.kind.symbol)
+                            .font(.caption.bold()).foregroundStyle(status.kind.color).help(status.tooltip)
                     }
-                    if let note, !note.text.isEmpty { Text(note.text).font(.caption.bold()).foregroundStyle(note.color).help(note.help) }
-                    if backFromSnoozeOn != nil {
-                        Label("back from snooze", systemImage: "moon.zzz").font(.caption).foregroundStyle(.purple).help(backFromSnoozeHelp)
-                    } else if task.isSnoozed(today: LocalDay(date: Date())), let until = task.snoozedUntil.flatMap(LocalDay.init) {
-                        Label("until \(DayView.title(for: until))", systemImage: "moon.zzz").font(.caption).foregroundStyle(.blue)
-                    }
-                    ForEach(task.tags, id: \.self) { TagChip(name: $0) }
                 }
+                chips(status: status, shownDay: shownDay)
             }
-            Spacer()
+            Spacer(minLength: 4)
             if let todaysPart { todaysPartButton(todaysPart) }
-            Menu {
-                ForEach(Priority.allCases.reversed(), id: \.self) { p in
-                    Button(p.label) { Task { await app.send(.updateTask(id: task.id, TaskPatch(priority: p))) } }
-                }
-            } label: { Text(task.priority.label).font(.caption) }
-            .menuStyle(.borderlessButton).fixedSize()
-            .disabled(!app.canWrite)
-            .help("Priority")
+            if hovering && task.status != .done { quickActions }
         }
+        .fixedSize(horizontal: false, vertical: true)
         .animation(.easeOut(duration: 0.2), value: pendingCompletion != nil)
         .contentShape(Rectangle())
-        .onTapGesture(perform: onEdit)          // single click opens, like page rows; the circle, priority and tags keep their own clicks
+        .onHover { hovering = $0 }
+        .onTapGesture(perform: onEdit)          // single click opens, like page rows; the circle, chips and actions keep their own clicks
         .contextMenu { TaskActions(task: task, onEdit: onEdit) }
         .padding(.vertical, 2)
+    }
+
+    static func shortReason(_ kind: StatusKind) -> String {
+        switch kind {
+        case .cantFit: "can't fit"
+        case .overdue: "overdue"
+        case .dueToday: "due"
+        case .needsWork: "needs work"
+        case .backFromSnooze: "back from snooze"
+        case .done: "done"
+        }
+    }
+
+    /// Effort (with what's left), due date, parts, snooze date and tags in the small chip style.
+    @ViewBuilder
+    private func chips(status: RowStatus?, shownDay: LocalDay) -> some View {
+        let dayLength = planning.hours.minutesPerDay
+        let parts = task.parts
+        let left = task.remaining(sizes: planning.sizes, dayMinutes: dayLength)
+        let progressed = task.workedMinutes != 0 || parts.contains { $0.estimate != nil }
+        let snoozedUntil = task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil
+        if task.effort != nil || progressed || task.due != nil || !parts.isEmpty || snoozedUntil != nil || !task.tags.isEmpty {
+            FlowLayout(spacing: 4) {
+                if let effort = task.effort {
+                    let text = progressed && left != nil ? "\(effort.label) · \(left == 0 ? "nothing" : formatEffort(Double(left!), dayLength: dayLength)) left" : effort.label
+                    Label(text, systemImage: "gauge.with.dots.needle.33percent").modifier(ChipStyle(compact: true)).help("Effort")
+                } else if progressed, let left {
+                    Label("\(formatEffort(Double(left), dayLength: dayLength)) left", systemImage: "gauge.with.dots.needle.33percent")
+                        .modifier(ChipStyle(compact: true)).help("Left from the estimated checklist items")
+                }
+                if let due = task.due {
+                    let overdue = status?.kind == .overdue || status?.kind == .cantFit
+                    Label(TaskPropertyRow.shortDue(due), systemImage: "calendar")
+                        .modifier(ChipStyle(tint: overdue ? StatusKind.overdue.color : .primary, compact: true)).help("Due date")
+                }
+                if !parts.isEmpty {
+                    Label("\(parts.filter(\.done).count)/\(parts.count)", systemImage: "checklist")
+                        .modifier(ChipStyle(compact: true)).help("Checklist items done")
+                }
+                if let snoozedUntil {
+                    Label("until \(DayView.weekday(snoozedUntil))", systemImage: "moon.zzz")
+                        .modifier(ChipStyle(tint: StatusKind.backFromSnooze.color, compact: true)).help("Snoozed until \(DayView.title(for: snoozedUntil))")
+                }
+                ForEach(task.tags, id: \.self) { tag in
+                    TagChip(name: tag)
+                }
+            }
+        }
+    }
+
+    /// Snooze, effort, open (on hover); the same actions stay in the context menu.
+    private var quickActions: some View {
+        HStack(spacing: 2) {
+            Button { snoozing = true } label: { Image(systemName: "moon.zzz") }
+                .help("Snooze")
+                .popover(isPresented: $snoozing, arrowEdge: .bottom) {
+                    SnoozePicker(task: task, until: task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil,
+                                 today: clock.today) { snoozing = false }.padding(12)
+                }
+            Button { estimating = true } label: { Image(systemName: "gauge.with.dots.needle.33percent") }
+                .help("Effort")
+                .popover(isPresented: $estimating, arrowEdge: .bottom) { EffortPicker(task: task) { estimating = false }.padding(12) }
+            Button(action: onEdit) { Image(systemName: "arrow.up.forward.square") }.help("Open")
+        }
+        .buttonStyle(.borderless).foregroundStyle(.secondary)
+        .disabled(!app.canWrite)
     }
 
     /// Records what today asks for as worked today, or takes it back (specs/daily-planning "Record today's part").
@@ -152,12 +210,6 @@ struct TaskRow: View {
         }
         .buttonStyle(.borderless).font(.caption)
         .disabled(!app.canWrite)
-    }
-
-    private var backFromSnoozeHelp: String {
-        let until = task.snoozeReturnDay.flatMap(LocalDay.init).map(DayView.title(for:)) ?? "this day"
-        guard let due = task.due else { return "Snoozed until \(until)" }
-        return "Snoozed until \(until) – due \(Self.dueText(due)) unchanged"
     }
 
     static func dueText(_ due: Due) -> String {
@@ -189,6 +241,11 @@ struct TaskActions: View {
             snoozeOptions(base)
         }
         Divider()
+        Menu("Priority") {
+            ForEach(Priority.allCases.reversed(), id: \.self) { p in
+                Button(p.label) { send(.updateTask(id: task.id, TaskPatch(priority: p))) }
+            }
+        }
         Menu("Effort") {
             ForEach(Effort.allCases, id: \.self) { e in
                 Button(e.label) { send(.updateTask(id: task.id, TaskPatch(effort: .some(e)))) }

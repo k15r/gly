@@ -116,25 +116,17 @@ import SwiftUI
 /// A short planning note on a task row ("today ≥ 2h", "start by Wed", "can't fit").
 struct PlanNote: Equatable {
     let text: String
-    let color: Color
+    /// Palette meaning; nil = secondary text (status-colors C1).
+    var status: StatusKind?
     let help: String
+    var color: Color { status?.color ?? .secondary }
 }
 
 extension Effort {
     var label: String { rawValue }
 }
 
-/// Effort-style duration: working days when it's at least a day ("1d 2h"), otherwise hours and minutes.
-func formatEffort(_ m: Double, dayLength: Int) -> String {
-    let total = Int(m.rounded()), day = max(60, dayLength)
-    guard total >= day else { return formatMinutes(m) }
-    let d = total / day, rest = total % day
-    return rest == 0 ? "\(d)d" : "\(d)d " + formatMinutes(Double(rest))
-}
+/// Effort-style duration: working days when it's at least a day ("1d 2h"), otherwise hours and minutes (`Durations`).
+func formatEffort(_ m: Double, dayLength: Int) -> String { Durations.effort(m, dayLength: dayLength) }
 
-func formatMinutes(_ m: Double) -> String {
-    let total = Int(m.rounded())
-    let h = total / 60, min = total % 60
-    if h == 0 { return "\(min)m" }
-    return min == 0 ? "\(h)h" : "\(h)h \(min)m"
-}
+func formatMinutes(_ m: Double) -> String { Durations.clock(m) }

@@ -33,14 +33,16 @@ struct ChipStyle: ViewModifier {
     var tint: Color = .primary
     /// A colored fill (tags) instead of the neutral grey.
     var tinted = false
+    /// The small variant used in task rows (status-colors C3).
+    var compact = false
 
     func body(content: Content) -> some View {
         let fill = tinted ? tint : Color.secondary
         content
-            .font(.callout)
+            .font(compact ? .caption : .callout)
             .lineLimit(1)
             .foregroundStyle(isEmpty ? Color.secondary.opacity(0.7) : tint)
-            .padding(.horizontal, 8).padding(.vertical, 3)
+            .padding(.horizontal, compact ? 6 : 8).padding(.vertical, compact ? 1 : 3)
             .background(Capsule().fill(fill.opacity(isEmpty ? (hovering ? 0.08 : 0) : (hovering ? 0.2 : (tinted ? 0.13 : 0.1)))))
             .overlay(Capsule().strokeBorder(Color.secondary.opacity(isEmpty ? 0.3 : 0), style: StrokeStyle(lineWidth: 1, dash: [3])))
             .contentShape(Capsule())
@@ -91,20 +93,7 @@ struct TaskPropertyRow: View {
         }()
         return PropertyChip(symbol: "gauge.with.dots.needle.33percent", text: text, isEmpty: task.effort == nil && !task.hasEstimatedParts,
                             help: "Effort: how much work this is (sizes in Settings → Planning)") { close in
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(Effort.allCases, id: \.self) { e in
-                    popoverRow("\(e.label) · \(formatEffort(Double(planning.sizes[e]), dayLength: dayLength))", selected: task.effort == e) {
-                        send(.updateTask(id: task.id, TaskPatch(effort: .some(e)))); close()
-                    }
-                }
-                Divider().padding(.vertical, 4)
-                popoverRow("None", selected: task.effort == nil) { send(.updateTask(id: task.id, TaskPatch(effort: .some(nil)))); close() }
-                if task.effort != nil, !task.hasEstimatedParts {
-                    Divider().padding(.vertical, 4)
-                    RemainingEditor(task: task, onDone: close)
-                }
-            }
-            .frame(width: 220)
+            EffortPicker(task: task, onDone: close)
         }
     }
 
@@ -133,6 +122,34 @@ struct TaskPropertyRow: View {
             SnoozePicker(task: task, until: until, today: clock.today, onDone: close)
         }
     }
+}
+
+/// Effort sizes with their durations, None, and the remaining stepper when it applies (task chip and row quick action).
+struct EffortPicker: View {
+    @Environment(AppModel.self) private var app
+    @Environment(PlanningModel.self) private var planning
+    let task: TaskItem
+    let onDone: () -> Void
+
+    var body: some View {
+        let dayLength = planning.hours.minutesPerDay
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Effort.allCases, id: \.self) { e in
+                popoverRow("\(e.label) · \(formatEffort(Double(planning.sizes[e]), dayLength: dayLength))", selected: task.effort == e) {
+                    send(.updateTask(id: task.id, TaskPatch(effort: .some(e)))); onDone()
+                }
+            }
+            Divider().padding(.vertical, 4)
+            popoverRow("None", selected: task.effort == nil) { send(.updateTask(id: task.id, TaskPatch(effort: .some(nil)))); onDone() }
+            if task.effort != nil, !task.hasEstimatedParts {
+                Divider().padding(.vertical, 4)
+                RemainingEditor(task: task, onDone: onDone)
+            }
+        }
+        .frame(width: 220)
+    }
+
+    private func send(_ c: Command) { Task { await app.send(c) } }
 }
 
 /// A selectable line in a property popover.

@@ -2,7 +2,7 @@
 
 ## 1. Palette
 
-- [ ] 1.1 `StatusColor` (C1) and `rowStatus` (C2) with tooltip texts; `PlanNote` uses the palette; verify with tests for the status order (can't fit > overdue > due > needs work > back from snooze) and the tooltip texts
+- [x] 1.1 `StatusColor` (C1) and `rowStatus` (C2) with tooltip texts; `PlanNote` uses the palette; verify with tests for the status order (can't fit > overdue > due > needs work > back from snooze) and the tooltip texts
 
 ## 2. Rows
 

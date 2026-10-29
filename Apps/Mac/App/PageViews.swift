@@ -362,6 +362,9 @@ struct TagPageView: View {
 
 struct QuickOpenView: View {
     @Environment(WikiModel.self) private var wiki
+    @Environment(TasksModel.self) private var tasks
+    @Environment(PlanningModel.self) private var planning
+    @Environment(Clock.self) private var clock
     @Environment(Navigation.self) private var nav
     @Environment(\.linkOpener) private var opener
     @Environment(\.dismiss) private var dismiss
@@ -419,7 +422,13 @@ struct QuickOpenView: View {
     private func rowView(_ row: Row) -> some View {
         switch row {
         case .hit(let hit):
+            // Task hits carry the status bar of task rows (specs/appearance "Task rows").
+            let status = hit.ref.kind == .task ? tasks.task(id: hit.ref.id).flatMap {
+                RowStatus.of($0, day: clock.today, today: clock.today, plan: nil, dayLength: planning.hours.minutesPerDay)
+            } : nil
             HStack(alignment: .firstTextBaseline, spacing: 8) {
+                RoundedRectangle(cornerRadius: 1.5).fill(status?.kind.color ?? .clear).frame(width: 3, height: 28)
+                    .help(status?.tooltip ?? "")
                 Image(systemName: hit.ref.kind.symbol).foregroundStyle(.secondary).frame(width: 16)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(wiki.displayNames([hit.ref.id])[hit.ref.id]?.display ?? hit.ref.title).lineLimit(1)
