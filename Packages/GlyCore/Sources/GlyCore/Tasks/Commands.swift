@@ -155,6 +155,10 @@ public enum Command: Codable, Equatable {
     case createBookmark(BookmarkDraft)
     case updateBookmark(id: String, BookmarkPatch)
     case deleteBookmark(id: String)
+    /// Saved views of the item browser (item-browser I3); preset views are refused.
+    case createView(ViewDraft)
+    case updateView(id: String, ViewPatch)
+    case deleteView(id: String)
     /// Replaces a tag's page description; creates the tag if it doesn't exist (e.g. a group node like `person`).
     case updateTagPage(name: String, body: String, session: String? = nil)
     /// Brings a deleted page or task back as it was when deleted, as a change of the caller (trash-bin T2).
@@ -337,6 +341,15 @@ public struct CommandHandler {
 
         case .deleteBookmark(let id):
             return try deleteBookmark(id, batch: batch)
+
+        case .createView(let draft):
+            return try createView(draft, batch: batch)
+
+        case .updateView(let id, let patch):
+            return try updateView(id, patch, batch: batch)
+
+        case .deleteView(let id):
+            return try deleteView(id, batch: batch)
 
         case .updateTagPage(let name, let body, _):
             let tag = try TagName(name)

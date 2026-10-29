@@ -24,7 +24,7 @@
 **Non-Goals:**
 - Syncing saved views; boolean OR between filters; nested queries.
 - Changing the Day view or the item pages.
-- An MCP `list_items` tool (follow-up; the query type is ready for it).
+- Syncing saved views between Macs (the table is sync-ready like the others).
 
 ## Decisions
 
@@ -68,7 +68,7 @@ The tag tree's counts use the view's query **without its tag filters** (`query.d
 
 `ItemView { id, name, symbol, query, group, sort, builtIn }`.
 - **Presets:** All items, Tasks (`is:task status:open status:snoozed`, task order), Pages (`is:page`, last change), Bookmarks (`is:bookmark`, title), Meetings (`is:meeting`, last change).
-- **Saved views:** stored as JSON in `UserDefaults` (per Mac), with the query in its text form, so older builds and later changes of the struct don't break them.
+- **Saved views:** a synced table `views` (migration v10: name, symbol, query in its text form, grouping, sort, position) written through commands (`createView`, `updateView`, `deleteView`), so they are undoable, change-logged and reachable by agents (I9). The app observes them like other data. Views saved by an earlier build in `UserDefaults` are imported once on start and the key is cleared. (First built with `UserDefaults`; moved when agents needed access: the agent's sandbox can't read the app's defaults.)
 - **Navigation:** `.items(viewID)` replaces `.tasks`, `.pages` and `.bookmarks`; `.tag(name)` shows the browser with a tag header. A `BrowserModel` keeps the edited query per view while the app runs; "Reset" goes back to the preset.
 
 ### I4: Filter bar
@@ -110,6 +110,13 @@ The bar edits the view's `ItemQuery` and never a string, so chips and text stay 
 
 `TagPageQueries.page` stays only for MCP `get_tag_page`/`get_context`, unchanged.
 
+### I9: Views and items over MCP
+
+- `list_views` returns the presets (`preset: true`) and the saved views: `{id, name, query, grouping, sort, preset}`.
+- `create_view {name, query, grouping?, sort?}`, `update_view {id, …}` and `delete_view {id}` go through the view commands; preset ids are refused.
+- `list_items {query? | view?, sort?, limit?}` runs `BrowseQueries.items` with the view's query and sort (or the given ones) and returns `{id, kind, title, tags, modified_at, modified_by}` plus the task fields for tasks and `url` for bookmarks.
+- Tool descriptions explain the token syntax once (shared text).
+
 ## Risks / Trade-offs
 
 - **[Big UI swap]** Three lists and the tree leaves go away at once. → Build the browser next to them first (task 2.x behind the new destinations), switch the sidebar in one step (3.1), and remove the old views last (3.4). Checks compare the old scenarios.
@@ -119,7 +126,7 @@ The bar edits the view's `ItemQuery` and never a string, so chips and text stay 
 
 ## Migration Plan
 
-No data migration. Saved views start empty. Rollback = an older build, which ignores the saved-views key.
+Migration v10 adds the `views` table (additive). Saved views from `UserDefaults` are imported once. Rollback = an older build, which ignores the table.
 
 ## Open Questions
 

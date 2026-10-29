@@ -102,6 +102,18 @@ extension Database {
         return (row["kind"] as String) == WorkKind.adjust.rawValue ? "Set remaining effort of \(title)" : "Record work on \(title)"
     }
 
+    /// Saved views (item-browser I3): "Save view …", "Delete view …", "Restore view …", "Edit view …".
+    private func viewLabel(_ entries: [Row]) throws -> String? {
+        guard let first = entries.first, (first["table_name"] as String) == "views",
+              let name = try String.fetchOne(self, sql: "SELECT name FROM views WHERE id = ?", arguments: [first["row_id"] as String]) else { return nil }
+        let quoted = "view “\(name)”"
+        if entries.contains(where: { ($0["op"] as String) == "insert" }) { return "Save \(quoted)" }
+        if let entry = entries.first(where: { ($0["field"] as String?) == "deleted_at" }) {
+            return ChangeValue.decode(entry["new_value"]).isNull ? "Restore \(quoted)" : "Delete \(quoted)"
+        }
+        return "Edit \(quoted)"
+    }
+
     /// bookmarks B2: "Add bookmark …", "Delete bookmark …", "Restore bookmark …", "Edit bookmark …".
     private static func bookmarkLabel(_ own: [Row], title: String) -> String {
         let quoted = "bookmark “\(title)”"
@@ -123,6 +135,7 @@ extension Database {
             return "\(Self.blockingVerb(r?["blocking"])) “\(r?["title"] as String? ?? "series")” (series)"
         }
         if let tagLabel = try tagStructureLabel(entries) { return tagLabel }
+        if let viewLabel = try viewLabel(entries) { return viewLabel }
         if let workLabel = try workLabel(entries) { return workLabel }
         // Items first, then tag assignments (→ their item), then tags (a tag page edit).
         guard var primary = entries.first(where: { ($0["table_name"] as String) == "items" })

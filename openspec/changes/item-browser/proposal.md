@@ -16,7 +16,8 @@ Tasks, pages, bookmarks and meeting notes are all items with tags, dates, status
   Tokens can be typed (`is:task #project/atlas due:week`) or picked from a menu, and are shown as removable chips.
 - **A "Refine" row** shows the tags that occur among the current results, with counts; one click narrows the results.
 - **Grouping and sorting** per view: by kind, tag, due date or status; by relevance, last change, due date or title.
-- **Saved views**: the current filter can be saved as a sidebar entry, renamed and deleted (per Mac).
+- **Saved views**: the current filter can be saved as a sidebar entry, renamed and deleted; views are kept in gly's store, so they are undoable and agents can manage them.
+- **MCP**: agents list, create, change and delete views, and list items by a view or a filter (`list_items`).
 - **Uniform rows**: every kind uses the same row layout, and task rows keep their status bar and quick actions. Everywhere, a click opens the item and ⌘-click opens its link (a bookmark's URL).
 - **Tag tree** **BREAKING**:
   - It lists tags only (no items as leaves) and has a filter field.
@@ -46,6 +47,7 @@ Decisions taken in this proposal (open for review):
   - "Drop targets in the tree" now covers the tag rows only.
 - `tag-pages`: "Tag page content" and "Open the tag page" become the tag view of the browser.
 - `search`: "Quick open" offers "Show all results" in the browser.
+- `agent-access`: "Views over MCP" and "Items over MCP" are added.
 - `bookmarks` (from the `bookmarks` change, which must be archived first):
   - "Bookmarks list" becomes the Bookmarks view.
   - "Bookmarks in the tag tree" is removed, since there are no item leaves any more.
@@ -58,5 +60,6 @@ Decisions taken in this proposal (open for review):
   - `Navigation.Destination` gets `.items(view)`, which replaces `.tasks`, `.pages` and `.bookmarks`; `.tag` renders the browser.
   - Removed: `TaskListView`, `PagesListView`, `BookmarksListView` and the tree leaves (`TreeLeafRow`, `ItemMove` from leaves).
   - The sidebar is rebuilt.
-- **Not affected:** the Day view, item pages (task, page, bookmark, meeting), quick capture, MCP. An MCP `list_items` tool with the same filters is a follow-up.
+- **Store and MCP:** migration v10 (`views` table) with view commands; MCP tools `list_views`, `create_view`, `update_view`, `delete_view`, `list_items`.
+- **Not affected:** item pages (task, page, bookmark, meeting) and quick capture.
 - **Ordering:** after `bookmarks` (archive it first); independent of `readability`, `week-view` and `meeting-actions`.

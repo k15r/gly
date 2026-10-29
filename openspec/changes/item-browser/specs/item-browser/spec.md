@@ -76,7 +76,7 @@ Every result SHALL be one row with the kind's icon, the title, the start of its 
 - **THEN** it shows its status bar and the snooze, effort and open buttons as in the day view
 
 ### Requirement: Saved views
-The user SHALL be able to save the current filter, grouping and sorting as a named view, which appears in the sidebar below the preset views and can be renamed and deleted there. Saved views SHALL be kept on this Mac across restarts.
+The user SHALL be able to save the current filter, grouping and sorting as a named view, which appears in the sidebar below the preset views and can be renamed and deleted there. Saved views SHALL be kept in gly's store like other data: across restarts, undoable, and available to agents.
 
 #### Scenario: Save a view
 - **WHEN** the user filters Tasks by `#project/atlas due:week`, chooses "Save View…" and names it "Atlas this week"

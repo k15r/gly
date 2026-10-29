@@ -19,6 +19,12 @@
 - [ ] 3.3 Tag view: browser with `#tag`, grouped by kind, header with name, color, management and description; chips and tag links open it; ⌘K "Show all results" (I8); verify manually "Project tag page", "Group tag", "Person's meetings", "Narrow a tag page", "From a chip", "Show all results"
 - [x] 3.4 Remove the replaced views and code (`TaskListView`, `PagesListView`, `BookmarksListView`, `TagPageView` body, tree leaves, `leavesByTag`/`untaggedItems` if unused, `BookmarkOpen.click`), keeping specs/tests green; verify with the full test suite, lint and a build
 
+## 5. Views in the store, agents
+
+- [x] 5.1 Migration v10 `views` table, view commands with undo labels, `ViewQueries` (I3); verify with tests for create/update/delete, undo, labels and the migration
+- [ ] 5.2 App: saved views from the store (sidebar, Save View, Update View, rename, delete through commands), one-time import from `UserDefaults` (I3); verify manually "Save a view" again and that views saved before reappear once
+- [ ] 5.3 MCP tools `list_views`, `create_view`, `update_view`, `delete_view`, `list_items` (I9); verify with MCP tests for "Agent saves a view", "Agent changes and deletes a view", "Preset views are read-only", "Agent runs a view", "Agent filters directly"
+
 ## 4. End to end
 
 - [ ] 4.1 Write `docs/manual-checks-item-browser.md` (neutral test data) and push it; done when `pull` reports every check passed

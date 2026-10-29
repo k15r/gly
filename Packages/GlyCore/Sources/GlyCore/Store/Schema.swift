@@ -4,12 +4,12 @@ import GRDB
 /// (sync-ready conventions, foundation-spikes D2/D3a).
 public enum Schema {
     /// Tables that will be synced later; every one carries the sync columns.
-    public static let syncedTables = ["items", "tags", "item_tags", "series_rules", "task_work"]
+    public static let syncedTables = ["items", "tags", "item_tags", "series_rules", "task_work", "views"]
 
     /// Removes every row of user data, the change log and the derived indexes; the schema stays (Settings → Data).
     /// Dependents first, so references never point at removed rows mid-way.
     static func eraseAllData(_ db: Database) throws {
-        for table in ["task_parts", "task_work", "item_tags", "series_rules", "items", "tags", "change_log", "link_index", "search_index"] {
+        for table in ["views", "task_parts", "task_work", "item_tags", "series_rules", "items", "tags", "change_log", "link_index", "search_index"] {
             try db.execute(sql: "DELETE FROM \(table)")
         }
         try db.execute(sql: "DELETE FROM sqlite_sequence WHERE name = 'change_log'")
@@ -80,6 +80,19 @@ public enum Schema {
             try rebuildItems(db)
             try db.alter(table: "items") { t in t.add(column: "url", .text) }
             try db.execute(sql: "CREATE UNIQUE INDEX items_bookmark_url ON items(url) WHERE kind = 'bookmark' AND deleted_at IS NULL")
+        }
+        // Saved views of the item browser (item-browser I3): kept with the data, so they are undoable and agents can manage them.
+        migrator.registerMigration("v10") { db in
+            try db.create(table: "views") { t in
+                syncColumns(t)
+                t.column("name", .text).notNull().check { length($0) > 0 }
+                t.column("symbol", .text).notNull().defaults(to: "line.3.horizontal.decrease.circle")
+                t.column("query", .text).notNull().defaults(to: "")      // ItemQuery text form
+                t.column("grouping", .text).notNull().defaults(to: "none")
+                t.column("sort", .text).notNull().defaults(to: "changed")
+                t.column("position", .double).notNull().defaults(to: 0)
+            }
+            try db.execute(sql: "CREATE VIEW live_views AS SELECT * FROM views WHERE deleted_at IS NULL")
         }
         return migrator
     }
