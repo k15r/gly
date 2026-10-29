@@ -79,7 +79,7 @@ public enum TagQueries {
             SELECT it.item_id, t.name, i.kind FROM live_item_tags it
             JOIN live_tags t ON t.id = it.tag_id
             JOIN live_items i ON i.id = it.item_id
-            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info' OR (i.kind = 'event_note' AND i.body != '')
+            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind IN ('info', 'bookmark') OR (i.kind = 'event_note' AND i.body != '')
             UNION ALL
             SELECT NULL, t.name, NULL FROM live_tags t
             """)
@@ -116,13 +116,13 @@ public enum TagQueries {
         return children(of: nil)
     }
 
-    /// Open tasks (task-list order), live pages (by title), then meetings with notes, per exact tag key, each with its other tags.
+    /// Open tasks (task-list order), live pages (by title), meetings with notes, then bookmarks (by title), per exact tag key, each with its other tags.
     static func leavesByTag(_ db: Database) throws -> [String: [TreeLeaf]] {
         let rows = try Row.fetchAll(db, sql: """
             SELECT i.id, i.kind, i.title, i.status, i.body, t.name, t.name_key FROM live_items i
             JOIN live_item_tags it ON it.item_id = i.id JOIN live_tags t ON t.id = it.tag_id
-            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info' OR (i.kind = 'event_note' AND i.body != '')
-            ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL), t.name_key
+            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind IN ('info', 'bookmark') OR (i.kind = 'event_note' AND i.body != '')
+            ORDER BY i.kind DESC, CASE WHEN i.kind IN ('info', 'bookmark') THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL), t.name_key
             """)
         var tagsOfItem: [String: [String]] = [:]
         for r in rows { tagsOfItem[r["id"], default: []].append(r["name"]) }
@@ -137,13 +137,13 @@ public enum TagQueries {
         return result
     }
 
-    /// Open tasks, live pages and meetings with notes without any tag (the "Untagged" node): tasks first.
+    /// Open tasks, live pages, meetings with notes and bookmarks without any tag (the "Untagged" node): tasks first.
     public static func untaggedItems(_ db: Database) throws -> [TreeLeaf] {
         try Row.fetchAll(db, sql: """
             SELECT i.id, i.kind, i.title, i.status, i.body FROM live_items i
-            WHERE ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind = 'info' OR (i.kind = 'event_note' AND i.body != ''))
+            WHERE ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind IN ('info', 'bookmark') OR (i.kind = 'event_note' AND i.body != ''))
               AND i.id NOT IN (SELECT item_id FROM live_item_tags)
-            ORDER BY i.kind DESC, CASE WHEN i.kind = 'info' THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL)
+            ORDER BY i.kind DESC, CASE WHEN i.kind IN ('info', 'bookmark') THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL)
             """).map { r in
                 TreeLeaf(kind: LinkRef.Kind(itemKind: r["kind"]), id: r["id"], title: r["title"],
                          otherTags: [], snoozed: (r["status"] as String?) == "snoozed", excerpt: TreeLeaf.excerpt(of: r["body"] ?? ""))

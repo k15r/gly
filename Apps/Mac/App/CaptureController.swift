@@ -128,8 +128,8 @@ final class CaptureController {
                     nav?.editRequest = id      // open with the cursor in the text
                     nav?.go(d.kind == .task ? .task(id) : .page(id))
                 case .bookmark:
-                    nav?.bookmarkEditRequest = id      // the bookmark editor instead of a page (B6)
-                    nav?.go(.bookmarks)
+                    nav?.editRequest = id      // its page, with the cursor in the description
+                    nav?.go(.bookmark(id))
                 }
             }
         }

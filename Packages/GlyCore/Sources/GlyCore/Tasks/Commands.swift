@@ -649,6 +649,7 @@ public struct CommandHandler {
         switch command {
         case .updateTask(_, let p): return p.session
         case .updatePage(_, let p): return p.session
+        case .updateBookmark(_, let p): return p.session
         case .updateTagPage(_, _, let s): return s
         case .saveMeetingNotes(_, _, _, let s): return s
         case .updateMeetingNotes(_, _, _, let s): return s
@@ -661,7 +662,7 @@ public struct CommandHandler {
         guard let session = Self.session(of: command) else { return nil }
         let rowID: String?
         switch command {
-        case .updateTask(let id, _), .updatePage(let id, _): rowID = id
+        case .updateTask(let id, _), .updatePage(let id, _), .updateBookmark(let id, _): rowID = id
         case .updateTagPage(let name, _, _):
             rowID = try String.fetchOne(db, sql: "SELECT id FROM live_tags WHERE name_key = ?", arguments: [TagName.key(for: name)])
         case .saveMeetingNotes(let target, _, _, _): rowID = try Self.meetingNotesRow(target, db: db)

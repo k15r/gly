@@ -179,6 +179,7 @@ struct ContentView: View {
                 // One view per item: a title being edited can't carry over into the next page or task.
                 case .page(let id): PageView(id: id).id(id)
                 case .task(let id): TaskPageView(id: id).id(id)
+                case .bookmark(let id): BookmarkPageView(id: id).id(id)
                 case .tag(let name): TagPageView(name: name)
                 case .meeting(let ref): MeetingPageView(ref: ref)
                 }
@@ -467,7 +468,7 @@ struct TreeLeafRow: View {
             Image(systemName: symbol).foregroundStyle(leaf.snoozed ? Color.blue : .secondary).imageScale(.small)
             VStack(alignment: .leading, spacing: 0) {
                 Text(leaf.title).lineLimit(1)
-                    .fontWeight(nav.current == .page(leaf.itemID) || nav.current == .task(leaf.itemID) ? .bold : .regular)
+                    .fontWeight([.page(leaf.itemID), .task(leaf.itemID), .bookmark(leaf.itemID)].contains(nav.current) ? .bold : .regular)
                     .foregroundStyle(leaf.snoozed ? .secondary : .primary)
                 // The start of the text, so items (same-titled ones especially) can be told apart without opening them.
                 if !leaf.excerpt.isEmpty {
@@ -500,7 +501,8 @@ struct TreeLeafRow: View {
         case .page: nav.go(.page(leaf.itemID))
         case .task: nav.go(.task(leaf.itemID))
         case .meeting: nav.go(.meeting(.notes(leaf.itemID)))
-        case .tag, .bookmark: break      // bookmarks aren't tree leaves
+        case .bookmark: nav.go(.bookmark(leaf.itemID))
+        case .tag: break
         }
     }
 
@@ -514,7 +516,7 @@ struct TreeLeafRow: View {
             case .bookmark: await app.send(.deleteBookmark(id: id))
             case .tag: return
             }
-            if nav.current == .page(id) || nav.current == .task(id) || nav.current == .meeting(.notes(id)) { nav.back() }
+            if [.page(id), .task(id), .meeting(.notes(id)), .bookmark(id)].contains(nav.current) { nav.back() }
         }
     }
 }

@@ -66,12 +66,14 @@ struct BacklinksView: View {
     @Environment(Navigation.self) private var nav
     @Environment(WikiModel.self) private var wiki
     let backlinks: [Backlink]
+    var title = "Backlinks"
+    var emptyText = "Nothing links here yet"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Backlinks").font(.headline)
+            Text(title).font(.headline)
             if backlinks.isEmpty {
-                Text("Nothing links here yet").font(.callout).foregroundStyle(.secondary)
+                Text(emptyText).font(.callout).foregroundStyle(.secondary)
             } else {
                 let names = wiki.displayNames(backlinks.map(\.source.id))
                 ForEach(backlinks) { b in
@@ -95,7 +97,7 @@ struct BacklinksView: View {
         case .task: nav.go(.task(ref.id))
         case .tag: nav.go(.tag(ref.title))
         case .meeting: nav.go(.meeting(.notes(ref.id)))
-        case .bookmark: break            // a bookmark's description isn't a page to open
+        case .bookmark: nav.go(.bookmark(ref.id))
         }
     }
 }
@@ -378,14 +380,15 @@ struct TagPageView: View {
     }
 }
 
-/// A bookmark on a tag page: a click opens the URL, the context menu edits it.
+/// A bookmark on a tag page: a click opens its page, ⌘-click the URL.
 struct TagPageBookmarkRow: View {
     @Environment(AppModel.self) private var app
+    @Environment(Navigation.self) private var nav
     let bookmark: BookmarkItem
-    @State private var editing = false
 
     var body: some View {
-        Button { if let url = URL(string: bookmark.url) { NSWorkspace.shared.open(url) } } label: {
+        // A click opens the bookmark's page, ⌘-click its URL.
+        Button { BookmarkOpen.click(bookmark, nav: nav) } label: {
             HStack {
                 Label(bookmark.title, systemImage: "bookmark")
                 Text(bookmark.host).font(.caption).foregroundStyle(.secondary)
@@ -395,8 +398,7 @@ struct TagPageBookmarkRow: View {
         }
         .buttonStyle(.plain)
         .help(BookmarkMark(title: bookmark.title, description: bookmark.description, tags: bookmark.tags).tooltip(url: bookmark.url))
-        .contextMenu { Button("Edit…") { editing = true }.disabled(!app.canWrite) }
-        .popover(isPresented: $editing, arrowEdge: .trailing) { BookmarkEditor(bookmark: bookmark) { editing = false } }
+        .contextMenu { BookmarkOpen.menu(bookmark, app: app, nav: nav) }
     }
 }
 
@@ -495,9 +497,8 @@ struct QuickOpenView: View {
             case .tag: nav.go(.tag(hit.ref.title))
             case .meeting: nav.go(.meeting(.notes(hit.ref.id)))
             case .bookmark:
-                // ⌥ edits the bookmark in the Bookmarks list; otherwise its URL opens (B5).
-                if NSEvent.modifierFlags.contains(.option) { nav.bookmarkEditRequest = hit.ref.id; nav.go(.bookmarks) }
-                else if let url = hit.url.flatMap(URL.init(string:)) { NSWorkspace.shared.open(url) }
+                // The bookmark's page; ⌘ opens its URL (B5).
+                if NSEvent.modifierFlags.contains(.command), let url = hit.url { BookmarkOpen.url(url) } else { nav.go(.bookmark(hit.ref.id)) }
             }
         case .create(let title):
             Task { await opener?.createPage(title: title) }

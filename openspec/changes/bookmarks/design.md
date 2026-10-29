@@ -50,20 +50,22 @@ A bookmark has `title`, `url`, `body` (the description, markdown) and tags throu
 - **The icon is a button:** a click on the drawn icon (the hidden `[` before the label) opens the bookmark editor popover, to add or to edit. This also works on rendered lines, where a click on the label follows the link.
 - **Context menu:** web links get "Add to bookmarks…" or "Edit bookmark…", plus "Copy link".
 
-### B4: The bookmark editor
+### B4: The bookmark editor and the bookmark page
 
-A popover with title, URL, description (a plain multi-line text field) and tags (`TagField`). "Save" sends create or update. When the URL is already bookmarked, it shows that bookmark instead (spec "Same URL again").
+- **Popover** (from a link in text and "New Bookmark"): title, URL, description and tags (`TagField`). "Save" sends create or update. When the URL is already bookmarked, it shows that bookmark instead (spec "Same URL again"), with "Open Page".
+- **Page** (`Navigation.Destination.bookmark(id)`, like the task page): title, URL field with an Open button, tags, the description in `GlyMarkdownEditor` (edit sessions coalesce through `BookmarkPatch.session`; `[[links]]` resolve as in pages), and "Linked from": texts that contain the URL (`BookmarkQueries.linkedFrom`).
 
 ### B5: The list, tag pages, search and picker
 
-- **Sidebar list:** a "Bookmarks" entry with a count, and a list with a search field and a tag filter. Each row has a `bookmark` icon, the title, the host, tag chips and the first line of the description. A click opens the URL with `NSWorkspace.open`; the context menu has Edit, Copy URL, Delete.
-- **Tag pages:** a "Bookmarks" section.
-- **Search:** results of kind bookmark open the URL; a modifier click opens the editor.
+- **Sidebar list:** a "Bookmarks" entry with a count, and a list with a search field and a tag filter. Each row has a `bookmark` icon, the title, the host, tag chips and the first line of the description. A click opens the bookmark's page, ⌘-click the URL (`NSWorkspace.open`); the context menu has Open Page, Open URL, Copy URL, Delete.
+- **Tag tree:** bookmarks are leaves (`TagQueries.leavesByTag`, `untaggedItems`) after tasks, pages and meetings; they don't add to the open-task counts.
+- **Tag pages:** a "Bookmarks" section, opening like the list.
+- **Search:** results of kind bookmark open the page; ⌘ opens the URL.
 - **The `[[` picker:** offers bookmarks with the `bookmark` symbol and inserts `[title](url)`.
 
 ### B6: Quick capture
 
-`CaptureKind.bookmark`: the first token that parses as a URL is the URL, `#tags` are tags, and the remaining words are the title. The preview shows "Bookmark · <title or fetching…> · host · tags". When no title is typed, the app fetches the page with `URLSession` (a 5 s timeout), reads `<title>` from the first 64 KB, and falls back to the host. The app gets `com.apple.security.network.client`. ⌘Return opens the bookmark editor instead of a page.
+`CaptureKind.bookmark`: the first token that parses as a URL is the URL, `#tags` are tags, and the remaining words are the title. The preview shows "Bookmark · <title or fetching…> · host · tags". When no title is typed, the app fetches the page with `URLSession` (a 5 s timeout), reads `<title>` from the first 64 KB, and falls back to the host. The app gets `com.apple.security.network.client`. ⌘Return opens the bookmark's page with the cursor in the description.
 
 ### B7: MCP
 

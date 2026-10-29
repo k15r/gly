@@ -27,14 +27,16 @@ public struct BookmarkDraft: Codable, Equatable {
     }
 }
 
-/// Partial bookmark update (updateBookmark). `nil` = unchanged.
+/// Partial bookmark update (updateBookmark). `nil` = unchanged. `session` coalesces saves of one edit session of the
+/// description on the bookmark's page (as for pages, design P6).
 public struct BookmarkPatch: Codable, Equatable {
     public var title: String?
     public var url: String?
     public var description: String?
     public var tags: [String]?
-    public init(title: String? = nil, url: String? = nil, description: String? = nil, tags: [String]? = nil) {
-        self.title = title; self.url = url; self.description = description; self.tags = tags
+    public var session: String?
+    public init(title: String? = nil, url: String? = nil, description: String? = nil, tags: [String]? = nil, session: String? = nil) {
+        self.title = title; self.url = url; self.description = description; self.tags = tags; self.session = session
     }
 }
 
@@ -103,6 +105,24 @@ public enum BookmarkQueries {
         return result
     }
 
+    /// Pages, tasks, meetings and tag pages whose text contains the bookmark's URL, for its page ("Linked from"),
+    /// each with the line around the link.
+    public static func linkedFrom(_ db: Database, bookmark: BookmarkItem) throws -> [Backlink] {
+        let like = "%" + bookmark.url.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_") + "%"
+        let rows = try Row.fetchAll(db, sql: """
+            SELECT id, kind, title, body FROM live_items WHERE id != ? AND body LIKE ? ESCAPE '\\'
+            UNION ALL SELECT id, 'tag' AS kind, name AS title, page_body AS body FROM live_tags WHERE page_body LIKE ? ESCAPE '\\'
+            ORDER BY title COLLATE NOCASE
+            """, arguments: [bookmark.id, like, like])
+        return rows.map { r in
+            let body: String = r["body"], kind: String = r["kind"]
+            let line = body.components(separatedBy: .newlines).first { $0.contains(bookmark.url) } ?? ""
+            return Backlink(source: LinkRef(kind: kind == "tag" ? .tag : LinkRef.Kind(itemKind: kind), id: r["id"], title: r["title"]),
+                            excerpt: TreeLeaf.excerpt(of: line))
+        }
+    }
+
     public static func count(_ db: Database) throws -> Int {
         try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_items WHERE kind = 'bookmark'") ?? 0
     }
@@ -127,10 +147,11 @@ extension CommandHandler {
             return CommandOK(id: existing.id, changed: false, message: "Already bookmarked as “\(existing.title)”.")
         }
         let names = try draft.tags.map(TagName.init)
-        let id = try batch.insert("items", ["kind": "bookmark", "title": Self.bookmarkTitle(draft.title, url: url), "url": url,
-                                            "body": draft.description.trimmingCharacters(in: .whitespacesAndNewlines)])
+        // The description is markdown like a page's text: `[[…]]` links resolve the same way.
+        let (body, unresolved) = try LinkResolver.resolve(draft.description.trimmingCharacters(in: .whitespacesAndNewlines), db: batch.db)
+        let id = try batch.insert("items", ["kind": "bookmark", "title": Self.bookmarkTitle(draft.title, url: url), "url": url, "body": body])
         try replaceTags(of: id, with: names, batch: batch)
-        return CommandOK(id: id)
+        return CommandOK(id: id, unresolved: unresolved)
     }
 
     func updateBookmark(_ id: String, _ patch: BookmarkPatch, batch: Batch) throws -> CommandOK {
@@ -145,11 +166,16 @@ extension CommandHandler {
             fields["url"] = url
         }
         if let t = patch.title { fields["title"] = Self.bookmarkTitle(t, url: url) }
-        if let d = patch.description { fields["body"] = d.trimmingCharacters(in: .whitespacesAndNewlines) }
+        var unresolved: [UnresolvedLink]?
+        if let d = patch.description {
+            // While typing on the page the text is kept as is; trimming would fight the editor.
+            let r = try LinkResolver.resolve(patch.session == nil ? d.trimmingCharacters(in: .whitespacesAndNewlines) : d, db: batch.db)
+            fields["body"] = r.text; unresolved = r.unresolved
+        }
         let tagNames = try patch.tags.map { try $0.map(TagName.init) }
         var changed = !(try batch.update("items", id: id, fields)).isEmpty
         if let tagNames { changed = try replaceTags(of: id, with: tagNames, batch: batch) || changed }
-        return CommandOK(id: id, changed: changed)
+        return CommandOK(id: id, changed: changed, unresolved: unresolved)
     }
 
     func deleteBookmark(_ id: String, batch: Batch) throws -> CommandOK {

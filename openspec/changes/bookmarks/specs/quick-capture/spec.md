@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Capture panel
-The panel SHALL show one text field and, below it, a preview of what will be created (type, title, tags, due date, priority). Tab SHALL cycle through Task, Page and Bookmark; for a bookmark, the text is a URL followed by optional title words and `#tags`, and the title defaults to the page's title, fetched from the URL, or else the host. Return SHALL create the item and close the panel without bringing gly to the front; ⌘Return SHALL create it and open it in gly with the cursor in its text; Esc SHALL close the panel without creating anything. An empty title SHALL NOT create anything.
+The panel SHALL show one text field and, below it, a preview of what will be created (type, title, tags, due date, priority). Tab SHALL cycle through Task, Page and Bookmark; for a bookmark, the text is a URL followed by optional title words and `#tags`, and the title defaults to the page's title, fetched from the URL, or else the host. Return SHALL create the item and close the panel without bringing gly to the front; ⌘Return SHALL create it and open it in gly with the cursor in its text (a bookmark's description); Esc SHALL close the panel without creating anything. An empty title SHALL NOT create anything.
 
 #### Scenario: Save and keep working
 - **WHEN** the user types "Call venue" and presses Return

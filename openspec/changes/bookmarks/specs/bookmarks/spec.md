@@ -18,11 +18,29 @@ A bookmark SHALL have a title, a URL (http, https or mailto), an optional descri
 - **THEN** no second bookmark is created and the existing one is shown for editing
 
 ### Requirement: Bookmarks list
-The sidebar SHALL offer a Bookmarks list showing each bookmark's title, host, tags and the start of its description, with a search field and a tag filter. Clicking a bookmark SHALL open its URL in the default browser; editing and deleting SHALL be available from its context menu.
+The sidebar SHALL offer a Bookmarks list showing each bookmark's title, host, tags and the start of its description, with a search field and a tag filter. Clicking a bookmark SHALL open its page; ⌘-clicking SHALL open its URL in the default browser; opening the URL and deleting SHALL also be available from its context menu. Tag pages and search SHALL open bookmarks the same way.
 
 #### Scenario: Open a bookmark
 - **WHEN** the user clicks "Latency dashboard" in the Bookmarks list
+- **THEN** the bookmark's page opens
+
+#### Scenario: Open the URL
+- **WHEN** the user ⌘-clicks "Latency dashboard" in the Bookmarks list
 - **THEN** the URL opens in the default browser
+
+### Requirement: Bookmark page
+Each bookmark SHALL have a page like a page or a task: its title, URL (with a button that opens it), tags, the description in the same editor as other texts, and the texts that link to its URL. Every change SHALL be saved at once, each field change and each description edit session one undo step.
+
+#### Scenario: Edit on the page
+- **WHEN** the user opens "Latency dashboard" and writes "p99 by service" into the description
+- **THEN** the description is saved, and ⌘Z removes the written text in one step
+
+### Requirement: Bookmarks in the tag tree
+The tag tree SHALL list bookmarks under their tags, after tasks, pages and meetings, like other items; clicking one SHALL open its page.
+
+#### Scenario: Tag tree
+- **WHEN** the user expands `project/atlas` in the sidebar
+- **THEN** "Latency dashboard" is listed there with a bookmark icon
 
 #### Scenario: Filter by tag
 - **WHEN** the user filters the list by `project/atlas`
@@ -50,7 +68,7 @@ The `[[` picker SHALL also offer bookmarks; choosing one SHALL insert a plain we
 - **THEN** the text contains `[Latency dashboard](https://grafana.example/d/latency)`
 
 ### Requirement: Bookmarks on tag pages and in search
-A tag page SHALL list the bookmarks carrying that tag or a tag below it. Global search SHALL find bookmarks by title, URL, description and tags and open them like the Bookmarks list does.
+A tag page SHALL list the bookmarks carrying that tag or a tag below it. Global search SHALL find bookmarks by title, URL, description and tags and open them like the Bookmarks list does (page; ⌘ for the URL).
 
 #### Scenario: Tag page section
 - **WHEN** the user opens the tag page of `project/atlas`

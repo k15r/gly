@@ -18,15 +18,13 @@ final class Navigation {
         case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
         case meeting(MeetingRef)    // meeting-pages N7
+        case bookmark(String)       // bookmark id (bookmark page)
     }
 
     private(set) var current: Destination = .day
     private var backStack: [Destination] = []
     private var forwardStack: [Destination] = []
     var day = LocalDay(date: Date())
-
-    /// A bookmark the Bookmarks list opens for editing when it appears (⌥ on a search result).
-    var bookmarkEditRequest: String?
 
     /// An item to open with the cursor in its text (⌘Return in quick capture), live-preview L5.
     var editRequest: String?

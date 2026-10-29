@@ -14,6 +14,7 @@
 - [ ] 3.1 Bookmark editor popover (B4) and the Bookmarks list in the sidebar (B5); verify manually "Open a bookmark", "Filter by tag", "Same URL again"
 - [ ] 3.2 Tag page section, search results and the `[[` picker (B5); verify manually "Tag page section", "Search by description", "Insert from the picker"
 - [ ] 3.3 Quick capture Bookmark kind with title fetching and the network entitlement (B6); verify with a parser test for URL/title/tags and manually "Capture a bookmark"
+- [ ] 3.4 Bookmark page (B4) and bookmarks in the tag tree (B5); click opens the page, ⌘-click the URL in the list, tag pages and search; verify with tests for tree leaves, description sessions and "Linked from", and manually "Open a bookmark", "Open the URL", "Edit on the page", "Tag tree"
 
 ## 4. Agents
 

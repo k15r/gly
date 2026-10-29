@@ -7,6 +7,7 @@ import GlyCore
 struct BookmarkEditor: View {
     @Environment(AppModel.self) private var app
     @Environment(WikiModel.self) private var wiki
+    @Environment(Navigation.self) private var nav
     let onDone: () -> Void
 
     /// The bookmark being edited; nil while adding.
@@ -60,8 +61,8 @@ struct BookmarkEditor: View {
             TagField(tags: $tags, input: $pendingTag)
             if let problem { Text(problem).font(.callout).foregroundStyle(.red) }
             HStack {
-                if let editing, let link = URL(string: editing.url) {
-                    Button("Open") { NSWorkspace.shared.open(link) }
+                if let editing {
+                    Button("Open Page") { onDone(); nav.go(.bookmark(editing.id)) }
                 }
                 Spacer()
                 Button("Cancel", action: onDone).keyboardShortcut(.cancelAction)
@@ -121,7 +122,6 @@ struct BookmarksListView: View {
     @State private var query = ""
     @State private var tag: String?
     @State private var adding = false
-    @State private var editing: BookmarkItem?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -147,33 +147,14 @@ struct BookmarksListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(shown) { b in
+                    // A click opens the bookmark's page, ⌘-click its URL.
                     BookmarkRow(bookmark: b)
                         .contentShape(Rectangle())
-                        .onTapGesture { open(b) }
-                        .popover(isPresented: Binding(get: { editing?.id == b.id }, set: { if !$0 { editing = nil } }), arrowEdge: .trailing) {
-                            BookmarkEditor(bookmark: b) { editing = nil }
-                        }
-                        .contextMenu {
-                            Button("Open") { open(b) }
-                            Button("Edit…") { editing = b }.disabled(!app.canWrite)
-                            Button("Copy URL") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(b.url, forType: .string) }
-                            Divider()
-                            Button("Delete", role: .destructive) { Task { await app.send(.deleteBookmark(id: b.id)) } }.disabled(!app.canWrite)
-                        }
+                        .onTapGesture { BookmarkOpen.click(b, nav: nav) }
+                        .contextMenu { BookmarkOpen.menu(b, app: app, nav: nav) }
                 }
             }
         }
-        // A request (⌥ on a search result, ⌘↩ in quick capture) may come before the new bookmark is observed.
-        .onAppear(perform: takeEditRequest)
-        .onChange(of: nav.bookmarkEditRequest) { takeEditRequest() }
-        .onChange(of: wiki.bookmarks) { takeEditRequest() }
-    }
-
-    private func takeEditRequest() {
-        guard let id = nav.bookmarkEditRequest, let b = wiki.bookmarks.first(where: { $0.id == id }) else { return }
-        nav.bookmarkEditRequest = nil
-        query = ""; tag = nil
-        editing = b
     }
 
     private var allTags: [String] {
@@ -194,7 +175,25 @@ struct BookmarksListView: View {
         }
     }
 
-    private func open(_ b: BookmarkItem) { if let url = URL(string: b.url) { NSWorkspace.shared.open(url) } }
+}
+
+/// How bookmarks open from lists, tag pages and search: a click shows the bookmark's page, ⌘-click opens the URL.
+@MainActor
+enum BookmarkOpen {
+    static func click(_ b: BookmarkItem, nav: Navigation) {
+        if NSEvent.modifierFlags.contains(.command) { url(b.url) } else { nav.go(.bookmark(b.id)) }
+    }
+
+    static func url(_ string: String) { if let url = URL(string: string) { NSWorkspace.shared.open(url) } }
+
+    @ViewBuilder
+    static func menu(_ b: BookmarkItem, app: AppModel, nav: Navigation) -> some View {
+        Button("Open Page") { nav.go(.bookmark(b.id)) }
+        Button("Open URL") { url(b.url) }
+        Button("Copy URL") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(b.url, forType: .string) }
+        Divider()
+        Button("Delete", role: .destructive) { Task { await app.send(.deleteBookmark(id: b.id)) } }.disabled(!app.canWrite)
+    }
 }
 
 struct BookmarkRow: View {
@@ -221,4 +220,129 @@ struct BookmarkRow: View {
         .padding(.vertical, 2)
         .help(bookmark.url)
     }
+}
+
+struct BookmarkDetail: Equatable {
+    var bookmark: BookmarkItem?
+    var linkedFrom: [Backlink]
+}
+
+/// A bookmark in the main area, laid out like a page or a task: title, URL, tags, the description in the editor and
+/// where it is linked from. Every change is saved at once; each field change and each description edit session is one undo step.
+struct BookmarkPageView: View {
+    @Environment(AppModel.self) private var app
+    @Environment(WikiModel.self) private var wiki
+    @Environment(Navigation.self) private var nav
+    let id: String
+
+    @State private var live = Live<BookmarkDetail>()
+    @State private var title = ""
+    @State private var url = ""
+    @State private var tags: [String] = []
+    @State private var pendingTag = ""
+    @State private var problem: String?
+    /// Opened from quick capture (⌘Return): the cursor goes into the description.
+    @State private var focusText = false
+    @FocusState private var focus: Field?
+    enum Field { case title, url }
+
+    var body: some View {
+        Group {
+            if let detail = live.value, let b = detail.bookmark {
+                content(b, linkedFrom: detail.linkedFrom)
+            } else if live.loaded {
+                ContentUnavailableView("Bookmark not found", systemImage: "bookmark.slash", description: Text("It may have been deleted."))
+            } else {
+                ProgressView()
+            }
+        }
+        .task(id: id) {
+            let id = self.id
+            live.observe(wiki.store) { db in
+                let b = try BookmarkQueries.bookmark(db, id: id)
+                return BookmarkDetail(bookmark: b, linkedFrom: try b.map { try BookmarkQueries.linkedFrom(db, bookmark: $0) } ?? [])
+            }
+        }
+        .onChange(of: live.value?.bookmark) { _, b in
+            guard let b else { return }
+            if focus != .title { title = b.title }
+            if focus != .url { url = b.url }
+            tags = b.tags
+            if nav.editRequest == b.id { focusText = true; nav.editRequest = nil }
+        }
+    }
+
+    private func content(_ b: BookmarkItem, linkedFrom: [Backlink]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "bookmark").font(.title2).foregroundStyle(.secondary)
+                TextField("Title", text: $title).font(.title.bold()).textFieldStyle(.plain)
+                    .focused($focus, equals: .title)
+                    .onSubmit { saveTitle(b) }
+                    .onChange(of: focus) { old, _ in if old == .title { saveTitle(b) } }
+                    .onDisappear { saveTitle(b) }
+                Spacer()
+                Menu {
+                    Button("Open URL") { BookmarkOpen.url(b.url) }
+                    Button("Copy URL") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(b.url, forType: .string) }
+                    Divider()
+                    Button("Delete", role: .destructive) { delete(b) }.disabled(!app.canWrite)
+                } label: { Image(systemName: "ellipsis.circle") }
+                .menuStyle(.borderlessButton).fixedSize()
+            }
+            .padding([.horizontal, .top])
+
+            HStack(spacing: 8) {
+                Image(systemName: "link").foregroundStyle(.secondary)
+                TextField("URL", text: $url).textFieldStyle(.plain).foregroundStyle(Color.accentColor)
+                    .focused($focus, equals: .url)
+                    .onSubmit { saveURL(b) }
+                    .onChange(of: focus) { old, _ in if old == .url { saveURL(b) } }
+                Button { BookmarkOpen.url(b.url) } label: { Label("Open", systemImage: "arrow.up.right.square") }
+                    .buttonStyle(.borderless).help("Open in the default browser")
+            }
+            .padding(.horizontal).padding(.top, 8)
+            if let problem { Text(problem).font(.callout).foregroundStyle(.red).padding(.horizontal).padding(.top, 4) }
+
+            TagField(tags: $tags, input: $pendingTag).padding(.horizontal).padding(.top, 8)
+                .onChange(of: tags) { _, new in
+                    guard new != b.tags else { return }
+                    send(.updateBookmark(id: b.id, BookmarkPatch(tags: new)))
+                }
+            Divider().padding(.top, 8)
+
+            GlyMarkdownEditor(text: b.description, onCommit: { text, session in
+                send(.updateBookmark(id: b.id, BookmarkPatch(description: text, session: session)))
+            }, initialCaret: focusText ? (b.description as NSString).length : nil)
+            .frame(maxHeight: .infinity)
+            Divider()
+            BacklinksView(backlinks: linkedFrom, title: "Linked from", emptyText: "No text links to this URL yet")
+                .padding().frame(maxWidth: .infinity, maxHeight: 180, alignment: .topLeading)
+        }
+    }
+
+    private func saveTitle(_ b: BookmarkItem) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != b.title else { return }
+        if trimmed.isEmpty { title = b.title; return }
+        send(.updateBookmark(id: b.id, BookmarkPatch(title: trimmed)))
+    }
+
+    private func saveURL(_ b: BookmarkItem) {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != b.url else { problem = nil; return }
+        Task {
+            if case .failure(let f) = await app.send(.updateBookmark(id: b.id, BookmarkPatch(url: trimmed)), quiet: true) {
+                problem = f.message
+            } else {
+                problem = nil
+            }
+        }
+    }
+
+    private func delete(_ b: BookmarkItem) {
+        Task { if case .ok = await app.send(.deleteBookmark(id: b.id)) { nav.back() } }
+    }
+
+    private func send(_ command: Command) { Task { await app.send(command) } }
 }

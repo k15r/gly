@@ -142,4 +142,37 @@ final class BookmarkTests: XCTestCase {
         XCTAssertEqual(failure(.updateBookmark(id: page, BookmarkPatch(title: "x")))?.code, .notFound)
         XCTAssertEqual(failure(.deleteBookmark(id: page))?.code, .notFound)
     }
+
+    func testBookmarksAreTagTreeLeaves() throws {
+        let id = create("Latency dashboard", dashboard, description: "p99 by service", tags: ["project/atlas"])
+        let loose = create("Recipes", "https://food.example")
+        let tree = try db.read { try TagQueries.tagTree($0, today: "2026-10-29") }
+        let atlas = try XCTUnwrap(tree.first?.children.first)
+        XCTAssertEqual(atlas.items.map(\.kind), [.bookmark])
+        XCTAssertEqual(atlas.items.first?.itemID, id)
+        XCTAssertEqual(atlas.items.first?.excerpt, "p99 by service")
+        XCTAssertEqual(atlas.openCount, 0, "counts are open tasks")
+        XCTAssertTrue(try db.read { try TagQueries.untaggedItems($0) }.contains { $0.itemID == loose && $0.kind == .bookmark })
+    }
+
+    func testDescriptionEditSessionIsOneStep() throws {
+        let id = create("Latency dashboard", dashboard)
+        ok(.updateBookmark(id: id, BookmarkPatch(description: "p99", session: "s1")))
+        ok(.updateBookmark(id: id, BookmarkPatch(description: "p99 by service ", session: "s1")))
+        XCTAssertEqual(try bookmark(id)?.description, "p99 by service ", "kept as typed while editing")
+        ok(.undo)
+        XCTAssertEqual(try bookmark(id)?.description, "", "one undo step for the session")
+    }
+
+    func testLinkedFrom() throws {
+        let id = create("Latency dashboard", dashboard)
+        let page = ok(.createPage(PageDraft(title: "Ops", body: "intro\nSee [the board](\(dashboard)) daily"))).id!
+        ok(.createPage(PageDraft(title: "Other", body: "https://grafana.example/d/errors")))
+        ok(.updateTagPage(name: "ops", body: "Board: \(dashboard)"))
+        let b = try XCTUnwrap(bookmark(id))
+        let links = try db.read { try BookmarkQueries.linkedFrom($0, bookmark: b) }
+        XCTAssertEqual(Set(links.map(\.source.kind)), [.tag, .page], "a page and a tag page; not the other URL")
+        XCTAssertEqual(links.count, 2)
+        XCTAssertEqual(links.first { $0.source.id == page }?.excerpt, "See the board daily")
+    }
 }
