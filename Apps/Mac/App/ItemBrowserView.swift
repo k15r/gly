@@ -269,10 +269,8 @@ struct ItemRow: View {
                 let excerpt = item.excerpt
                 if !excerpt.isEmpty { Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }
-            Spacer()
-            if !item.tags.isEmpty {
-                HStack(spacing: 4) { ForEach(item.tags.prefix(3), id: \.self) { TagChip(name: $0) } }
-            }
+            Spacer(minLength: 8)
+            TagChipLine(tags: item.tags).layoutPriority(-1)
             Text(item.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.tertiary).lineLimit(1)
         }
         .padding(.vertical, 2)

@@ -50,7 +50,7 @@ The user SHALL be able to drag items from the browser's rows onto a tag in the t
 ## ADDED Requirements
 
 ### Requirement: Tag tree
-The sidebar SHALL show all tags as a hierarchy, including tags without items, with a filter field that narrows the tree to matching tags and their parents. Each tag SHALL show the number of items of the current view carrying it or a tag below it. Clicking a tag SHALL open its tag page and expand it; ⇧-click SHALL add the tag to the filter of the browser view shown. "Untagged" SHALL filter items without tags.
+The sidebar SHALL show all tags as a hierarchy, including tags without items, with a filter field that narrows the tree to matching tags and their parents. Each tag SHALL show the number of items of the current view carrying it or a tag below it. In a browser view, clicking a tag SHALL set the view's tag filter to it and ⇧-click SHALL add it to or remove it from the filter; ⌘-click, and a click outside a browser view, SHALL open the tag page. A click SHALL also expand the tag. "Untagged" SHALL filter items without tags.
 
 #### Scenario: Tag hierarchy with counts
 - **WHEN** Tasks is shown and two open tasks are tagged `person/alex` and one `person/sam`
@@ -64,13 +64,17 @@ The sidebar SHALL show all tags as a hierarchy, including tags without items, wi
 - **WHEN** the tag `person/alex/goals` has nothing assigned
 - **THEN** `goals` appears below `alex` with a count of 0
 
-#### Scenario: Click opens the tag page
-- **WHEN** the user clicks `project` in the tag tree
-- **THEN** the tag page of `project` opens and `project` expands, showing `atlas` below it
+#### Scenario: Click filters the view
+- **WHEN** the user is in Pages and clicks `project`
+- **THEN** Pages shows only pages tagged `project` or below, and `project` expands, showing `atlas` below it
 
-#### Scenario: ⇧-click narrows the view
-- **WHEN** the user is in Bookmarks and ⇧-clicks `project/atlas`, then ⇧-clicks `ops`
-- **THEN** Bookmarks shows bookmarks tagged both `project/atlas` (or below) and `ops` (or below)
+#### Scenario: ⇧-click adds and removes
+- **WHEN** the user is in Bookmarks, clicks `project/atlas`, ⇧-clicks `ops`, then ⇧-clicks `project/atlas` again
+- **THEN** Bookmarks first shows bookmarks tagged both `project/atlas` and `ops`, then only those tagged `ops`
+
+#### Scenario: ⌘-click opens the tag page
+- **WHEN** the user ⌘-clicks `project/atlas` in the tag tree
+- **THEN** the tag page of `project/atlas` opens
 
 #### Scenario: Find a tag
 - **WHEN** the user types `ale` into the tag tree's filter field

@@ -15,7 +15,7 @@
 ## 3. Sidebar, tag tree, tag views
 
 - [ ] 3.1 Sidebar: preset views with counts, saved views with rename/delete and "Save View…", replacing Tasks/Pages/Bookmarks (I3); verify manually "Save a view", "Default sorting", "Snoozed tasks stay visible", "Show completed tasks", "Recently changed first"
-- [ ] 3.2 Tag tree: tags only, filter field, view-relative counts, click opens the tag page and expands, ⇧-click adds to the filter, Untagged, "Open Tag Page", drops on tag rows with move/alias from the view's tag (I7); verify manually "Click filters the view", "Find a tag", "Untagged", "Move a page", "Alias a page", "Move a task", "Tag from a list", "Collapsed tag opens while dragging", "Drop onto the tag text"
+- [ ] 3.2 Tag tree: tags only, filter field, view-relative counts, click filters and expands, ⇧-click adds/removes, ⌘-click opens the tag page, Untagged, "Open Tag Page", drops on tag rows with move/alias from the view's tag (I7); verify manually "Click filters the view", "Find a tag", "Untagged", "Move a page", "Alias a page", "Move a task", "Tag from a list", "Collapsed tag opens while dragging", "Drop onto the tag text"
 - [ ] 3.3 Tag view: browser with `#tag`, grouped by kind, header with name, color, management and description; chips and tag links open it; ⌘K "Show all results" (I8); verify manually "Project tag page", "Group tag", "Person's meetings", "Narrow a tag page", "From a chip", "Show all results"
 - [x] 3.4 Remove the replaced views and code (`TaskListView`, `PagesListView`, `BookmarksListView`, `TagPageView` body, tree leaves, `leavesByTag`/`untaggedItems` if unused, `BookmarkOpen.click`), keeping specs/tests green; verify with the full test suite, lint and a build
 

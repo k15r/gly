@@ -21,7 +21,7 @@ Tasks, pages, bookmarks and meeting notes are all items with tags, dates, status
 - **Tag tree** **BREAKING**:
   - It lists tags only (no items as leaves) and has a filter field.
   - Counts reflect the current view.
-  - Clicking a tag opens its tag page and expands it; ⇧-click adds the tag to the current view's filter.
+  - Clicking a tag filters the current view by it; ⇧-click adds or removes it; ⌘-click opens the tag page; a click also expands the tag.
   - "Untagged" filters items without tags.
   - Items are dragged from the browser's rows onto tags.
 - **Tag pages become the browser filtered by the tag**, grouped by kind, with the tag's name, color, management actions and description on top.
@@ -29,7 +29,7 @@ Tasks, pages, bookmarks and meeting notes are all items with tags, dates, status
 
 Decisions taken in this proposal (open for review):
 - The tag tree shows tags only, because the browser shows the items.
-- A tag click opens the tag page (and expands the tag); ⇧-click narrows the current view (revised after trying click-to-filter).
+- A tag click filters the current view (confirmed after trying it); ⌘-click opens the tag page.
 
 ## Capabilities
 

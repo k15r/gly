@@ -109,7 +109,10 @@ struct TaskRow: View {
                             .font(.caption.bold()).foregroundStyle(status.kind.color).help(status.tooltip)
                     }
                 }
-                chips(status: status, shownDay: shownDay)
+                HStack(spacing: 4) {
+                    chips(status: status, shownDay: shownDay).fixedSize()
+                    TagChipLine(tags: task.tags)
+                }
             }
             Spacer(minLength: 4)
             if let todaysPart { todaysPartButton(todaysPart) }
@@ -135,7 +138,7 @@ struct TaskRow: View {
         }
     }
 
-    /// Effort (with what's left), due date, parts, snooze date and tags in the small chip style.
+    /// Effort (with what's left), due date, parts and snooze date in the small chip style (tags follow in `TagChipLine`).
     @ViewBuilder
     private func chips(status: RowStatus?, shownDay: LocalDay) -> some View {
         let dayLength = planning.hours.minutesPerDay
@@ -143,8 +146,8 @@ struct TaskRow: View {
         let left = task.remaining(sizes: planning.sizes, dayMinutes: dayLength)
         let progressed = task.workedMinutes != 0 || parts.contains { $0.estimate != nil }
         let snoozedUntil = task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil
-        if task.effort != nil || progressed || task.due != nil || !parts.isEmpty || snoozedUntil != nil || !task.tags.isEmpty {
-            FlowLayout(spacing: 4) {
+        if task.effort != nil || progressed || task.due != nil || !parts.isEmpty || snoozedUntil != nil {
+            HStack(spacing: 4) {
                 if let effort = task.effort {
                     let text = progressed && left != nil ? "\(effort.label) · \(left == 0 ? "nothing" : formatEffort(Double(left!), dayLength: dayLength)) left" : effort.label
                     Label(text, systemImage: "gauge.with.dots.needle.33percent").modifier(ChipStyle(compact: true)).help("Effort")
@@ -164,9 +167,6 @@ struct TaskRow: View {
                 if let snoozedUntil {
                     Label("until \(DayView.weekday(snoozedUntil))", systemImage: "moon.zzz")
                         .modifier(ChipStyle(tint: StatusKind.backFromSnooze.color, compact: true)).help("Snoozed until \(DayView.title(for: snoozedUntil))")
-                }
-                ForEach(task.tags, id: \.self) { tag in
-                    TagChip(name: tag)
                 }
             }
         }
@@ -299,6 +299,32 @@ struct EffortChip: View {
         Text(effort.label).font(.caption2.bold()).monospaced().padding(.horizontal, 4).padding(.vertical, 1)
             .overlay(RoundedRectangle(cornerRadius: 3).stroke(.secondary.opacity(0.5)))
             .foregroundStyle(.secondary).help("Effort")
+    }
+}
+
+/// Tags on one line: as many chips as fit, then "+N" whose tooltip names the others, so a long tag list never
+/// spills over or gets cut off at random.
+struct TagChipLine: View {
+    let tags: [String]
+
+    var body: some View {
+        if !tags.isEmpty {
+            ViewThatFits(in: .horizontal) {
+                ForEach(Array(stride(from: tags.count, through: 0, by: -1)), id: \.self) { shown in
+                    HStack(spacing: 4) {
+                        ForEach(tags.prefix(shown), id: \.self) { TagChip(name: $0) }
+                        if shown < tags.count {
+                            let hidden = Array(tags.dropFirst(shown))
+                            Text("+\(hidden.count)").font(.caption).monospacedDigit()
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Color.secondary.opacity(0.15), in: Capsule())
+                                .help(hidden.joined(separator: "\n"))
+                        }
+                    }
+                    .fixedSize()
+                }
+            }
+        }
     }
 }
 
