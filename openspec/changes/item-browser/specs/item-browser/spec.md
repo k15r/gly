@@ -28,7 +28,7 @@ The browser SHALL show the active filters as removable chips and accept typed to
 - `host:<host>`
 - `untagged`
 
-Other words SHALL search the items' titles and texts. The add-filter menu SHALL offer kind, tags (nested like the tag hierarchy), untagged, last change, author and, when tasks can be among the results, the task filters.
+Other words SHALL search the items' titles and texts.
 
 #### Scenario: Typed tokens
 - **WHEN** the user types `is:task #project/atlas due:week review` in All items
@@ -42,13 +42,16 @@ Other words SHALL search the items' titles and texts. The add-filter menu SHALL 
 - **WHEN** it is Thursday, the workweek is Monday to Friday and the user adds "Due ▸ Within 2 workdays" in Tasks
 - **THEN** tasks due today, Friday or Monday are listed, not those due Tuesday or overdue
 
-#### Scenario: Filters that fit the kinds
-- **WHEN** the view is limited to pages
-- **THEN** the add-filter menu doesn't offer status, due date, priority or effort, and the Group and Sort menus don't offer task groupings or task order
-
 #### Scenario: Agent changes
 - **WHEN** the user filters All items with `by:agent changed:today`
 - **THEN** the list shows the items an agent changed last today
+
+### Requirement: Add-filter menu
+The filter bar's add-filter menu SHALL offer kind, tags (nested like the tag hierarchy), untagged, last change, author and, when tasks can be among the results, status, due date, priority and effort. The Group and Sort menus SHALL likewise offer task groupings and task order only when tasks can be among the results.
+
+#### Scenario: Filters that fit the kinds
+- **WHEN** the view is limited to pages
+- **THEN** the add-filter menu doesn't offer status, due date, priority or effort, and the Group and Sort menus don't offer task groupings or task order
 
 ### Requirement: Refine by tags
 Above the results, the browser SHALL show the tags that occur among the current results, most frequent first, each with the number of results carrying it or a tag below it, leaving out tags already in the filter. Clicking one SHALL add it to the filter.
