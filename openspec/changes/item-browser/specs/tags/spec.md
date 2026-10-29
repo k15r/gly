@@ -50,7 +50,7 @@ The user SHALL be able to drag items from the browser's rows onto a tag in the t
 ## ADDED Requirements
 
 ### Requirement: Tag tree
-The sidebar SHALL show all tags as a hierarchy, including tags without items, with a filter field that narrows the tree to matching tags and their parents. Each tag SHALL show the number of items of the current view carrying it or a tag below it. In a browser view, clicking a tag SHALL set the view's tag filter to it and ⇧-click SHALL add it to or remove it from the filter; ⌘-click, and a click outside a browser view, SHALL open the tag page. A click SHALL also expand the tag. "Untagged" SHALL filter items without tags.
+The sidebar SHALL show all tags as a hierarchy, including tags without items, with a filter field that narrows the tree to matching tags and their parents. Each tag SHALL show the number of items of the current view carrying it or a tag below it. "Untagged" SHALL filter the current view to items without tags.
 
 #### Scenario: Tag hierarchy with counts
 - **WHEN** Tasks is shown and two open tasks are tagged `person/alex` and one `person/sam`
@@ -64,6 +64,17 @@ The sidebar SHALL show all tags as a hierarchy, including tags without items, wi
 - **WHEN** the tag `person/alex/goals` has nothing assigned
 - **THEN** `goals` appears below `alex` with a count of 0
 
+#### Scenario: Find a tag
+- **WHEN** the user types `ale` into the tag tree's filter field
+- **THEN** the tree shows `person/alex` (with `person` as its parent) and hides tags that don't match
+
+#### Scenario: Untagged
+- **WHEN** the user clicks "Untagged" in Pages
+- **THEN** Pages shows the pages without tags
+
+### Requirement: Clicks in the tag tree
+In a browser view, clicking a tag SHALL set the view's tag filter to it, and ⇧-click SHALL add it to or remove it from the filter. ⌘-click, and a click outside a browser view, SHALL open the tag page. A click SHALL also expand the tag.
+
 #### Scenario: Click filters the view
 - **WHEN** the user is in Pages and clicks `project`
 - **THEN** Pages shows only pages tagged `project` or below, and `project` expands, showing `atlas` below it
@@ -75,14 +86,6 @@ The sidebar SHALL show all tags as a hierarchy, including tags without items, wi
 #### Scenario: ⌘-click opens the tag page
 - **WHEN** the user ⌘-clicks `project/atlas` in the tag tree
 - **THEN** the tag page of `project/atlas` opens
-
-#### Scenario: Find a tag
-- **WHEN** the user types `ale` into the tag tree's filter field
-- **THEN** the tree shows `person/alex` (with `person` as its parent) and hides tags that don't match
-
-#### Scenario: Untagged
-- **WHEN** the user clicks "Untagged" in Pages
-- **THEN** Pages shows the pages without tags
 
 ### Requirement: Tag rows accept drops
 Every tag row SHALL accept drops over its whole width including the text. While dragging, the tag under the pointer SHALL be highlighted, and a collapsed tag SHALL expand when the drag rests on it for a moment.
