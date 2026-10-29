@@ -313,17 +313,46 @@ struct TagChipLine: View {
                 ForEach(Array(stride(from: tags.count, through: 0, by: -1)), id: \.self) { shown in
                     HStack(spacing: 4) {
                         ForEach(tags.prefix(shown), id: \.self) { TagChip(name: $0) }
-                        if shown < tags.count {
-                            let hidden = Array(tags.dropFirst(shown))
-                            Text("+\(hidden.count)").font(.caption).monospacedDigit()
-                                .padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(Color.secondary.opacity(0.15), in: Capsule())
-                                .help(hidden.joined(separator: "\n"))
-                        }
+                        if shown < tags.count { MoreTagsChip(hidden: Array(tags.dropFirst(shown))) }
                     }
                     .fixedSize()
                 }
             }
+        }
+    }
+}
+
+/// "+N": the tags that didn't fit, shown in a small popup on hover (a plain tooltip doesn't appear inside rows that
+/// handle hover and clicks themselves); a click keeps the popup open, and its chips open their tag pages.
+struct MoreTagsChip: View {
+    let hidden: [String]
+    @State private var hoveringChip = false
+    @State private var hoveringPopup = false
+    @State private var pinned = false
+    @State private var shown = false
+
+    var body: some View {
+        Text("+\(hidden.count)").font(.caption).monospacedDigit()
+            .padding(.horizontal, 5).padding(.vertical, 1)
+            .background(Color.secondary.opacity(hoveringChip ? 0.3 : 0.15), in: Capsule())
+            .contentShape(Capsule())
+            .onHover { hoveringChip = $0; update() }
+            .onTapGesture { pinned.toggle(); update() }
+            .popover(isPresented: Binding(get: { shown }, set: { if !$0 { shown = false; pinned = false } }), arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(hidden, id: \.self) { TagChip(name: $0) }
+                }
+                .padding(8)
+                .onHover { hoveringPopup = $0; update() }
+            }
+    }
+
+    /// Opens at once on hover; closes shortly after the pointer left chip and popup (so it can move into the popup).
+    private func update() {
+        if hoveringChip || hoveringPopup || pinned { shown = true; return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            if !hoveringChip && !hoveringPopup && !pinned { shown = false }
         }
     }
 }

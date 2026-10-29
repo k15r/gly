@@ -33,7 +33,7 @@ All are created by an agent (Claude), so `by:agent` finds them.
 - [ ] C3 Tasks filtered by `#gly/checks/item-browser/demo/atlas`: the Refine row shows `…/people/alex 2` before `…/people/sam 1`; clicking `…/people/alex` leaves the two tasks ("Who is involved").
 - [ ] C4 Group ▸ Due date in Tasks (demo-filtered) → "Overdue", "This week", "Later", "No due date" in that order; Group ▸ Tag and Status group accordingly; Sort menus reorder ("Group by due date").
 - [ ] C5 In Tasks filtered by `#gly/checks/item-browser/demo/atlas` choose New Task → the form already has that tag; New in All items offers task, page and bookmark, each with the view's tags ("New task in a tag view").
-- [ ] C7 Give a demo task eight tags (or narrow the window): its row shows the tags that fit and "+N"; hovering "+N" lists the others; nothing is cut off or overlaps ("Many tags").
+- [ ] C7 Give a demo task eight tags (or narrow the window): its row shows the tags that fit and "+N"; hovering "+N" opens a small popup with the others (a click keeps it open; its chips open tag pages); nothing is cut off or overlaps ("Many tags").
 - [ ] C6 Right-click a page or bookmark row → Open, (Open URL, Copy URL), Delete; Delete moves it to the Trash.
 
 ## D. Tag tree (task 3.2)

@@ -100,7 +100,7 @@ The bar edits the view's `ItemQuery` and never a string, so chips and text stay 
 
 - `TagTreeView` loses its leaves (`TreeLeafRow`, `untaggedItems`), and gains a filter field (case-insensitive substring on the full path; matches keep their parents and are expanded) and view-relative counts (I2).
 - **Click:** in a browser view (not a tag view) it sets the view's tag filter to this tag; ⇧-click adds or removes it; ⌘-click opens the tag view, as does any click outside a browser view. A click also expands the tag. (Tried "click opens the tag page" in between; filtering the view you're in is what a click on a tag is for.)
-- **Tag chips in rows:** `TagChipLine` shows as many chips as fit on one line and "+N" with the rest in its tooltip (`ViewThatFits` over the prefixes), replacing a wrapping layout that clipped tags when the row's width wasn't known yet.
+- **Tag chips in rows:** `TagChipLine` shows as many chips as fit on one line and "+N" with the rest in a hover popup (`ViewThatFits` over the prefixes; a plain tooltip does not show inside rows with their own hover and tap handling), replacing a wrapping layout that clipped tags when the row's width wasn't known yet.
 - **Context menu:** "Open Tag Page" plus the existing color/rename/delete/new subtag.
 - "Untagged" sets `untagged`.
 

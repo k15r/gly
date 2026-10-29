@@ -57,7 +57,7 @@ The browser SHALL group results by nothing, kind, due date (overdue, today, this
 - **THEN** the overdue tasks come first under "Overdue", then "Today", "This week", "Later" and "No due date"
 
 ### Requirement: Item rows
-Every result SHALL be one row with the kind's icon, the title, the start of its text, its tags (on one line: as many as fit, then "+N" naming the others on hover) and, depending on the kind, its task chips and status bar, the bookmark's host, or the last change. A click SHALL open the item's page; ⌘-click SHALL open its link when it has one (a bookmark's URL) and otherwise its page. Rows SHALL be draggable onto tags in the tag tree, and offer the item's actions in their context menu.
+Every result SHALL be one row with the kind's icon, the title, the start of its text, its tags (on one line: as many as fit, then "+N" showing the others on hover) and, depending on the kind, its task chips and status bar, the bookmark's host, or the last change. A click SHALL open the item's page; ⌘-click SHALL open its link when it has one (a bookmark's URL) and otherwise its page. Rows SHALL be draggable onto tags in the tag tree, and offer the item's actions in their context menu.
 
 #### Scenario: Open a bookmark from the browser
 - **WHEN** the user clicks a bookmark in All items, then ⌘-clicks it
@@ -65,7 +65,7 @@ Every result SHALL be one row with the kind's icon, the title, the start of its 
 
 #### Scenario: Many tags
 - **WHEN** a task has eight tags and its row has room for three
-- **THEN** the row shows the first three tags and "+5", whose tooltip lists the other five
+- **THEN** the row shows the first three tags and "+5", and hovering "+5" shows the other five
 
 #### Scenario: Task row keeps its actions
 - **WHEN** the user hovers a task row in the browser
