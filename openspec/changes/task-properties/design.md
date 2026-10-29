@@ -40,7 +40,7 @@ The day words move from `CaptureParser` into a public `DateWords.parse(_ text:, 
 ### T4: Layout
 
 - **Title row:** completion button, title, ⋯ menu.
-- **Chip row:** priority, effort, due, snooze, then the tags as chips with ✕ on hover and a "+" chip that opens `TagField`'s suggestions in a popover.
+- **Chip row:** priority, effort, due, snooze, then the tags as chips in their color with ✕ on hover (a click opens the tag page), and a faded "+ Tag" chip that opens the tag menu (existing tags as a tree, "New tag…"). All chips share one style (`ChipStyle`).
 - **Below:** the Progress row and the "All parts done" banner as before, then the notes (live preview) and the backlinks.
 - **No status picker:** Reopen and Drop are in the ⋯ menu.
 
