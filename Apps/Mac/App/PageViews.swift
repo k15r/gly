@@ -255,150 +255,86 @@ struct PageView: View {
 
 // MARK: - Tag page
 
-struct TagPageDetail: Equatable {
-    var data: TagPageData
+struct TagHeaderData: Equatable {
+    var tagID: String?
+    var body: String
     var backlinks: [Backlink]
 }
 
-/// A tag's page: description, open tasks, pages, finished tasks, backlinks (specs/tag-pages).
+/// A tag's view (specs/tag-pages "Tag page content", item-browser I8): the item browser filtered by the tag and grouped
+/// by kind, with the tag's name, color, management, description and backlinks above the results.
 struct TagPageView: View {
     @Environment(AppModel.self) private var app
     @Environment(WikiModel.self) private var wiki
-    @Environment(TasksModel.self) private var tasks
-    @Environment(Navigation.self) private var nav
-    @Environment(Clock.self) private var clock
+    @Environment(BrowserModel.self) private var browser
     @Environment(TagColorModel.self) private var tagColors
     let name: String
 
-    @State private var live = Live<TagPageDetail>()
-    @State private var showFinished = false
+    @State private var live = Live<TagHeaderData>()
+    /// nil = the default: open when there is a description.
+    @State private var descriptionOpen: Bool?
+    @State private var backlinksOpen = false
     @State private var newSubtag = false
     @State private var renaming = false
     @State private var deleting = false
 
     var body: some View {
-        Group {
-            if let detail = live.value { content(detail) } else { ProgressView() }
-        }
-        .task(id: name) {
-            guard let tag = try? TagName(name) else { return }
-            let today = clock.today
-            live.observe(wiki.store) { db in
-                let data = try TagPageQueries.page(db, name: tag, today: today)
-                let backlinks = try data.tagID.map { try LinkQueries.backlinks(db, to: $0, isTag: true) } ?? []
-                return TagPageDetail(data: data, backlinks: backlinks)
+        let viewID = browser.tagView(name)
+        ItemBrowserView(viewID: viewID) { header(viewID) }
+            .task(id: name) {
+                let key = TagName.key(for: name)
+                live.observe(wiki.store) { db in
+                    let row = try Row.fetchOne(db, sql: "SELECT id, page_body FROM live_tags WHERE name_key = ?", arguments: [key])
+                    let id: String? = row?["id"]
+                    return TagHeaderData(tagID: id, body: row?["page_body"] ?? "",
+                                         backlinks: try id.map { try LinkQueries.backlinks(db, to: $0, isTag: true) } ?? [])
+                }
             }
-        }
     }
 
-    private func content(_ detail: TagPageDetail) -> some View {
-        let data = detail.data
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Label(data.name, systemImage: "tag").font(.title.bold()).foregroundStyle(tagColors.color(data.name))
-                    TagColorControl(name: data.name)
-                    Spacer()
-                    Button("Show in Tasks") {
-                        tasks.tagFilter = try? TagName(data.name)
-                        nav.go(.tasks)
-                    }
-                    Button("Show in Pages") {
-                        wiki.pageTagFilter = try? TagName(data.name)
-                        nav.go(.pages)
-                    }
-                    Button { newSubtag = true } label: { Label("New Subtag", systemImage: "tag") }.disabled(!app.canWrite)
-                    Button { nav.showNewPage = true } label: { Label("New Page", systemImage: "plus") }.disabled(!app.canWrite)
-                    Menu {
-                        Button("Rename…") { renaming = true }
-                        Button("Delete…") { deleting = true }.disabled(data.tagID == nil)
-                    } label: { Image(systemName: "ellipsis.circle") }
-                    .menuStyle(.borderlessButton).fixedSize().disabled(!app.canWrite)
-                }
-                .modifier(NewSubtagPrompt(parent: data.name, isPresented: $newSubtag))
-                .modifier(TagManagementPrompts(name: data.name, renaming: $renaming, deleting: $deleting))
-                // One mode: the description in the live-preview editor (live-preview L5).
-                if data.body.isEmpty {
-                    Text("Describe this \(data.name.contains("/") ? "tag" : "group") – click below to write.").font(.caption).foregroundStyle(.secondary)
-                }
-                GlyMarkdownEditor(text: data.body, onCommit: { text, session in
-                    Task { await app.send(.updateTagPage(name: data.name, body: text, session: session)) }
-                })
-                .frame(minHeight: data.body.isEmpty ? 60 : 160)
-
-                section("Open tasks", count: data.openTasks.count) {
-                    ForEach(data.openTasks) { task in
-                        TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })
-                    }
-                }
-                section("Pages", count: data.pages.count) {
-                    let names = wiki.displayNames(data.pages.map(\.id))
-                    ForEach(data.pages) { page in
-                        Button { nav.go(.page(page.id)) } label: {
-                            HStack { Label(names[page.id]?.display ?? page.title, systemImage: "doc.text"); Spacer()
-                                Text(page.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.secondary) }
-                                .contentShape(Rectangle())
-                        }.buttonStyle(.plain)
-                    }
-                }
-                // specs/bookmarks "Tag page section": bookmarks with this tag or one below it.
-                let key = TagName.key(for: data.name)
-                let bookmarks = wiki.bookmarks.filter { b in b.tags.contains { let k = TagName.key(for: $0); return k == key || k.hasPrefix(key + "/") } }
-                if !bookmarks.isEmpty {
-                    section("Bookmarks", count: bookmarks.count) {
-                        ForEach(bookmarks) { b in TagPageBookmarkRow(bookmark: b) }
-                    }
-                }
-                if !data.meetings.isEmpty {
-                    section("Meetings", count: data.meetings.count) {
-                        ForEach(data.meetings) { meeting in
-                            Button { nav.go(.meeting(.notes(meeting.id))) } label: {
-                                HStack { Label(meeting.title, systemImage: "calendar"); Spacer() }
-                                    .contentShape(Rectangle())
-                            }.buttonStyle(.plain)
-                        }
-                    }
-                }
-                DisclosureGroup("Finished tasks (\(data.finishedTasks.count))", isExpanded: $showFinished) {
-                    ForEach(data.finishedTasks) { task in
-                        TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })
-                    }
-                }
-                Divider()
-                BacklinksView(backlinks: detail.backlinks)
-            }
-            .padding()
-        }
-    }
-
-    @ViewBuilder
-    private func section(_ title: String, count: Int, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("\(title) (\(count))").font(.headline)
-            if count == 0 { Text("None").font(.callout).foregroundStyle(.secondary) } else { content() }
-        }
-    }
-}
-
-/// A bookmark on a tag page: a click opens its page, ⌘-click the URL.
-struct TagPageBookmarkRow: View {
-    @Environment(AppModel.self) private var app
-    @Environment(Navigation.self) private var nav
-    let bookmark: BookmarkItem
-
-    var body: some View {
-        // A click opens the bookmark's page, ⌘-click its URL.
-        Button { BookmarkOpen.click(bookmark, nav: nav) } label: {
+    private func header(_ viewID: String) -> some View {
+        let data = live.value ?? TagHeaderData(tagID: nil, body: "", backlinks: [])
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label(bookmark.title, systemImage: "bookmark")
-                Text(bookmark.host).font(.caption).foregroundStyle(.secondary)
+                Label(name, systemImage: "tag").font(.title.bold()).foregroundStyle(tagColors.color(name))
+                TagColorControl(name: name)
                 Spacer()
+                // "Show only one kind" (specs/tag-pages "Open the tag page").
+                Picker("Show", selection: Binding(get: { browser.view(viewID).query.kinds.first.flatMap { k in
+                    browser.view(viewID).query.kinds.count == 1 ? k : nil } }, set: { kind in
+                    browser.update(viewID) { $0.query.kinds = kind.map { [$0] } ?? [] } })) {
+                    Text("All").tag(ItemKind?.none)
+                    Text("Tasks").tag(ItemKind?.some(.task))
+                    Text("Pages").tag(ItemKind?.some(.page))
+                    Text("Bookmarks").tag(ItemKind?.some(.bookmark))
+                    Text("Meetings").tag(ItemKind?.some(.meeting))
+                }
+                .pickerStyle(.segmented).labelsHidden().fixedSize()
+                Button { newSubtag = true } label: { Label("New Subtag", systemImage: "tag") }.disabled(!app.canWrite)
+                Menu {
+                    Button("Rename…") { renaming = true }
+                    Button("Delete…") { deleting = true }.disabled(data.tagID == nil)
+                } label: { Image(systemName: "ellipsis.circle") }
+                .menuStyle(.borderlessButton).fixedSize().disabled(!app.canWrite)
             }
-            .contentShape(Rectangle())
+            .modifier(NewSubtagPrompt(parent: name, isPresented: $newSubtag))
+            .modifier(TagManagementPrompts(name: name, renaming: $renaming, deleting: $deleting))
+            DisclosureGroup(isExpanded: Binding(get: { descriptionOpen ?? !data.body.isEmpty }, set: { descriptionOpen = $0 })) {
+                // One mode: the description in the live-preview editor (live-preview L5).
+                GlyMarkdownEditor(text: data.body, onCommit: { text, session in
+                    Task { await app.send(.updateTagPage(name: name, body: text, session: session)) }
+                })
+                .frame(minHeight: 60, maxHeight: 200)
+            } label: {
+                Text(data.body.isEmpty ? "Describe this \(name.contains("/") ? "tag" : "group")" : "Description").font(.headline)
+            }
+            if !data.backlinks.isEmpty {
+                DisclosureGroup(isExpanded: $backlinksOpen) {
+                    BacklinksView(backlinks: data.backlinks, title: "", emptyText: "")
+                } label: { Text("Backlinks (\(data.backlinks.count))").font(.headline) }
+            }
         }
-        .buttonStyle(.plain)
-        .help(BookmarkMark(title: bookmark.title, description: bookmark.description, tags: bookmark.tags).tooltip(url: bookmark.url))
-        .contextMenu { BookmarkOpen.menu(bookmark, app: app, nav: nav) }
+        .padding([.horizontal, .top])
     }
 }
 
@@ -406,6 +342,7 @@ struct TagPageBookmarkRow: View {
 
 struct QuickOpenView: View {
     @Environment(WikiModel.self) private var wiki
+    @Environment(BrowserModel.self) private var browser
     @Environment(TasksModel.self) private var tasks
     @Environment(PlanningModel.self) private var planning
     @Environment(Clock.self) private var clock
@@ -419,7 +356,11 @@ struct QuickOpenView: View {
     private enum Row: Identifiable {
         case hit(SearchHit)
         case create(String)
-        var id: String { switch self { case .hit(let h): h.ref.kind.rawValue + h.id; case .create(let t): "create:" + t } }
+        /// All items with the typed text, to narrow down further (specs/search "Quick open").
+        case showAll(String)
+        var id: String {
+            switch self { case .hit(let h): h.ref.kind.rawValue + h.id; case .create(let t): "create:" + t; case .showAll(let t): "all:" + t }
+        }
     }
 
     private var rows: [Row] {
@@ -429,6 +370,7 @@ struct QuickOpenView: View {
         if !trimmed.isEmpty, !results.pages.contains(where: { $0.ref.title.caseInsensitiveCompare(trimmed) == .orderedSame }) {
             rows.append(.create(trimmed))
         }
+        if !trimmed.isEmpty { rows.append(.showAll(trimmed)) }
         return rows
     }
 
@@ -483,6 +425,8 @@ struct QuickOpenView: View {
             }
         case .create(let title):
             Label("Create page “\(title)”", systemImage: "plus.circle")
+        case .showAll(let text):
+            Label("Show all results for “\(text)”", systemImage: "line.3.horizontal.decrease.circle")
         }
     }
 
@@ -502,6 +446,11 @@ struct QuickOpenView: View {
             }
         case .create(let title):
             Task { await opener?.createPage(title: title) }
+        case .showAll(let text):
+            var q = ItemQuery.parse(text)
+            q.text = q.text.isEmpty && q.tokens.isEmpty ? text : q.text
+            browser.setQuery(ItemView.all.id, q)
+            nav.go(.items(ItemView.all.id))
         }
     }
 }

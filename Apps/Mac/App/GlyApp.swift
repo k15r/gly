@@ -210,7 +210,7 @@ struct ContentView: View {
                 case .bookmark(let id): BookmarkPageView(id: id).id(id)
                 // One browser per view: each keeps its own results and collapsed groups.
                 case .items(let viewID): ItemBrowserView(viewID: viewID).id(viewID)
-                case .tag(let name): TagPageView(name: name)
+                case .tag(let name): TagPageView(name: name).id(name)
                 case .meeting(let ref): MeetingPageView(ref: ref)
                 }
             }

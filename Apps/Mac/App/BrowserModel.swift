@@ -11,7 +11,7 @@ final class BrowserModel {
     /// Changed filter, grouping or sorting per view id, until reset.
     private var edited: [String: ItemView] = [:]
     /// Tag views by id, so a tag view keeps its display name.
-    private var tagViews: [String: ItemView] = [:]
+    @ObservationIgnored private var tagViews: [String: ItemView] = [:]
     /// The browser view in the main area; nil when it shows something else (Day, an item's page).
     var activeViewID: String?
 
