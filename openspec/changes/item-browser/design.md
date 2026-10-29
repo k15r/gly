@@ -99,7 +99,7 @@ The bar edits the view's `ItemQuery` and never a string, so chips and text stay 
 ### I7: Tag tree
 
 - `TagTreeView` loses its leaves (`TreeLeafRow`, `untaggedItems`), and gains a filter field (case-insensitive substring on the full path; matches keep their parents and are expanded) and view-relative counts (I2).
-- **Click:** in a browser destination it replaces the view's tag filters with this tag; with ⇧ it adds it. On other destinations (Day, an item page) it opens the tag view.
+- **Click:** opens the tag view and expands the tag. ⇧-click adds the tag to the filter of the browser view shown (decided after trying it: the tag page is where a click on a tag should lead).
 - **Context menu:** "Open Tag Page" plus the existing color/rename/delete/new subtag.
 - "Untagged" sets `untagged`.
 

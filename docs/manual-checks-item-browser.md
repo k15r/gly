@@ -38,7 +38,7 @@ All are created by an agent (Claude), so `by:agent` finds them.
 ## D. Tag tree (task 3.2)
 
 - [ ] D1 The tag tree shows tags only (no items below them); in Tasks `demo/atlas` counts its open tasks, in Bookmarks it counts 1 ("Tag hierarchy with counts", "Counts follow the view"); an unused tag shows no number ("Empty tag").
-- [ ] D2 In Bookmarks click `demo/atlas` → only bookmarks tagged with it; ⇧-click `demo/ops` → both tags in the filter (nothing left, as no bookmark has both) ("Click filters the view"). In the Day view, clicking a tag opens its tag page.
+- [ ] D2 Click `…/demo` in the tree → its tag page opens and the tag expands ("Click opens the tag page"). In Bookmarks ⇧-click `demo/atlas` → only bookmarks tagged with it; ⇧-click `demo/ops` too → both tags in the filter (nothing left, as no bookmark has both) ("⇧-click narrows the view").
 - [ ] D3 Type `peop` into "Filter tags" → only `…/demo/people` with `alex` and `sam` (and their parents) remain, expanded ("Find a tag").
 - [ ] D4 In Pages click "Untagged" → "Demo: untagged page" (among other untagged pages) ("Untagged").
 - [ ] D5 In Pages filtered by `#gly/checks/item-browser/demo/ops`, drag "Demo: ops runbook" onto `demo/atlas` → moved (only `demo/atlas` now); drag it back with ⌥ → both tags ("Move a page", "Alias a page"); from an unfiltered view a drop adds the tag ("Tag from a list"); a task moves the same way ("Move a task").

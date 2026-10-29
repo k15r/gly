@@ -352,7 +352,7 @@ private struct OptionalDrag: ViewModifier {
 /// Dropping onto a tag or onto any item of its group moves the dragged item there (⌥ adds the tag instead);
 /// the group being dropped into is highlighted.
 /// The tag tree (specs/tags "Tag tree", item-browser I7): tags only, a filter field, counts of the current view's
-/// items, and clicks that filter the current view (⇧ adds); outside the browser a click opens the tag's view.
+/// items; a click opens the tag's page and expands the tag, ⇧-click adds the tag to the shown view's filter.
 struct TagTreeView: View {
     @Environment(TasksModel.self) private var tasks
     @Environment(WikiModel.self) private var wiki
@@ -429,15 +429,10 @@ enum TagTreeClick {
         browser.activeViewID.map { browser.view($0).query.droppingTags() } ?? ItemQuery()
     }
 
+    /// A click opens the tag's page; ⇧-click adds the tag to the filter of the browser view shown.
     static func tag(_ path: String, browser: BrowserModel, nav: Navigation) {
-        let adding = NSEvent.modifierFlags.contains(.shift)
-        if let id = target(browser) {
-            var q = browser.view(id).query
-            if !adding { q.tags = []; q.untagged = false }
-            q.add(.tag(path))
-            browser.setQuery(id, q)
-        } else if adding, let id = browser.activeViewID {
-            browser.setQuery(id, browser.view(id).query.adding(.tag(path)))     // a tag view narrowed by another tag
+        if NSEvent.modifierFlags.contains(.shift), let id = browser.activeViewID {
+            browser.setQuery(id, browser.view(id).query.adding(.tag(path)))
         } else {
             nav.go(.tag(path))
         }
@@ -531,7 +526,7 @@ struct TagTreeNode: View {
             Spacer()
             if count > 0 { Text("\(count)").foregroundStyle(.secondary).monospacedDigit() }
         }
-        .help("Click: show only items tagged \(node.path) · ⇧-click: add to the filter")
+        .help("Click: open the tag page · ⇧-click: add \(node.path) to the current filter")
         .treeRow(group: .tag(node.path), state: drop, onTap: {
             TagTreeClick.tag(node.path, browser: browser, nav: nav)
             if !node.children.isEmpty { withAnimation { expanded = true } }     // the click also shows the tag's subtags
