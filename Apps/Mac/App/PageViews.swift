@@ -213,8 +213,8 @@ struct PageView: View {
                 .menuStyle(.borderlessButton).fixedSize()
             }
             .padding([.horizontal, .top])
-            Form { TagField(tags: $tags, input: $pendingTag) }
-                .formStyle(.columns).padding(.horizontal)
+            TagField(tags: $tags, input: $pendingTag)
+                .padding(.horizontal).padding(.top, 6)
                 .onChange(of: tags) { _, new in
                     guard new != page.tags else { return }
                     Task { await app.send(.updatePage(id: page.id, PagePatch(tags: new))) }

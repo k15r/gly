@@ -67,8 +67,8 @@ struct MeetingPageView: View {
     private func content(_ data: MeetingPageData) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             header(data).padding([.horizontal, .top])
-            Form { TagField(tags: $tags, input: $pendingTag) }
-                .formStyle(.columns).padding(.horizontal)
+            TagField(tags: $tags, input: $pendingTag)
+                .padding(.horizontal).padding(.top, 6)
                 .onChange(of: tags) { _, new in
                     guard new != (data.item?.tags ?? []) else { return }
                     save(data, body: nil, tags: new, session: nil)

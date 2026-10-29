@@ -397,6 +397,23 @@ struct TaskEditor: View {
 
 /// Tag entry: chips plus an "Add tag" menu that mirrors the tag hierarchy (specs/tags "Tag picker").
 /// `input` holds a typed-but-unconfirmed new tag name (committed on save by the editors).
+/// A tag chip whose ✕ appears on hover.
+struct RemovableTagChip: View {
+    let name: String
+    let remove: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 2) {
+            TagChip(name: name, opensTagPage: false)
+            Button(action: remove) { Image(systemName: "xmark.circle.fill").font(.caption) }
+                .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove tag")
+                .opacity(hovering ? 1 : 0)
+        }
+        .onHover { hovering = $0 }
+    }
+}
+
 struct TagField: View {
     @Environment(TasksModel.self) private var tasks
     @Binding var tags: [String]
@@ -427,22 +444,21 @@ struct TagField: View {
     }
 
     var body: some View {
-        LabeledContent("Tags") {
-            VStack(alignment: .leading, spacing: 6) {
+        // Tags as chips with ✕ on hover and a faded "+ Tag" (task-properties T4, T5); same on tasks, pages and meetings.
+        VStack(alignment: .leading, spacing: 6) {
                 FlowLayout(spacing: 6) {
                     ForEach(tags, id: \.self) { tag in
-                        HStack(spacing: 2) {
-                            TagChip(name: tag, opensTagPage: false)
-                            Button { tags.removeAll { $0 == tag } } label: { Image(systemName: "xmark").font(.caption2) }
-                                .buttonStyle(.plain).help("Remove tag")
-                        }
+                        RemovableTagChip(name: tag) { tags.removeAll { $0 == tag } }
                     }
                     Menu {
                         ForEach(Self.tree(tasks.allTagNames())) { node in nodeMenu(node) }
                         Divider()
                         Button("New tag…") { newTagPrefix = "" }
-                    } label: { Label("Add tag", systemImage: "plus") }
-                    .menuStyle(.borderlessButton).fixedSize()
+                    } label: {
+                        Label("Tag", systemImage: "plus").font(.callout).foregroundStyle(Color.secondary.opacity(0.7))
+                    }
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .help("Add a tag")
                 }
                 if let prefix = newTagPrefix {
                     HStack {
@@ -456,7 +472,6 @@ struct TagField: View {
                     .onChange(of: input) { problem = nil }
                 }
                 if let problem { Text(problem).font(.caption).foregroundStyle(.red) }
-            }
         }
         // Focus the name field as soon as "New tag…" is chosen (after the menu has closed).
         .onChange(of: newTagPrefix) { _, prefix in

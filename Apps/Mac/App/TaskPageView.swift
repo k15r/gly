@@ -75,7 +75,11 @@ struct TaskPageView: View {
             }
             .padding([.horizontal, .top])
 
-            fields(task).padding(.horizontal).padding(.top, 8)
+            TaskPropertyRow(task: task, tags: $tags, pendingTag: $pendingTag).padding(.horizontal).padding(.top, 8)
+                .onChange(of: tags) { _, new in
+                    guard new != task.tags else { return }
+                    send(.updateTask(id: task.id, TaskPatch(tags: new)))
+                }
             if task.effort != nil || task.hasEstimatedParts { TaskProgressRow(task: task, work: work).padding(.horizontal).padding(.top, 6) }
             if allPartsDone(task) {
                 // specs/tasks "All parts done": offered, never automatic.
@@ -85,12 +89,6 @@ struct TaskPageView: View {
                 }
                 .font(.callout).padding(.horizontal).padding(.top, 6)
             }
-            Form { TagField(tags: $tags, input: $pendingTag) }
-                .formStyle(.columns).padding(.horizontal)
-                .onChange(of: tags) { _, new in
-                    guard new != task.tags else { return }
-                    send(.updateTask(id: task.id, TaskPatch(tags: new)))
-                }
             Divider().padding(.top, 8)
 
             // One mode: the notes in the live-preview editor (specs/markdown-editing "Same editor everywhere").
@@ -100,81 +98,6 @@ struct TaskPageView: View {
             .frame(maxHeight: .infinity)
             Divider()
             BacklinksView(backlinks: backlinks).padding().frame(maxHeight: 180, alignment: .top)
-        }
-    }
-
-    /// Priority, due date, status/snooze, each saved on change.
-    private func fields(_ task: TaskItem) -> some View {
-        // Wraps onto a second line when the window is narrow; every group keeps its natural width.
-        FlowLayout(spacing: 16) {
-            Picker("Priority", selection: Binding(get: { task.priority }, set: { p in
-                send(.updateTask(id: task.id, TaskPatch(priority: p)))
-            })) {
-                ForEach(Priority.allCases.reversed(), id: \.self) { Text($0.label).tag($0) }
-            }
-            .fixedSize()
-
-            Picker("Effort", selection: Binding(get: { task.effort }, set: { e in
-                send(.updateTask(id: task.id, TaskPatch(effort: .some(e))))
-            })) {
-                Text("–").tag(Effort?.none)
-                ForEach(Effort.allCases, id: \.self) { Text($0.label).tag(Effort?.some($0)) }
-            }
-            .fixedSize()
-            .help("How much work this is (sizes in Settings → Planning)")
-
-            dueControl(task)
-
-            Picker("Status", selection: Binding(get: { task.status }, set: { status in
-                let snooze = status == .snoozed ? LocalDay(date: Date()).adding(days: 1).description : nil
-                send(.setStatus(id: task.id, status, snoozedUntil: snooze))
-            })) {
-                Text("Open").tag(TaskStatus.open)
-                Text("Snoozed").tag(TaskStatus.snoozed)
-                Text("Done").tag(TaskStatus.done)
-                Text("Dropped").tag(TaskStatus.dropped)
-            }
-            .fixedSize()
-            if task.status == .snoozed, let until = task.snoozedUntil.flatMap(LocalDay.init) {
-                DatePicker("until", selection: Binding(get: { until.interval().start }, set: { date in
-                    send(.setStatus(id: task.id, .snoozed, snoozedUntil: LocalDay(date: date).description))
-                }), displayedComponents: [.date])
-                .fixedSize()
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// "Add due date", or `Due [date] [time / Add time] ✕`.
-    @ViewBuilder
-    private func dueControl(_ task: TaskItem) -> some View {
-        if let due = task.due {
-            HStack(spacing: 6) {
-                Text("Due").foregroundStyle(.secondary).fixedSize()
-                DatePicker("Due", selection: Binding(get: { due.date() ?? Date() }, set: { date in
-                    send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: date, includeTime: due.time != nil)))))
-                }), displayedComponents: due.time == nil ? [.date] : [.date, .hourAndMinute])
-                .labelsHidden().fixedSize()
-                if due.time == nil {
-                    Button("Add time") {
-                        let start = due.date() ?? Date()
-                        send(.updateTask(id: task.id, TaskPatch(due: .some(Due(date: start.addingTimeInterval(9 * 3600), includeTime: true)))))
-                    }
-                    .buttonStyle(.borderless).fixedSize()
-                } else {
-                    Button("Remove time") {
-                        send(.updateTask(id: task.id, TaskPatch(due: .some(Due(day: due.day)))))
-                    }
-                    .buttonStyle(.borderless).fixedSize()
-                }
-                Button { send(.updateTask(id: task.id, TaskPatch(due: .some(nil)))) } label: { Image(systemName: "xmark.circle.fill") }
-                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Remove due date")
-            }
-        } else {
-            Button { send(.updateTask(id: task.id, TaskPatch(due: .some(Due(day: clock.today.description))))) } label: {
-                Label("Add due date", systemImage: "calendar.badge.plus")
-            }
-            .buttonStyle(.borderless).fixedSize()
         }
     }
 
@@ -200,7 +123,6 @@ struct TaskProgressRow: View {
     let task: TaskItem
     let work: [WorkEntry]
     @State private var editing = false
-    @State private var draft = 0
 
     var body: some View {
         let dayLength = planning.hours.minutesPerDay
@@ -232,27 +154,10 @@ struct TaskProgressRow: View {
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
             Spacer()
-            Button("Set remaining…") { draft = left; editing = true }
+            Button("Set remaining…") { editing = true }
                 .buttonStyle(.borderless).disabled(!app.canWrite)
                 .popover(isPresented: $editing, arrowEdge: .bottom) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Stepper(value: $draft, in: 0...max(effortMinutes * 2, 60), step: 30) {
-                            // Fixed width, so the arrows stay put while the text grows ("7h" → "7h 30m").
-                            Text("\(formatEffort(Double(draft), dayLength: dayLength)) left").monospacedDigit()
-                                .frame(width: 130, alignment: .leading)
-                        }
-                        HStack {
-                            Button("Cancel") { editing = false }
-                            Spacer()
-                            Button("Set") {
-                                editing = false
-                                let day = LocalDay(date: Date()).description
-                                Task { await app.send(.setRemaining(id: task.id, minutes: draft, effortMinutes: effortMinutes, day: day)) }
-                            }
-                            .keyboardShortcut(.defaultAction)
-                        }
-                    }
-                    .padding().frame(width: 240)
+                    RemainingEditor(task: task) { editing = false }.padding().frame(width: 240)
                 }
             if !work.isEmpty {
                 Button("Reset") { Task { await app.send(.resetRemaining(id: task.id)) } }
@@ -271,5 +176,38 @@ struct TaskProgressRow: View {
         case .agent: return "\(day) \(entry.minutes < 0 ? "−" : "")\(amount) by an agent"
         case .part: return "\(day) \(amount)"
         }
+    }
+}
+
+/// Sets what's left of a task's effort, in 30-minute steps (task-progress P5; also in the effort chip's popover).
+struct RemainingEditor: View {
+    @Environment(AppModel.self) private var app
+    @Environment(PlanningModel.self) private var planning
+    let task: TaskItem
+    let onDone: () -> Void
+    @State private var draft = 0
+
+    var body: some View {
+        let dayLength = planning.hours.minutesPerDay
+        let effortMinutes = task.effort.map { planning.sizes[$0] } ?? 0
+        VStack(alignment: .leading, spacing: 10) {
+            Stepper(value: $draft, in: 0...max(effortMinutes * 2, 60), step: 30) {
+                // Fixed width, so the arrows stay put while the text grows ("7h" → "7h 30m").
+                Text("\(formatEffort(Double(draft), dayLength: dayLength)) left").monospacedDigit()
+                    .frame(width: 130, alignment: .leading)
+            }
+            HStack {
+                Button("Cancel", action: onDone)
+                Spacer()
+                Button("Set") {
+                    let day = LocalDay(date: Date()).description
+                    Task { await app.send(.setRemaining(id: task.id, minutes: draft, effortMinutes: effortMinutes, day: day)) }
+                    onDone()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!app.canWrite)
+            }
+        }
+        .onAppear { draft = task.remaining(sizes: planning.sizes, dayMinutes: dayLength) ?? effortMinutes }
     }
 }
