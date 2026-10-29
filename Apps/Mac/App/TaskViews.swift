@@ -397,20 +397,35 @@ struct TaskEditor: View {
 
 /// Tag entry: chips plus an "Add tag" menu that mirrors the tag hierarchy (specs/tags "Tag picker").
 /// `input` holds a typed-but-unconfirmed new tag name (committed on save by the editors).
-/// A tag chip whose ✕ appears on hover.
+/// A tag as a property chip in its color; a click opens the tag page, ✕ (on hover) removes it (task-properties T5).
 struct RemovableTagChip: View {
+    @Environment(Navigation.self) private var nav
+    @Environment(TagColorModel.self) private var tagColors
     let name: String
     let remove: () -> Void
     @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 2) {
-            TagChip(name: name, opensTagPage: false)
-            Button(action: remove) { Image(systemName: "xmark.circle.fill").font(.caption) }
-                .buttonStyle(.plain).foregroundStyle(.secondary).help("Remove tag")
-                .opacity(hovering ? 1 : 0)
+        HStack(spacing: 5) {
+            Image(systemName: "tag")
+            Text(name)
+            Button(action: remove) { Image(systemName: "xmark").font(.caption2.bold()) }
+                .buttonStyle(.plain).help("Remove tag")
+                .opacity(hovering ? 0.8 : 0).frame(width: hovering ? nil : 0)
         }
+        .modifier(ChipStyle(hovering: hovering, tint: tagColors.color(name), tinted: true))
         .onHover { hovering = $0 }
+        .onTapGesture { nav.go(.tag(name)) }
+        .help("Open tag page")
+        .animation(.easeOut(duration: 0.12), value: hovering)
+    }
+}
+
+/// "+ Tag" with the dashed look of an empty property chip.
+private struct AddTagLabel: View {
+    @State private var hovering = false
+    var body: some View {
+        Label("+ Tag", systemImage: "tag").modifier(ChipStyle(isEmpty: true, hovering: hovering)).onHover { hovering = $0 }
     }
 }
 
@@ -455,9 +470,9 @@ struct TagField: View {
                         Divider()
                         Button("New tag…") { newTagPrefix = "" }
                     } label: {
-                        Label("Tag", systemImage: "plus").font(.callout).foregroundStyle(Color.secondary.opacity(0.7))
+                        AddTagLabel()
                     }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
                     .help("Add a tag")
                 }
                 if let prefix = newTagPrefix {

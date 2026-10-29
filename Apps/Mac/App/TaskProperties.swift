@@ -16,16 +16,34 @@ struct PropertyChip<Popup: View>: View {
     var body: some View {
         Button { open.toggle() } label: {
             Label(isEmpty ? "+ " + text : text, systemImage: symbol)
-                .font(.callout)
-                .foregroundStyle(isEmpty ? Color.secondary.opacity(0.7) : tint)
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Capsule().fill(Color.secondary.opacity(isEmpty ? (hovering ? 0.08 : 0) : (hovering ? 0.18 : 0.1))))
-                .overlay(Capsule().strokeBorder(Color.secondary.opacity(isEmpty ? 0.3 : 0), style: StrokeStyle(lineWidth: 1, dash: [3])))
+                .modifier(ChipStyle(isEmpty: isEmpty, hovering: hovering, tint: tint))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .help(help)
         .popover(isPresented: $open, arrowEdge: .bottom) { popup { open = false }.padding(12) }
+    }
+}
+
+/// The look of every property chip: a capsule in callout size; filled when set (in the tint for colored values such as
+/// tags), a dashed outline and faded text when empty (task-properties T1).
+struct ChipStyle: ViewModifier {
+    var isEmpty = false
+    var hovering = false
+    var tint: Color = .primary
+    /// A colored fill (tags) instead of the neutral grey.
+    var tinted = false
+
+    func body(content: Content) -> some View {
+        let fill = tinted ? tint : Color.secondary
+        content
+            .font(.callout)
+            .lineLimit(1)
+            .foregroundStyle(isEmpty ? Color.secondary.opacity(0.7) : tint)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Capsule().fill(fill.opacity(isEmpty ? (hovering ? 0.08 : 0) : (hovering ? 0.2 : (tinted ? 0.13 : 0.1)))))
+            .overlay(Capsule().strokeBorder(Color.secondary.opacity(isEmpty ? 0.3 : 0), style: StrokeStyle(lineWidth: 1, dash: [3])))
+            .contentShape(Capsule())
     }
 }
 
