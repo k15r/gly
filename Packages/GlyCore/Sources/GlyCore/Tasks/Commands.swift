@@ -151,6 +151,10 @@ public enum Command: Codable, Equatable {
     case createPage(PageDraft)
     case updatePage(id: String, PagePatch)
     case deletePage(id: String)
+    /// Bookmarks (bookmarks B2): an already bookmarked URL returns the existing one, unchanged.
+    case createBookmark(BookmarkDraft)
+    case updateBookmark(id: String, BookmarkPatch)
+    case deleteBookmark(id: String)
     /// Replaces a tag's page description; creates the tag if it doesn't exist (e.g. a group node like `person`).
     case updateTagPage(name: String, body: String, session: String? = nil)
     /// Brings a deleted page or task back as it was when deleted, as a change of the caller (trash-bin T2).
@@ -325,6 +329,15 @@ public struct CommandHandler {
             try batch.softDelete("items", id: id)
             return CommandOK(id: id)
 
+        case .createBookmark(let draft):
+            return try createBookmark(draft, batch: batch)
+
+        case .updateBookmark(let id, let patch):
+            return try updateBookmark(id, patch, batch: batch)
+
+        case .deleteBookmark(let id):
+            return try deleteBookmark(id, batch: batch)
+
         case .updateTagPage(let name, let body, _):
             let tag = try TagName(name)
             let (text, unresolved) = try LinkResolver.resolve(body, db: db)
@@ -343,6 +356,7 @@ public struct CommandHandler {
             guard let entry = try TrashQueries.entry(db, id: id) else {
                 throw CommandFailure(.notFound, "\(id) is not in the trash.")
             }
+            try Self.checkRestorable(id, db: db)
             if let deleteBatch = entry.batch {
                 // Revert only this item and its tag assignments from the delete batch (assignments removed earlier stay removed).
                 let assignments = Set(try String.fetchAll(db, sql: "SELECT id FROM item_tags WHERE item_id = ?", arguments: [id]))
@@ -684,7 +698,7 @@ public struct CommandHandler {
     /// Makes the task's live tag set equal to `names`: tombstones removed assignments, inserts new ones,
     /// creates missing tags (reusing an existing tag with the same case-folded key). Returns whether anything changed.
     @discardableResult
-    private func replaceTags(of itemID: String, with names: [TagName], batch: Batch) throws -> Bool {
+    func replaceTags(of itemID: String, with names: [TagName], batch: Batch) throws -> Bool {
         let db = batch.db
         let current = try Row.fetchAll(db, sql: """
             SELECT it.id AS assignment, t.name_key FROM live_item_tags it JOIN live_tags t ON t.id = it.tag_id WHERE it.item_id = ?

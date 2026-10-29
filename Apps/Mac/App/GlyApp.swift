@@ -456,6 +456,7 @@ struct TreeLeafRow: View {
         case .task: leaf.snoozed ? "moon.zzz" : "circle"
         case .tag: "tag"
         case .meeting: "calendar"
+        case .bookmark: "bookmark"
         }
     }
 
@@ -497,7 +498,7 @@ struct TreeLeafRow: View {
         case .page: nav.go(.page(leaf.itemID))
         case .task: nav.go(.task(leaf.itemID))
         case .meeting: nav.go(.meeting(.notes(leaf.itemID)))
-        case .tag: break
+        case .tag, .bookmark: break      // bookmarks aren't tree leaves
         }
     }
 
@@ -508,6 +509,7 @@ struct TreeLeafRow: View {
             case .page: await app.send(.deletePage(id: id))
             case .task: await app.send(.deleteTask(id: id))
             case .meeting: await app.send(.deleteMeetingNotes(id: id))
+            case .bookmark: await app.send(.deleteBookmark(id: id))
             case .tag: return
             }
             if nav.current == .page(id) || nav.current == .task(id) || nav.current == .meeting(.notes(id)) { nav.back() }
@@ -530,7 +532,7 @@ enum ItemMove {
             switch kind {
             case .page: guard let page = wiki.page(id) else { continue }; current = page.tags
             case .task: guard let task = tasks.task(id: id) else { continue }; current = task.tags
-            case .meeting:
+            case .meeting, .bookmark:
                 guard let tags = try? wiki.store?.read({ try TaskQueries.tagsByItem($0, ids: [id])[id] ?? [] }) else { continue }
                 current = tags
             case .tag: continue
@@ -549,6 +551,7 @@ enum ItemMove {
                 case .page: await app.send(.updatePage(id: id, PagePatch(tags: tags)))
                 case .task: await app.send(.updateTask(id: id, TaskPatch(tags: tags)))
                 case .meeting: await app.send(.updateMeetingNotes(id: id, body: nil, tags: tags))
+                case .bookmark: await app.send(.updateBookmark(id: id, BookmarkPatch(tags: tags)))
                 case .tag: break
                 }
             }

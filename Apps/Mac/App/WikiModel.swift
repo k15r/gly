@@ -76,7 +76,7 @@ final class WikiModel {
 
     /// "Page · person/alex · edited 3 days ago"
     static func secondLine(kind: LinkRef.Kind, tags: [String], modified: Date?) -> String {
-        let kindText = switch kind { case .page: "Page"; case .task: "Task"; case .tag: "Tag page"; case .meeting: "Meeting" }
+        let kindText = switch kind { case .page: "Page"; case .task: "Task"; case .tag: "Tag page"; case .meeting: "Meeting"; case .bookmark: "Bookmark" }
         let edited = modified.map { "edited " + RelativeDateTimeFormatter().localizedString(for: $0, relativeTo: Date()) }
         return ([kindText] + (tags.isEmpty ? [] : [tags.joined(separator: ", ")]) + [edited].compactMap { $0 }).joined(separator: " · ")
     }

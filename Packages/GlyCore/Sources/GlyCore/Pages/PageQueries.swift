@@ -18,12 +18,15 @@ public struct LinkRef: Equatable, Hashable, Identifiable {
         case page, task, tag
         /// A meeting's notes document (meeting-pages N7); not offered by the `[[` picker.
         case meeting
+        /// A bookmark (bookmarks B2); the picker inserts it as a web link.
+        case bookmark
 
-        /// The kind of an `items` row (`info`, `task`, `event_note`).
+        /// The kind of an `items` row (`info`, `task`, `event_note`, `bookmark`).
         public init(itemKind: String) {
             switch itemKind {
             case "info": self = .page
             case "event_note": self = .meeting
+            case "bookmark": self = .bookmark
             default: self = .task
             }
         }

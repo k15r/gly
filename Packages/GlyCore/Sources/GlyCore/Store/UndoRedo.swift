@@ -102,6 +102,16 @@ extension Database {
         return (row["kind"] as String) == WorkKind.adjust.rawValue ? "Set remaining effort of \(title)" : "Record work on \(title)"
     }
 
+    /// bookmarks B2: "Add bookmark …", "Delete bookmark …", "Restore bookmark …", "Edit bookmark …".
+    private static func bookmarkLabel(_ own: [Row], title: String) -> String {
+        let quoted = "bookmark “\(title)”"
+        if own.contains(where: { ($0["op"] as String) == "insert" }) { return "Add \(quoted)" }
+        if let entry = own.first(where: { ($0["field"] as String?) == "deleted_at" }) {
+            return ChangeValue.decode(entry["new_value"]).isNull ? "Restore \(quoted)" : "Delete \(quoted)"
+        }
+        return "Edit \(quoted)"
+    }
+
     /// Describes a normal change batch by its entries: create / delete / status change / edit of an item.
     public func label(ofBatch batchID: String) throws -> String {
         let entries = try Row.fetchAll(self, sql: "SELECT * FROM change_log WHERE batch = ? ORDER BY seq", arguments: [batchID])
@@ -151,6 +161,7 @@ extension Database {
             let b = try String.fetchOne(self, sql: "SELECT blocking FROM items WHERE id = ?", arguments: [rowID])
             return "\(Self.blockingVerb(b)) “\(item["title"] as String)” (this occurrence)"
         }
+        if (item["kind"] as String) == "bookmark" { return Self.bookmarkLabel(own, title: item["title"]) }
         let isPage = (item["kind"] as String) == "info"
         let quoted = (isPage ? "page " : "") + "“\(item["title"] as String)”"
         if own.contains(where: { ($0["op"] as String) == "insert" }) { return "Create \(quoted)" }

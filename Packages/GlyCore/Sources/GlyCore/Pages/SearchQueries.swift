@@ -9,6 +9,8 @@ public struct SearchHit: Equatable, Identifiable {
     public let excerpt: String
     public var tags: [String] = []
     public var modifiedAt: Date?
+    /// A bookmark's URL.
+    public var url: String?
 }
 
 /// Results grouped by kind; each group ordered by relevance (bm25 is not comparable across kinds).
@@ -18,9 +20,11 @@ public struct SearchResults: Equatable {
     public var tags: [SearchHit] = []
     /// Meetings with notes (meeting-pages), found by title and notes text.
     public var meetings: [SearchHit] = []
+    /// Bookmarks (bookmarks B5), by title, URL, description and tags; `url` is set.
+    public var bookmarks: [SearchHit] = []
     public init() {}
-    public var isEmpty: Bool { pages.isEmpty && tasks.isEmpty && tags.isEmpty && meetings.isEmpty }
-    public var all: [SearchHit] { pages + tasks + meetings + tags }
+    public var isEmpty: Bool { pages.isEmpty && tasks.isEmpty && tags.isEmpty && meetings.isEmpty && bookmarks.isEmpty }
+    public var all: [SearchHit] { pages + tasks + meetings + bookmarks + tags }
 }
 
 public enum SearchQueries {
@@ -31,7 +35,7 @@ public enum SearchQueries {
         return words.enumerated().map { i, w in i == words.count - 1 ? "\"\(w)\"*" : "\"\(w)\"" }.joined(separator: " ")
     }
 
-    public static func search(_ db: Database, _ input: String, kinds: Set<LinkRef.Kind> = [.page, .task, .tag, .meeting],
+    public static func search(_ db: Database, _ input: String, kinds: Set<LinkRef.Kind> = [.page, .task, .tag, .meeting, .bookmark],
                               limit: Int = 20) throws -> SearchResults {
         guard let match = ftsQuery(input) else { return SearchResults() }
         var results = SearchResults()
@@ -43,6 +47,7 @@ public enum SearchQueries {
             case .task: (ftsKind, extra) = ("task", "")
             case .tag: (ftsKind, extra) = ("tag", " AND owner_id NOT IN (SELECT id FROM tags WHERE archived = 1)")
             // Annotation rows that only carry a blocking override have no notes and aren't results.
+            case .bookmark: (ftsKind, extra) = ("bookmark", "")
             case .meeting: (ftsKind, extra) = ("event_note", " AND owner_id IN (SELECT id FROM live_items WHERE kind = 'event_note' AND body != '')")
             }
             let rows = try Row.fetchAll(db, sql: """
@@ -61,11 +66,28 @@ public enum SearchQueries {
             case .task: results.tasks = hits
             case .tag: results.tags = hits
             case .meeting: results.meetings = hits
+            case .bookmark: results.bookmarks = try bookmarkHits(db, hits, input: input, limit: limit)
             }
         }
         results.pages = try enrich(db, results.pages); results.tasks = try enrich(db, results.tasks); results.tags = try enrich(db, results.tags)
         results.meetings = try enrich(db, results.meetings)
         return results
+    }
+
+    /// Text matches, then bookmarks whose tags match the input; with tags and URLs.
+    static func bookmarkHits(_ db: Database, _ textHits: [SearchHit], input: String, limit: Int) throws -> [SearchHit] {
+        var hits = textHits
+        let seen = Set(hits.map(\.id))
+        if hits.count < limit {
+            for b in try BookmarkQueries.list(db, text: input, limit: limit) where !seen.contains(b.id) && hits.count < limit {
+                hits.append(SearchHit(ref: LinkRef(kind: .bookmark, id: b.id, title: b.title), excerpt: b.description))
+            }
+        }
+        let marks = hits.map { _ in "?" }.joined(separator: ",")
+        let rows = try Row.fetchAll(db, sql: "SELECT id, url FROM live_items WHERE kind = 'bookmark' AND id IN (\(marks))",
+                                    arguments: StatementArguments(hits.map(\.id)))
+        let urls = Dictionary(rows.map { ($0["id"] as String, $0["url"] as String? ?? "") }, uniquingKeysWith: { a, _ in a })
+        return try enrich(db, hits).map { var h = $0; h.url = urls[h.id]; return h }
     }
 
     /// What lives under a tag, for the link picker after `[[person/alex/` (no title typed yet): live pages and open tasks

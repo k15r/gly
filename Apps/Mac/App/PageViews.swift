@@ -84,6 +84,7 @@ struct BacklinksView: View {
         case .task: nav.go(.task(ref.id))
         case .tag: nav.go(.tag(ref.title))
         case .meeting: nav.go(.meeting(.notes(ref.id)))
+        case .bookmark: break            // a bookmark's description isn't a page to open
         }
     }
 }
@@ -452,6 +453,7 @@ struct QuickOpenView: View {
             case .task: nav.go(.task(hit.ref.id))
             case .tag: nav.go(.tag(hit.ref.title))
             case .meeting: nav.go(.meeting(.notes(hit.ref.id)))
+            case .bookmark: if let url = hit.url.flatMap(URL.init(string:)) { NSWorkspace.shared.open(url) }
             }
         case .create(let title):
             Task { await opener?.createPage(title: title) }

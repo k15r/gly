@@ -6,7 +6,7 @@ import GRDB
 public enum DerivedIndex {
     /// Columns whose change requires a refresh, per table.
     static let watched: [String: Set<String>] = [
-        "items": ["title", "body", "deleted_at", "kind"],
+        "items": ["title", "body", "deleted_at", "kind", "url"],
         "tags": ["name", "page_body", "deleted_at"],
     ]
 
@@ -31,11 +31,15 @@ public enum DerivedIndex {
     public static func refresh(_ db: Database, table: String, id: String) throws {
         let row: Row?
         let kind: String, title: String, text: String
+        var searchText: String?
         switch table {
         case "items":
-            row = try Row.fetchOne(db, sql: "SELECT kind, title, body, deleted_at FROM items WHERE id = ?", arguments: [id])
+            // `*`: before migration v9 there is no `url` column (older migrations rebuild this index too).
+            row = try Row.fetchOne(db, sql: "SELECT * FROM items WHERE id = ?", arguments: [id])
             guard let row else { return }
             (kind, title, text) = (row["kind"], row["title"], row["body"])
+            // A bookmark is found by its URL too (bookmarks B2).
+            if let url: String = row["url"] { searchText = LinkParser.plainText(text) + "\n" + url }
         case "tags":
             row = try Row.fetchOne(db, sql: "SELECT name, page_body, deleted_at FROM tags WHERE id = ?", arguments: [id])
             guard let row else { return }
@@ -62,7 +66,7 @@ public enum DerivedIndex {
         try db.execute(sql: "DELETE FROM search_index WHERE rowid = ?", arguments: [rowid])
         guard (row?["deleted_at"] as Date?) == nil else { return }
         try db.execute(sql: "INSERT INTO search_index (rowid, owner_table, owner_id, kind, title, text) VALUES (?, ?, ?, ?, ?, ?)",
-                       arguments: [rowid, table, id, kind, title, LinkParser.plainText(text)])
+                       arguments: [rowid, table, id, kind, title, searchText ?? LinkParser.plainText(text)])
     }
 
     /// Rebuilds both indexes from scratch (migration backfill; later after sync).
