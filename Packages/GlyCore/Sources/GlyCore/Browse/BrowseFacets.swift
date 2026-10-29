@@ -50,8 +50,6 @@ public struct ItemGroup: Equatable, Identifiable {
 }
 
 public enum BrowseGroups {
-    // One case per grouping; each is a few lines.
-    // swiftlint:disable:next cyclomatic_complexity
     public static func group(_ items: [BrowseItem], by grouping: ItemGrouping, query: ItemQuery, sort: ItemSort,
                              today: LocalDay, calendar: Calendar = .current) -> [ItemGroup] {
         func groups(_ order: [(String, String)], _ key: (BrowseItem) -> [String]) -> [ItemGroup] {
