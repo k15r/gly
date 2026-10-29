@@ -23,7 +23,7 @@
 
 - [x] 5.1 Migration v10 `views` table, view commands with undo labels, `ViewQueries` (I3); verify with tests for create/update/delete, undo, labels and the migration
 - [ ] 5.2 App: saved views from the store (sidebar, Save View, Update View, rename, delete through commands), one-time import from `UserDefaults` (I3); verify manually "Save a view" again and that views saved before reappear once
-- [ ] 5.3 MCP tools `list_views`, `create_view`, `update_view`, `delete_view`, `list_items` (I9); verify with MCP tests for "Agent saves a view", "Agent changes and deletes a view", "Preset views are read-only", "Agent runs a view", "Agent filters directly"
+- [x] 5.3 MCP tools `list_views`, `create_view`, `update_view`, `delete_view`, `list_items` (I9); verify with MCP tests for "Agent saves a view", "Agent changes and deletes a view", "Preset views are read-only", "Agent runs a view", "Agent filters directly"
 
 ## 4. End to end
 

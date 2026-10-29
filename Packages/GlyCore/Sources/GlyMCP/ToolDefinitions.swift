@@ -35,7 +35,7 @@ public enum ToolDefinitions {
     static let linkNote = "Markdown may link to pages, tasks and tags: write [[Exact Title]] (resolved if exactly one page, task or tag has that title or name), narrow it with a prefix ([[page:Title]], [[task:Title]], [[tag:project/atlas]]) or a tag path ([[person/alex/Goals]] = the page or task titled Goals that carries the tag person/alex), or reuse the canonical form [label](gly://item/<id>) / [label](gly://tag/<id>) returned by tools. Titles may repeat (e.g. a Goals page per person). Resolution happens once; afterwards the link points to the id. Unresolved links stay as 'missing page' links and are listed in `unresolved` and `unresolved_links` (with candidates when several items matched – retry with a tag path or prefix). Ordinary web links ([text](https://…)) are fine too."
     static let pageShape = "A page is {id, title, text, tags, created_at, modified_at, modified_by, links: [{id, kind, title, display, tags, state}], backlinks: [{id, kind, title, display, tags, excerpt}]}; kind is page, task or tag; state is live, deleted or missing; display adds a qualifier (\"Goals · person/alex\") when titles repeat."
 
-    public static let all: [Tool] = core + bookmarkTools
+    public static let all: [Tool] = core + bookmarkTools + viewTools
 
     static let core: [Tool] = [
         Tool(name: "get_schedule",
