@@ -10,6 +10,8 @@ struct PropertyChip<Popup: View>: View {
     var isEmpty = false
     /// The small variant of task rows (item rows show the task page's chips on hover).
     var compact = false
+    /// Told when the popover opens and closes (a hover-only chip must stay while its popover is open).
+    var onOpenChange: (Bool) -> Void = { _ in }
     let help: String
     @ViewBuilder let popup: (_ close: @escaping () -> Void) -> Popup
     @State private var open = false
@@ -24,6 +26,7 @@ struct PropertyChip<Popup: View>: View {
         .onHover { hovering = $0 }
         .help(help)
         .popover(isPresented: $open, arrowEdge: .bottom) { popup { open = false }.padding(12) }
+        .onChange(of: open) { _, isOpen in onOpenChange(isOpen) }
     }
 }
 

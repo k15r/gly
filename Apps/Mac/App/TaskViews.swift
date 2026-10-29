@@ -56,6 +56,8 @@ struct TaskRow: View {
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
     @State private var hovering = false
+    /// A property chip's popover is open: the hover chips stay while the pointer is in the popover.
+    @State private var chipOpen = false
 
     private var showsDone: Bool { task.status == .done || pendingCompletion != nil }
 
@@ -159,7 +161,7 @@ struct TaskRow: View {
         let progressed = task.workedMinutes != 0 || parts.contains { $0.estimate != nil }
         let snoozedUntil = task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil
         let editable = app.canWrite && task.status != .done && task.status != .dropped
-        let showEmpty = hovering && editable
+        let showEmpty = (hovering || chipOpen) && editable
         let effortEmpty = task.effort == nil && !progressed
         let effortText: String = {
             if let effort = task.effort {
@@ -170,12 +172,12 @@ struct TaskRow: View {
         HStack(spacing: 4) {
             if showEmpty {
                 PropertyChip(symbol: task.priority.symbol ?? "flag", text: task.priority == .none ? "Priority" : task.priority.label,
-                             tint: task.priority.tint, isEmpty: task.priority == .none, compact: true, help: "Priority") { close in
+                             tint: task.priority.tint, isEmpty: task.priority == .none, compact: true, onOpenChange: { chipOpen = $0 }, help: "Priority") { close in
                     PriorityPicker(current: task.priority) { p in send(.updateTask(id: task.id, TaskPatch(priority: p))); close() }
                 }
             }
             if !effortEmpty || showEmpty {
-                PropertyChip(symbol: "gauge.with.dots.needle.33percent", text: effortText, isEmpty: effortEmpty, compact: true, help: "Effort") { close in
+                PropertyChip(symbol: "gauge.with.dots.needle.33percent", text: effortText, isEmpty: effortEmpty, compact: true, onOpenChange: { chipOpen = $0 }, help: "Effort") { close in
                     EffortPicker(task: task, onDone: close)
                 }
                 .disabled(!editable)
@@ -183,7 +185,7 @@ struct TaskRow: View {
             if task.due != nil || showEmpty {
                 let overdue = status?.kind == .overdue || status?.kind == .cantFit
                 PropertyChip(symbol: "calendar", text: task.due.map(TaskPropertyRow.shortDue) ?? "Due",
-                             tint: overdue ? StatusKind.overdue.color : .primary, isEmpty: task.due == nil, compact: true, help: "Due date") { close in
+                             tint: overdue ? StatusKind.overdue.color : .primary, isEmpty: task.due == nil, compact: true, onOpenChange: { chipOpen = $0 }, help: "Due date") { close in
                     DuePicker(task: task, today: clock.today) { due in send(.updateTask(id: task.id, TaskPatch(due: .some(due)))); close() }
                 }
                 .disabled(!editable)
@@ -194,7 +196,7 @@ struct TaskRow: View {
             }
             if snoozedUntil != nil || showEmpty {
                 PropertyChip(symbol: "moon.zzz", text: snoozedUntil.map { "until \(DayView.weekday($0))" } ?? "Snooze",
-                             tint: snoozedUntil == nil ? .primary : StatusKind.backFromSnooze.color, isEmpty: snoozedUntil == nil, compact: true,
+                             tint: snoozedUntil == nil ? .primary : StatusKind.backFromSnooze.color, isEmpty: snoozedUntil == nil, compact: true, onOpenChange: { chipOpen = $0 },
                              help: snoozedUntil.map { "Snoozed until \(DayView.title(for: $0))" } ?? "Hide the task until a day; its due date stays") { close in
                     SnoozePicker(task: task, until: snoozedUntil, today: clock.today, onDone: close)
                 }
