@@ -20,7 +20,7 @@ public enum Schema {
     public static let eventStates = ["active", "cancelled", "gone", "ambiguous"]
     public static let blockingValues = ["blocks", "optional", "ignore"]
 
-    public static let itemKinds = ["info", "task", "event_note", "local_event"]
+    public static let itemKinds = ["info", "task", "event_note", "local_event", "bookmark"]
     public static let taskStatuses = ["open", "snoozed", "done", "dropped"]
     public static let priorities = ["none", "low", "normal", "high", "urgent"]
 
@@ -74,6 +74,13 @@ public enum Schema {
             try db.create(index: "task_parts_item", on: "task_parts", columns: ["item_id", "position"])
             try db.execute(sql: "CREATE VIEW live_task_parts AS SELECT * FROM task_parts WHERE deleted_at IS NULL")
         }
+        // Bookmarks are items (bookmarks B1): `bookmark` joins the kind check, which SQLite can only change by
+        // rebuilding the table; rows, columns, indexes and views stay the same. Foreign keys are checked at the end.
+        migrator.registerMigration("v9") { db in
+            try rebuildItems(db)
+            try db.alter(table: "items") { t in t.add(column: "url", .text) }
+            try db.execute(sql: "CREATE UNIQUE INDEX items_bookmark_url ON items(url) WHERE kind = 'bookmark' AND deleted_at IS NULL")
+        }
         return migrator
     }
 
@@ -86,11 +93,33 @@ public enum Schema {
         t.column("deleted_at", .datetime)
     }
 
+    /// Recreates `items` with the kind check of `itemKinds`: same columns and rows, then the indexes and the views
+    /// that read `items` again.
+    private static func rebuildItems(_ db: Database) throws {
+        let table = try String.fetchOne(db, sql: "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'items'") ?? ""
+        let check = #"CHECK \("kind" IN \([^)]*\)\)"#
+        guard table.range(of: check, options: .regularExpression) != nil else { throw DatabaseError(message: "items: no kind check") }
+        let kinds = itemKinds.map { "'\($0)'" }.joined(separator: ", ")
+        let newTable = table
+            .replacingOccurrences(of: check, with: "CHECK (\"kind\" IN (\(kinds)))", options: .regularExpression)
+            .replacingOccurrences(of: #"CREATE TABLE "items""#, with: #"CREATE TABLE "items_new""#)
+        let indexes = try String.fetchAll(db, sql: "SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'items' AND sql IS NOT NULL")
+        let views = try Row.fetchAll(db, sql: "SELECT name, sql FROM sqlite_master WHERE type = 'view' AND sql LIKE '%items%'")
+            .map { (name: $0["name"] as String, sql: $0["sql"] as String) }
+        for view in views { try db.execute(sql: "DROP VIEW \(view.name.quotedDatabaseIdentifier)") }
+        try db.execute(sql: newTable)
+        try db.execute(sql: "INSERT INTO items_new SELECT * FROM items")
+        try db.execute(sql: "DROP TABLE items")
+        try db.execute(sql: "ALTER TABLE items_new RENAME TO items")
+        for sql in indexes + views.map(\.sql) { try db.execute(sql: sql) }
+    }
+
     private static func createV1(_ db: Database) throws {
-        // One table for all item kinds (D3); only `task` is used in this version.
+        // One table for all item kinds (D3); only `task` is used in this version. The kind list is that of v1;
+        // later kinds come with the v9 rebuild.
         try db.create(table: "items") { t in
             syncColumns(t)
-            t.column("kind", .text).notNull().check { itemKinds.contains($0) }
+            t.column("kind", .text).notNull().check { ["info", "task", "event_note", "local_event"].contains($0) }
             t.column("title", .text).notNull().check { length($0) > 0 }
             t.column("body", .text).notNull().defaults(to: "")
             t.column("status", .text).check { $0 == nil || taskStatuses.contains($0) }

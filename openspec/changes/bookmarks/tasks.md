@@ -2,7 +2,7 @@
 
 ## 1. Core
 
-- [ ] 1.1 Migration v9 (B1): rebuild `items` with `bookmark` in the kind check and a `url` column, the unique live-URL index, views and indexes recreated; verify with a migration test on a populated database (counts, tags, work, links, search index, foreign key check)
+- [x] 1.1 Migration v9 (B1): rebuild `items` with `bookmark` in the kind check and a `url` column, the unique live-URL index, views and indexes recreated; verify with a migration test on a populated database (counts, tags, work, links, search index, foreign key check)
 - [ ] 1.2 Bookmark commands and queries (B2): create (existing URL returns it), update, delete/restore, list by tag and text, lookup by URL(s), URL normalization, search text, undo labels; verify with tests for "Create a bookmark", "Same URL again", "Filter by tag", "Search by description", restore from the Trash
 
 ## 2. Editor

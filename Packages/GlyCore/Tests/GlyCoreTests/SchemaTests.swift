@@ -90,6 +90,54 @@ extension SchemaTests {
         XCTAssertFalse(Schema.syncedTables.contains("search_index"))
     }
 
+    /// bookmarks B1: v9 rebuilds `items` with `bookmark` in the kind check; rows, references and indexes survive.
+    func testV9RebuildKeepsAPopulatedDatabase() throws {
+        var config = Configuration(); config.foreignKeysEnabled = true
+        let queue = try DatabaseQueue(configuration: config)
+        try Schema.migrator.migrate(queue, upTo: "v8")
+        try queue.write { db in
+            let cols = "id, created_at, modified_at, modified_by"
+            try db.execute(sql: """
+                INSERT INTO items (\(cols), kind, title, body, status, priority, due_day, snooze_ended_on)
+                VALUES ('T1', ?, ?, 'u', 'task', 'Draft report', 'see [[Atlas]]', 'open', 'high', '2026-11-02', '2026-10-26');
+                INSERT INTO items (\(cols), kind, title, body) VALUES ('P1', ?, ?, 'u', 'info', 'Atlas', 'notes about apples');
+                INSERT INTO items (\(cols), kind, title, body, deleted_at) VALUES ('P2', ?, ?, 'u', 'info', 'Gone', '', ?);
+                INSERT INTO items (\(cols), kind, title, event_key) VALUES ('N1', ?, ?, 'u', 'event_note', 'Weekly', 'k1');
+                INSERT INTO tags (\(cols), name, name_key) VALUES ('G1', ?, ?, 'u', 'Work', 'work');
+                INSERT INTO item_tags (\(cols), item_id, tag_id) VALUES ('IT1', ?, ?, 'u', 'T1', 'G1');
+                INSERT INTO task_work (\(cols), item_id, day, minutes, kind) VALUES ('W1', ?, ?, 'u', 'T1', '2026-10-27', 60, 'part');
+                """, arguments: StatementArguments(Array(repeating: now, count: 15)))
+            try DerivedIndex.rebuild(db)
+        }
+        try Schema.migrator.migrate(queue)
+        try queue.read { db in
+            XCTAssertEqual(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM items"), 4)
+            XCTAssertEqual(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_items"), 3)
+            let task = try Row.fetchOne(db, sql: "SELECT * FROM items WHERE id = 'T1'")!
+            XCTAssertEqual(task["priority"] as String?, "high")
+            XCTAssertEqual(task["snooze_ended_on"] as String?, "2026-10-26")
+            XCTAssertNil(task["url"] as String?)
+            XCTAssertEqual(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_item_tags WHERE item_id = 'T1'"), 1)
+            XCTAssertEqual(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_task_work WHERE item_id = 'T1'"), 1)
+            XCTAssertEqual(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM link_index WHERE source_id = 'T1'"), 1)
+            XCTAssertEqual(try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM search_index WHERE search_index MATCH 'apples'"), 1)
+            XCTAssertTrue(try Row.fetchAll(db, sql: "PRAGMA foreign_key_check").isEmpty)
+            let indexes = Set(try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'items'"))
+            for name in ["items_kind_status", "items_due_day", "items_event_key", "items_event_start", "items_series_rule", "items_bookmark_url"] {
+                XCTAssertTrue(indexes.contains(name), name)
+            }
+        }
+        // The new kind is accepted, the old check still rejects unknown kinds, and a live URL is bookmarked once.
+        let insert = "INSERT INTO items (id, created_at, modified_at, modified_by, kind, title, url) VALUES (?, ?, ?, 'u', ?, 'Docs', ?)"
+        try queue.write { db in try db.execute(sql: insert, arguments: ["B1", now, now, "bookmark", "https://example.com/docs"]) }
+        XCTAssertThrowsError(try queue.write { db in try db.execute(sql: insert, arguments: ["B2", now, now, "bookmark", "https://example.com/docs"]) })
+        XCTAssertThrowsError(try queue.write { db in try db.execute(sql: insert, arguments: ["X1", now, now, "note", nil]) })
+        try queue.write { db in
+            try db.execute(sql: "UPDATE items SET deleted_at = ? WHERE id = 'B1'", arguments: [now])
+            try db.execute(sql: insert, arguments: ["B3", now, now, "bookmark", "https://example.com/docs"])
+        }
+    }
+
     /// Rollback check (design Migration Plan): what an older build's migrator does with a v2 database.
     func testOlderMigratorOnV2Database() throws {
         let queue = try StoreFactory.openInMemory()
