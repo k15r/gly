@@ -182,11 +182,23 @@ struct ItemBrowserView<Header: View>: View {
                     if view.grouping == .none {
                         ForEach(group.items) { ItemRow(item: $0, sourceTag: source) }
                     } else {
-                        Section(isExpanded: Binding(get: { !(collapsed.contains(group.id) != group.collapsed) },
-                                                    set: { open in toggle(group, open: open) })) {
-                            ForEach(group.items) { ItemRow(item: $0, sourceTag: source) }
+                        // Own header with a chevron: List sections only collapse natively in sidebar-style lists.
+                        let open = collapsed.contains(group.id) == group.collapsed
+                        Section {
+                            if open { ForEach(group.items) { ItemRow(item: $0, sourceTag: source) } }
                         } header: {
-                            Text("\(group.title) (\(group.items.count))")
+                            Button { withAnimation(.easeOut(duration: 0.15)) { toggle(group, open: !open) } } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "chevron.right").font(.caption.bold())
+                                        .rotationEffect(.degrees(open ? 90 : 0))
+                                    Text(group.title)
+                                    Text("\(group.items.count)").foregroundStyle(.secondary).monospacedDigit()
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(open ? "Collapse" : "Expand")
                         }
                     }
                 }
