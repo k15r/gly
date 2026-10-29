@@ -78,12 +78,12 @@ A token field:
 - Typing a complete token and space or Return turns it into a chip. `#` suggests existing tags (the same tree as `TagField`), and `is:` / `status:` / `due:` suggest their values.
 - A "+" menu offers each filter kind with its values.
 
-The bar edits the view's `ItemQuery` and never a string, so chips and text stay in sync.
+The bar edits the view's `ItemQuery` and never a string, so chips and text stay in sync. The ⊕ menu shows only filters that can match: task filters when tasks can be among the results; tags as nested menus (`TagField.tree`). Exclusions (`-#tag`) and hosts (`host:`) stay typed tokens but aren't in the menu (rarely needed, clutter). `due:Nwd` counts working days from `WorkingHours.workdays`, passed into `BrowseQueries` by the app and the MCP tools.
 
 ### I5: Refine row, grouping, sorting
 
 - **Refine row:** up to 8 tags from the facets, leaving out tags in the filter and their ancestors, most frequent first. A click adds `#tag`.
-- **Group and sort:** menus in the toolbar. Grouping is done in memory on the results:
+- **Group and sort:** menus in the toolbar; task groupings (due, status, priority, effort) and orders (due, task order) only when tasks can be among the results, Kind only with several kinds; "Last change" groups by today / yesterday / 7 days / earlier. Grouping is done in memory on the results:
   - **kind:** in tag views, with "Finished tasks" as its own collapsed group
   - **due:** overdue / today / this week / later / none, based on the local day
   - **status**
@@ -99,6 +99,7 @@ The bar edits the view's `ItemQuery` and never a string, so chips and text stay 
 ### I7: Tag tree
 
 - `TagTreeView` loses its leaves (`TreeLeafRow`, `untaggedItems`), and gains a filter field (case-insensitive substring on the full path; matches keep their parents and are expanded) and view-relative counts (I2).
+- **Counts and pruning:** `BrowserModel` observes the counts for the shown view (in a model, not in a lazily rendered sidebar row whose task stopped updating), and in browser views the tree hides tags without items there (filtered tags and their parents stay), with "Show all tags".
 - **Click:** in a browser view (not a tag view) it sets the view's tag filter to this tag; ⇧-click adds or removes it; ⌘-click opens the tag view, as does any click outside a browser view. A click also expands the tag. (Tried "click opens the tag page" in between; filtering the view you're in is what a click on a tag is for.)
 - **Tag chips in rows:** `TagChipLine` shows as many chips as fit on one line and "+N" with the rest in a hover popup (`ViewThatFits` over the prefixes; a plain tooltip does not show inside rows with their own hover and tap handling), replacing a wrapping layout that clipped tags when the row's width wasn't known yet.
 - **Context menu:** "Open Tag Page" plus the existing color/rename/delete/new subtag.

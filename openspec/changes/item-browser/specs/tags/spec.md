@@ -50,7 +50,7 @@ The user SHALL be able to drag items from the browser's rows onto a tag in the t
 ## ADDED Requirements
 
 ### Requirement: Tag tree
-The sidebar SHALL show all tags as a hierarchy, including tags without items, with a filter field that narrows the tree to matching tags and their parents. Each tag SHALL show the number of items of the current view carrying it or a tag below it. "Untagged" SHALL filter the current view to items without tags.
+The sidebar SHALL show all tags as a hierarchy, including tags without items, with a filter field that narrows the tree to matching tags and their parents. Each tag SHALL show the number of items of the current view carrying it or a tag below it. In a browser view, tags without items there SHALL be hidden (except tags in the filter), with "Show all tags" to show them. "Untagged" SHALL filter the current view to items without tags.
 
 #### Scenario: Tag hierarchy with counts
 - **WHEN** Tasks is shown and two open tasks are tagged `person/alex` and one `person/sam`
@@ -62,7 +62,11 @@ The sidebar SHALL show all tags as a hierarchy, including tags without items, wi
 
 #### Scenario: Empty tag
 - **WHEN** the tag `person/alex/goals` has nothing assigned
-- **THEN** `goals` appears below `alex` with a count of 0
+- **THEN** in a browser view `goals` is hidden until "Show all tags" is checked, then it appears below `alex` without a count; outside a browser view it is always shown
+
+#### Scenario: Tree follows the view
+- **WHEN** the user opens Bookmarks and only `ops` and `team` carry bookmarks
+- **THEN** the tag tree shows only `ops` and `team` (and their parents), each with its number of bookmarks
 
 #### Scenario: Find a tag
 - **WHEN** the user types `ale` into the tag tree's filter field

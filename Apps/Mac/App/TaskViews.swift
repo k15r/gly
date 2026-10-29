@@ -58,6 +58,8 @@ struct TaskRow: View {
     @State private var hovering = false
     @State private var snoozing = false
     @State private var estimating = false
+    @State private var dating = false
+    @State private var prioritizing = false
 
     private var showsDone: Bool { task.status == .done || pendingCompletion != nil }
 
@@ -190,6 +192,24 @@ struct TaskRow: View {
                 .popover(isPresented: $snoozing, arrowEdge: .bottom) {
                     SnoozePicker(task: task, until: task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil,
                                  today: clock.today) { snoozing = false }.padding(12)
+                }
+            Button { dating = true } label: { Image(systemName: "calendar") }
+                .help("Due date")
+                .popover(isPresented: $dating, arrowEdge: .bottom) {
+                    DuePicker(task: task, today: clock.today) { due in
+                        Task { await app.send(.updateTask(id: task.id, TaskPatch(due: .some(due)))) }
+                        dating = false
+                    }
+                    .padding(12)
+                }
+            Button { prioritizing = true } label: { Image(systemName: "flag") }
+                .help("Priority")
+                .popover(isPresented: $prioritizing, arrowEdge: .bottom) {
+                    PriorityPicker(current: task.priority) { p in
+                        Task { await app.send(.updateTask(id: task.id, TaskPatch(priority: p))) }
+                        prioritizing = false
+                    }
+                    .padding(12)
                 }
             Button { estimating = true } label: { Image(systemName: "gauge.with.dots.needle.33percent") }
                 .help("Effort")

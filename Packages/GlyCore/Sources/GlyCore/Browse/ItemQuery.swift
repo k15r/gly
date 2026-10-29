@@ -23,7 +23,38 @@ public enum ItemKind: String, Codable, CaseIterable, Comparable, Sendable {
 /// What a browser view shows (item-browser I1): plain data with a text form (`is:task #project/atlas due:week review`).
 /// All conditions are combined with AND; several tags must all match, each including the tags below it.
 public struct ItemQuery: Equatable, Hashable, Codable, Sendable {
-    public enum Due: String, Codable, CaseIterable, Sendable { case overdue, today, week, none }
+    /// Due filters; `workdays(n)`: due from today through the n-th working day after today (`due:3wd`).
+    public enum Due: Hashable, Codable, Sendable {
+        case overdue, today, week, none, workdays(Int)
+
+        public static let fixed: [Due] = [.overdue, .today, .week, .none]
+        /// Offered in menus and suggestions.
+        public static let workdayChoices = [1, 2, 3, 5, 10]
+
+        public var token: String {
+            switch self {
+            case .overdue: "overdue"
+            case .today: "today"
+            case .week: "week"
+            case .none: "none"
+            case .workdays(let n): "\(n)wd"
+            }
+        }
+
+        public init?(token: String) {
+            if let f = Self.fixed.first(where: { $0.token == token }) { self = f; return }
+            guard token.hasSuffix("wd"), let n = Int(token.dropLast(2)), (1...60).contains(n) else { return nil }
+            self = .workdays(n)
+        }
+
+        public init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            guard let d = Due(token: raw) else { throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: raw)) }
+            self = d
+        }
+
+        public func encode(to encoder: Encoder) throws { var c = encoder.singleValueContainer(); try c.encode(token) }
+    }
     public enum Changed: String, Codable, CaseIterable, Sendable { case today, days7 = "7d", days30 = "30d" }
     public enum Author: String, Codable, CaseIterable, Sendable { case me, agent }
 
@@ -61,7 +92,7 @@ public struct ItemQuery: Equatable, Hashable, Codable, Sendable {
             case .excludedTag(let t): "-#\(t)"
             case .untagged: "untagged"
             case .status(let s): "status:\(s.rawValue)"
-            case .due(let d): "due:\(d.rawValue)"
+            case .due(let d): "due:\(d.token)"
             case .priority(let p): "prio:\(p.rawValue)"
             case .effort(let e): "effort:\(e.rawValue)"
             case .changed(let c): "changed:\(c.rawValue)"
@@ -82,7 +113,7 @@ public struct ItemQuery: Equatable, Hashable, Codable, Sendable {
             switch key {
             case "is": return ItemKind(rawValue: value).map(Token.kind)
             case "status": return TaskStatus(rawValue: value).map(Token.status)
-            case "due": return Due(rawValue: value).map(Token.due)
+            case "due": return Due(token: value).map(Token.due)
             case "prio", "priority": return Priority(rawValue: value).map(Token.priority)
             case "effort": return Effort(rawValue: value.uppercased()).map(Token.effort)
             case "changed": return Changed(rawValue: value).map(Token.changed)

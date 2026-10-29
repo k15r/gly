@@ -37,9 +37,10 @@ public enum ItemSort: String, Codable, CaseIterable, Sendable {
 
 public enum BrowseQueries {
     /// Live items matching `query`, in `sort` order. `now` and `calendar` place "today", "this week" and the change windows.
+    /// `workdays`: the working weekdays for `due:Nwd` (Calendar weekday numbers, as in `WorkingHours`).
     public static func items(_ db: Database, _ query: ItemQuery, sort: ItemSort, now: Date = Date(), calendar: Calendar = .current,
-                             limit: Int? = nil) throws -> [BrowseItem] {
-        guard let (sql, arguments) = statement(query, sort: sort, now: now, calendar: calendar, limit: limit) else { return [] }
+                             workdays: Set<Int> = WorkingHours.mondayToFriday, limit: Int? = nil) throws -> [BrowseItem] {
+        guard let (sql, arguments) = statement(query, sort: sort, now: now, calendar: calendar, workdays: workdays, limit: limit) else { return [] }
         let rows = try Row.fetchAll(db, sql: sql, arguments: arguments)
         guard !rows.isEmpty else { return [] }
         let tags = try TaskQueries.tagsByItem(db, ids: rows.map { $0["id"] as String })
@@ -55,8 +56,9 @@ public enum BrowseQueries {
     }
 
     /// How many items match (sidebar counts).
-    public static func count(_ db: Database, _ query: ItemQuery, now: Date = Date(), calendar: Calendar = .current) throws -> Int {
-        guard let (sql, arguments) = statement(query, sort: .changed, now: now, calendar: calendar, limit: nil) else { return 0 }
+    public static func count(_ db: Database, _ query: ItemQuery, now: Date = Date(), calendar: Calendar = .current,
+                             workdays: Set<Int> = WorkingHours.mondayToFriday) throws -> Int {
+        guard let (sql, arguments) = statement(query, sort: .changed, now: now, calendar: calendar, workdays: workdays, limit: nil) else { return 0 }
         return try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM (\(sql))", arguments: arguments) ?? 0
     }
 
@@ -69,10 +71,11 @@ public enum BrowseQueries {
     }
 
     /// The SQL for a query; nil when it can't match anything (text without searchable words).
-    static func statement(_ q: ItemQuery, sort: ItemSort, now: Date, calendar: Calendar, limit: Int?) -> (String, StatementArguments)? {
+    static func statement(_ q: ItemQuery, sort: ItemSort, now: Date, calendar: Calendar, workdays: Set<Int> = WorkingHours.mondayToFriday,
+                          limit: Int?) -> (String, StatementArguments)? {
         var w = Conditions()
         kindAndTagConditions(q, into: &w)
-        taskConditions(q, today: LocalDay(date: now, calendar: calendar), calendar: calendar, into: &w)
+        taskConditions(q, today: LocalDay(date: now, calendar: calendar), calendar: calendar, workdays: workdays, into: &w)
         otherConditions(q, now: now, calendar: calendar, into: &w)
 
         var from = "live_items i"
@@ -104,7 +107,7 @@ public enum BrowseQueries {
     }
 
     /// Status leaves other kinds alone; due, priority and effort need a task.
-    static func taskConditions(_ q: ItemQuery, today: LocalDay, calendar: Calendar, into w: inout Conditions) {
+    static func taskConditions(_ q: ItemQuery, today: LocalDay, calendar: Calendar, workdays: Set<Int>, into w: inout Conditions) {
         if !q.statuses.isEmpty {
             let names = TaskStatus.allCases.filter(q.statuses.contains).map(\.rawValue)
             w.add("(i.kind != 'task' OR i.status IN (\(Conditions.list(names.count))))", StatementArguments(names))
@@ -115,6 +118,9 @@ public enum BrowseQueries {
         case .week?:
             w.add("(i.kind = 'task' AND i.due_day >= ? AND i.due_day <= ?)", [today.description, today.adding(days: 6, calendar: calendar).description])
         case .none?: w.add("(i.kind = 'task' AND i.due_day IS NULL)")
+        case .workdays(let n)?:
+            let end = Self.workday(n, after: today, workdays: workdays, calendar: calendar)
+            w.add("(i.kind = 'task' AND i.due_day >= ? AND i.due_day <= ?)", [today.description, end.description])
         case nil: break
         }
         if !q.priorities.isEmpty {
@@ -150,6 +156,18 @@ public enum BrowseQueries {
                       return ["%://\(e)", "%://\(e)/%", "%.\(e)", "%.\(e)/%"]
                   }))
         }
+    }
+
+    /// The n-th working day after `day` (without working days configured, the n-th day).
+    public static func workday(_ n: Int, after day: LocalDay, workdays: Set<Int>, calendar: Calendar = .current) -> LocalDay {
+        let hours = WorkingHours(workdays: workdays)
+        guard !workdays.isEmpty else { return day.adding(days: n, calendar: calendar) }
+        var current = day, found = 0
+        while found < n {
+            current = current.adding(days: 1, calendar: calendar)
+            if hours.isWorkday(current, calendar: calendar) { found += 1 }
+        }
+        return current
     }
 
     static func order(_ sort: ItemSort, ranked: Bool) -> String {

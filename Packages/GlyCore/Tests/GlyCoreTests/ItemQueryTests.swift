@@ -25,7 +25,7 @@ final class ItemQueryTests: XCTestCase {
         XCTAssertEqual(q.hosts, ["example.com"])
         XCTAssertEqual(q.due, .overdue)
         XCTAssertEqual(q.text, "")
-        for (input, check) in [("due:today", ItemQuery.parse("due:today").due == .today), ("due:none", ItemQuery.parse("due:none").due == ItemQuery.Due.none),
+        for (input, check) in [("due:today", ItemQuery.parse("due:today").due == .today), ("due:none", ItemQuery.parse("due:none").due == ItemQuery.Due.none), ("due:3wd", ItemQuery.parse("due:3wd").due == .workdays(3)),
                                ("changed:today", ItemQuery.parse("changed:today").changed == .today), ("changed:30d", ItemQuery.parse("changed:30d").changed == .days30),
                                ("by:me", ItemQuery.parse("by:me").author == .me), ("priority:urgent", ItemQuery.parse("priority:urgent").priorities == [.urgent]),
                                ("is:meeting", ItemQuery.parse("is:meeting").kinds == [.meeting]), ("status:dropped", ItemQuery.parse("status:dropped").statuses == [.dropped])] {
@@ -35,6 +35,7 @@ final class ItemQueryTests: XCTestCase {
 
     func testUnknownTokensAreText() {
         let q = ItemQuery.parse("is:nothing due:later foo:bar # #bad//tag status:open,weird plain")
+        XCTAssertNil(ItemQuery.parse("due:0wd").due); XCTAssertNil(ItemQuery.parse("due:99wd").due)
         XCTAssertTrue(q.kinds.isEmpty && q.due == nil && q.tags.isEmpty && q.statuses.isEmpty)
         XCTAssertEqual(q.text, "is:nothing due:later foo:bar # #bad//tag status:open,weird plain")
     }
@@ -47,7 +48,7 @@ final class ItemQueryTests: XCTestCase {
 
     func testRoundTrip() {
         for input in ["", "is:task #project/atlas due:week review", "is:page -#ops untagged prio:high effort:XL changed:30d by:me host:example.com",
-                      "status:open status:snoozed is:task", "release notes"] {
+                      "status:open status:snoozed is:task", "release notes", "is:task due:5wd"] {
             let q = ItemQuery.parse(input)
             XCTAssertEqual(ItemQuery.parse(q.description), q, input)
         }

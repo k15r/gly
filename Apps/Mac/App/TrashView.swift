@@ -22,8 +22,8 @@ struct SidebarCountRow: View {
     }
 
     /// Items of a browser view.
-    nonisolated static func matching(_ query: ItemQuery) -> @Sendable (Database) throws -> Int {
-        { @Sendable db in try BrowseQueries.count(db, query) }
+    nonisolated static func matching(_ query: ItemQuery, workdays: Set<Int> = WorkingHours.mondayToFriday) -> @Sendable (Database) throws -> Int {
+        { @Sendable db in try BrowseQueries.count(db, query, workdays: workdays) }
     }
     static let openTasks: @Sendable (Database) throws -> Int = { db in
         try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_items WHERE kind = 'task' AND status IN ('open', 'snoozed')") ?? 0

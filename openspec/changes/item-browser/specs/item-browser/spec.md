@@ -22,13 +22,13 @@ The browser SHALL show the active filters as removable chips and accept typed to
 - `is:task|page|bookmark|meeting`
 - `#tag` (the tag or below; several must all match) and `-#tag` (excluded)
 - `status:open|snoozed|done|dropped`
-- `due:overdue|today|week|none`
+- `due:overdue|today|week|none` and `due:<N>wd` (due within N working days of the configured workweek)
 - `prio:<priority>`, `effort:<size>`
 - `changed:today|7d|30d`, `by:me|agent`
 - `host:<host>`
 - `untagged`
 
-Other words SHALL search the items' titles and texts. Each kind of filter SHALL also be offered from an add-filter menu.
+Other words SHALL search the items' titles and texts. The add-filter menu SHALL offer kind, tags (nested like the tag hierarchy), untagged, last change, author and, when tasks can be among the results, the task filters.
 
 #### Scenario: Typed tokens
 - **WHEN** the user types `is:task #project/atlas due:week review` in All items
@@ -37,6 +37,14 @@ Other words SHALL search the items' titles and texts. Each kind of filter SHALL 
 #### Scenario: Exclude a tag
 - **WHEN** the user adds `-#ops` to Bookmarks
 - **THEN** bookmarks tagged `ops` or below are no longer listed
+
+#### Scenario: Due within working days
+- **WHEN** it is Thursday, the workweek is Monday to Friday and the user adds "Due ▸ Within 2 workdays" in Tasks
+- **THEN** tasks due today, Friday or Monday are listed, not those due Tuesday or overdue
+
+#### Scenario: Filters that fit the kinds
+- **WHEN** the view is limited to pages
+- **THEN** the add-filter menu doesn't offer status, due date, priority or effort, and the Group and Sort menus don't offer task groupings or task order
 
 #### Scenario: Agent changes
 - **WHEN** the user filters All items with `by:agent changed:today`
@@ -50,7 +58,7 @@ Above the results, the browser SHALL show the tags that occur among the current 
 - **THEN** the refine row shows `person/alex 4` before `person/sam 2`, and clicking `person/alex` leaves the four tasks
 
 ### Requirement: Grouping and sorting
-The browser SHALL group results by nothing, kind, due date (overdue, today, this week, later, no due date), status or tag (the next level below a filtered tag, else top-level tags), and sort by relevance (when searching text), last change, due date, title or task-list order. Each preset view SHALL have a sensible default: Tasks in task-list order, Pages and All items by last change, Bookmarks by title, tag views grouped by kind.
+The browser SHALL group results by nothing, kind, due date (overdue, today, this week, later, no due date), status, priority, effort, last change or tag (the next level below a filtered tag, else top-level tags), and sort by relevance (when searching text), last change, due date, title or task-list order. Each preset view SHALL have a sensible default: Tasks in task-list order, Pages and All items by last change, Bookmarks by title, tag views grouped by kind.
 
 #### Scenario: Group by due date
 - **WHEN** the user groups Tasks by due date

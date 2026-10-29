@@ -97,6 +97,17 @@ final class BrowseQueryTests: XCTestCase {
         XCTAssertEqual(try titles("is:task status:done"), ["Done one"])
     }
 
+    func testDueWithinWorkdays() throws {
+        // Thursday 29 Oct: 2 working days (Mon–Fri) reach Monday 2 Nov; the weekend doesn't count.
+        task("Today", due: 0); task("Friday", due: 1); task("Monday", due: 4); task("Tuesday", due: 5); task("Overdue", due: -1)
+        XCTAssertEqual(try titles("due:2wd"), ["Friday", "Monday", "Today"])
+        XCTAssertEqual(BrowseQueries.workday(2, after: today, workdays: WorkingHours.mondayToFriday, calendar: cal).description, "2026-11-02")
+        XCTAssertEqual(BrowseQueries.workday(2, after: today, workdays: [1, 2, 3, 4, 5, 6, 7], calendar: cal).description, "2026-10-31")
+        let sixDayWeek = try db.read { try BrowseQueries.items($0, ItemQuery.parse("due:2wd"), sort: .title, now: now, calendar: cal,
+                                                               workdays: [2, 3, 4, 5, 6, 7]).map(\.title) }
+        XCTAssertEqual(sixDayWeek, ["Friday", "Today"], "with Saturday a working day, 2 working days end on Saturday")
+    }
+
     func testHost() throws {
         ok(.createBookmark(BookmarkDraft(url: "https://docs.example.com/a", title: "Docs")))
         ok(.createBookmark(BookmarkDraft(url: "https://example.com", title: "Home")))

@@ -14,7 +14,14 @@ final class BrowserModel {
     /// Tag views by id, so a tag view keeps its display name.
     @ObservationIgnored private var tagViews: [String: ItemView] = [:]
     /// The browser view in the main area; nil when it shows something else (Day, an item's page).
-    var activeViewID: String?
+    var activeViewID: String? { didSet { refreshCounts() } }
+    /// The tag tree's counts: items of the shown view without its tag filters, all items elsewhere (item-browser I2).
+    private(set) var tagCounts = TagCounts(tags: [:], untagged: 0)
+    @ObservationIgnored private var store: ReadOnlyStore?
+    @ObservationIgnored private var countsObservation: AnyDatabaseCancellable?
+    @ObservationIgnored private var countsQuery: ItemQuery?
+    /// The working weekdays for `due:Nwd` (the planning settings).
+    var workdays: Set<Int> = WorkingHours.mondayToFriday { didSet { if workdays != oldValue { countsQuery = nil; refreshCounts() } } }
     @ObservationIgnored private var app: AppModel?
     @ObservationIgnored private var observation: AnyDatabaseCancellable?
     @ObservationIgnored private var importStarted = false
@@ -23,6 +30,9 @@ final class BrowserModel {
     func attach(_ store: ReadOnlyStore?, app: AppModel) {
         guard let store else { return }
         self.app = app
+        self.store = store
+        countsQuery = nil
+        refreshCounts()
         observation = store.observe(ValueObservation.tracking { try ViewQueries.list($0) },
                                     onError: { print("views observation: \($0)") },
                                     onChange: { [weak self] in self?.saved = $0 })
@@ -54,13 +64,30 @@ final class BrowserModel {
         var v = view(id)
         change(&v)
         edited[id] = v == base(id) ? nil : v
+        refreshCounts()
     }
+
+    /// Re-observes the counts when the shown view's query (without tags) changed.
+    private func refreshCounts() {
+        guard let store else { return }
+        let q = activeViewID.map { view($0).query.droppingTags() } ?? ItemQuery()
+        guard q != countsQuery else { return }
+        let workdays = self.workdays
+        countsQuery = q
+        countsObservation = store.observe(ValueObservation.tracking { db -> TagCounts in
+            let items = try BrowseQueries.items(db, q, sort: .changed, workdays: workdays)
+            return TagCounts(tags: BrowseFacets.tagCounts(items), untagged: BrowseFacets.untaggedCount(items))
+        }, onError: { print("tag counts observation: \($0)") }, onChange: { [weak self] in self?.tagCounts = $0 })
+    }
+
+    /// Whether the shown view is a saved one (so its changes can be written back).
+    func isSaved(_ id: String) -> Bool { saved.contains { $0.id == id } }
 
     func setQuery(_ id: String, _ query: ItemQuery) { update(id) { $0.query = query } }
 
     func isModified(_ id: String) -> Bool { edited[id] != nil }
 
-    func reset(_ id: String) { edited[id] = nil }
+    func reset(_ id: String) { edited[id] = nil; refreshCounts() }
 
     // MARK: Saved views (specs/item-browser "Saved views")
 

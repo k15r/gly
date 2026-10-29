@@ -93,12 +93,11 @@ struct FilterBar: View {
         let values: [String] = switch key {
         case "is": ItemKind.allCases.map(\.rawValue)
         case "status": TaskStatus.allCases.map(\.rawValue)
-        case "due": ItemQuery.Due.allCases.map(\.rawValue)
+        case "due": ItemQuery.Due.fixed.map(\.token) + ItemQuery.Due.workdayChoices.map { "\($0)wd" }
         case "prio", "priority": Priority.allCases.map(\.rawValue)
         case "effort": Effort.allCases.map(\.rawValue)
         case "changed": ItemQuery.Changed.allCases.map(\.rawValue)
         case "by": ItemQuery.Author.allCases.map(\.rawValue)
-        case "host": Array(Set(wiki.bookmarks.map(\.host))).sorted()
         default: []
         }
         return values.filter { $0.lowercased().hasPrefix(typed) }.map { "\(key):\($0)" }
@@ -106,29 +105,43 @@ struct FilterBar: View {
 
     // MARK: Add-filter menu
 
+    /// Only filters that can match the kinds in the query: task filters need tasks among them.
     private var addMenu: some View {
         Menu {
             Menu("Kind") { ForEach(ItemKind.allCases, id: \.self) { k in option(.kind(k)) } }
-            Menu("Tag") { ForEach(tasks.allTagNames(), id: \.self) { t in option(.tag(t)) } }
-            Menu("Exclude Tag") { ForEach(tasks.allTagNames(), id: \.self) { t in option(.excludedTag(t)) } }
+            Menu("Tag") { ForEach(TagField.tree(tasks.allTagNames())) { node in tagMenu(node) } }
             option(.untagged)
-            Divider()
-            Menu("Status") { ForEach(TaskStatus.allCases, id: \.self) { s in option(.status(s)) } }
-            Menu("Due") { ForEach(ItemQuery.Due.allCases, id: \.self) { d in option(.due(d)) } }
-            Menu("Priority") { ForEach(Priority.allCases.reversed(), id: \.self) { p in option(.priority(p)) } }
-            Menu("Effort") { ForEach(Effort.allCases, id: \.self) { e in option(.effort(e)) } }
+            if query.kinds.isEmpty || query.kinds.contains(.task) {
+                Divider()
+                Menu("Status") { ForEach(TaskStatus.allCases, id: \.self) { s in option(.status(s)) } }
+                Menu("Due") {
+                    ForEach(ItemQuery.Due.fixed, id: \.self) { d in option(.due(d)) }
+                    Divider()
+                    ForEach(ItemQuery.Due.workdayChoices, id: \.self) { n in option(.due(.workdays(n))) }
+                }
+                Menu("Priority") { ForEach(Priority.allCases.reversed(), id: \.self) { p in option(.priority(p)) } }
+                Menu("Effort") { ForEach(Effort.allCases, id: \.self) { e in option(.effort(e)) } }
+            }
             Divider()
             Menu("Changed") { ForEach(ItemQuery.Changed.allCases, id: \.self) { c in option(.changed(c)) } }
             Menu("Changed By") { ForEach(ItemQuery.Author.allCases, id: \.self) { a in option(.author(a)) } }
-            let hosts = Array(Set(wiki.bookmarks.map(\.host))).sorted()
-            if !hosts.isEmpty { Menu("Host") { ForEach(hosts, id: \.self) { h in option(.host(h)) } } }
         } label: { Image(systemName: "plus.circle") }
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .help("Add a filter")
     }
 
-    private func option(_ token: ItemQuery.Token) -> some View {
-        Button(FilterChip.label(token)) { query.add(token) }.disabled(query.tokens.contains(token))
+    /// The tag hierarchy as nested menus; a group offers itself first (as in the tag picker).
+    private func tagMenu(_ node: TagField.Node) -> AnyView {
+        if node.children.isEmpty { return AnyView(option(.tag(node.path), title: node.segment)) }
+        return AnyView(Menu(node.segment) {
+            option(.tag(node.path), title: "Filter by “\(node.path)”")
+            Divider()
+            ForEach(node.children) { child in tagMenu(child) }
+        })
+    }
+
+    private func option(_ token: ItemQuery.Token, title: String? = nil) -> some View {
+        Button(title ?? FilterChip.label(token)) { query.add(token) }.disabled(query.tokens.contains(token))
     }
 }
 
@@ -159,12 +172,22 @@ struct FilterChip: View {
         case .excludedTag(let t): "not #" + t
         case .untagged: "Untagged"
         case .status(let s): s.rawValue.capitalized
-        case .due(let d): "Due: " + ["overdue": "overdue", "today": "today", "week": "this week", "none": "no date"][d.rawValue]!
+        case .due(let d): "Due: " + dueLabel(d)
         case .priority(let p): "Priority: " + p.rawValue
         case .effort(let e): "Effort: " + e.rawValue
         case .changed(let c): "Changed: " + ["today": "today", "7d": "last 7 days", "30d": "last 30 days"][c.rawValue]!
         case .author(let a): a == .agent ? "By an agent" : "By me"
         case .host(let h): h
+        }
+    }
+
+    static func dueLabel(_ d: ItemQuery.Due) -> String {
+        switch d {
+        case .overdue: "overdue"
+        case .today: "today"
+        case .week: "this week"
+        case .none: "no date"
+        case .workdays(let n): "within \(n) workday\(n == 1 ? "" : "s")"
         }
     }
 

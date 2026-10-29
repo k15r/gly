@@ -50,7 +50,8 @@ extension GlyTools {
         }
         let order = try sort(args) ?? base?.sort ?? (query.text.isEmpty ? .changed : .relevance)
         let limit = min(500, max(1, try args.int("limit") ?? 50))
-        let items = try reader.read { try BrowseQueries.items($0, query, sort: order, now: now(), limit: limit + 1) }
+        let workdays = planning().0.workdays
+        let items = try reader.read { try BrowseQueries.items($0, query, sort: order, now: now(), workdays: workdays, limit: limit + 1) }
         return .object(["query": .string(query.description), "sort": .string(order.rawValue),
                         "items": .array(items.prefix(limit).map(itemValue)), "has_more": .bool(items.count > limit)])
     }
@@ -84,7 +85,7 @@ extension GlyTools {
 
 extension ToolDefinitions {
     // swiftlint:disable line_length
-    static let querySyntax = "Filters use the item browser's syntax: is:task|page|bookmark|meeting, #tag (that tag or below; several must all match), -#tag (exclude), untagged, status:open|snoozed|done|dropped (tasks), due:overdue|today|week|none, prio:<none|low|normal|high|urgent>, effort:<XS..XL>, changed:today|7d|30d, by:me|agent, host:<domain> (bookmarks); other words search titles and texts. Example: \"is:task #project/atlas due:week review\"."
+    static let querySyntax = "Filters use the item browser's syntax: is:task|page|bookmark|meeting, #tag (that tag or below; several must all match), -#tag (exclude), untagged, status:open|snoozed|done|dropped (tasks), due:overdue|today|week|none|<N>wd (due within N working days, e.g. due:3wd), prio:<none|low|normal|high|urgent>, effort:<XS..XL>, changed:today|7d|30d, by:me|agent, host:<domain> (bookmarks); other words search titles and texts. Example: \"is:task #project/atlas due:week review\"."
     static let viewShape = "A view is {id, name, query, grouping (none|kind|due|status|tag), sort (relevance|changed|due|title|taskOrder), preset}."
     static let groupingSchema = string("How gly groups the view's items.", enum: ItemGrouping.allCases.map { .string($0.rawValue) })
     static let sortSchema = string("Order of the items.", enum: ItemSort.allCases.map { .string($0.rawValue) })

@@ -10,6 +10,7 @@ struct ItemBrowserView<Header: View>: View {
     @Environment(AppModel.self) private var app
     @Environment(Navigation.self) private var nav
     @Environment(Clock.self) private var clock
+    @Environment(PlanningModel.self) private var planning
     let viewID: String
     @ViewBuilder var header: () -> Header
 
@@ -21,7 +22,7 @@ struct ItemBrowserView<Header: View>: View {
     @State private var viewName = ""
 
     /// What the results depend on; a change re-runs the observation.
-    private struct Key: Hashable { let query: ItemQuery; let sort: ItemSort; let today: LocalDay }
+    private struct Key: Hashable { let query: ItemQuery; let sort: ItemSort; let today: LocalDay; let workdays: Set<Int> }
 
     var body: some View {
         let view = browser.view(viewID)
@@ -35,9 +36,9 @@ struct ItemBrowserView<Header: View>: View {
             Divider()
             results(view, items: items)
         }
-        .task(id: Key(query: view.query, sort: view.sort, today: clock.today)) {
-            let q = view.query, sort = view.sort
-            live.observe(wiki.store) { db in try BrowseQueries.items(db, q, sort: sort) }
+        .task(id: Key(query: view.query, sort: view.sort, today: clock.today, workdays: planning.hours.workdays)) {
+            let q = view.query, sort = view.sort, workdays = planning.hours.workdays
+            live.observe(wiki.store) { db in try BrowseQueries.items(db, q, sort: sort, workdays: workdays) }
         }
         .onAppear { browser.activeViewID = viewID; collapsed = [] }
         .onDisappear { if browser.activeViewID == viewID { browser.activeViewID = nil } }
@@ -65,30 +66,28 @@ struct ItemBrowserView<Header: View>: View {
             }
             Text("\(count) item\(count == 1 ? "" : "s")").foregroundStyle(.secondary).monospacedDigit()
             Spacer()
+            // Task groupings and orders only where tasks can be among the results; Kind only with several kinds.
+            let tasks = view.query.kinds.isEmpty || view.query.kinds.contains(.task)
             Menu {
                 Picker("Group", selection: binding(\.grouping)) {
-                    Text("No grouping").tag(ItemGrouping.none)
-                    Text("Kind").tag(ItemGrouping.kind)
-                    Text("Due date").tag(ItemGrouping.due)
-                    Text("Status").tag(ItemGrouping.status)
-                    Text("Tag").tag(ItemGrouping.tag)
+                    ForEach(ItemGrouping.allCases.filter { g in
+                        (tasks || !g.tasksOnly) && (g != .kind || view.query.kinds.count != 1) || g == view.grouping
+                    }, id: \.self) { g in Text(Self.groupingLabel(g)).tag(g) }
                 }
                 .pickerStyle(.inline)
             } label: { Label("Group", systemImage: "rectangle.3.group") }
             .fixedSize()
             Menu {
                 Picker("Sort", selection: binding(\.sort)) {
-                    Text("Relevance").tag(ItemSort.relevance)
-                    Text("Last change").tag(ItemSort.changed)
-                    Text("Due date").tag(ItemSort.due)
-                    Text("Title").tag(ItemSort.title)
-                    Text("Task order").tag(ItemSort.taskOrder)
+                    ForEach(ItemSort.allCases.filter { s in tasks || ![.due, .taskOrder].contains(s) || s == view.sort }, id: \.self) { s in
+                        Text(Self.sortLabel(s)).tag(s)
+                    }
                 }
                 .pickerStyle(.inline)
             } label: { Label("Sort", systemImage: "arrow.up.arrow.down") }
             .fixedSize()
             if browser.isModified(viewID) {
-                if view.id.hasPrefix("saved:") {
+                if browser.isSaved(viewID) {
                     Button("Update View") { browser.updateSaved(viewID) }.help("Save these changes into “\(view.name)”")
                 }
                 Button("Reset") { browser.reset(viewID) }.help("Back to the view's own filter")
@@ -112,6 +111,29 @@ struct ItemBrowserView<Header: View>: View {
         let base = view.isTagView ? "" : view.name + " "
         viewName = (base + view.query.description).trimmingCharacters(in: .whitespaces)
         savingView = true
+    }
+
+    static func groupingLabel(_ g: ItemGrouping) -> String {
+        switch g {
+        case .none: "No grouping"
+        case .kind: "Kind"
+        case .due: "Due date"
+        case .status: "Status"
+        case .priority: "Priority"
+        case .effort: "Effort"
+        case .changed: "Last change"
+        case .tag: "Tag"
+        }
+    }
+
+    static func sortLabel(_ s: ItemSort) -> String {
+        switch s {
+        case .relevance: "Relevance"
+        case .changed: "Last change"
+        case .due: "Due date"
+        case .title: "Title"
+        case .taskOrder: "Task order"
+        }
     }
 
     private func binding<T>(_ path: WritableKeyPath<ItemView, T>) -> Binding<T> {

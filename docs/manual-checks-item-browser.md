@@ -29,7 +29,7 @@ All are created by an agent (Claude), so `by:agent` finds them.
 ## C. Results (task 2.3)
 
 - [ ] C1 In All items click "Demo: dashboard" → its page; back, ⌘-click it → https://example.com/dashboard opens in the browser ("Open a bookmark from the browser"). ⌘-click on a page or task opens its page.
-- [ ] C2 Task rows in the browser have the status bar (red for the overdue one) and, on hover, snooze, effort and open buttons; right-click shows the task actions ("Task row keeps its actions").
+- [ ] C2 Task rows in the browser have the status bar (red for the overdue one) and, on hover, snooze, due date, priority, effort and open buttons; right-click shows the task actions ("Task row keeps its actions").
 - [ ] C3 Tasks filtered by `#gly/checks/item-browser/demo/atlas`: the Refine row shows `…/people/alex 2` before `…/people/sam 1`; clicking `…/people/alex` leaves the two tasks ("Who is involved").
 - [ ] C4 Group ▸ Due date in Tasks (demo-filtered) → "Overdue", "This week", "Later", "No due date" in that order; Group ▸ Tag and Status group accordingly; Sort menus reorder ("Group by due date").
 - [ ] C5 In Tasks filtered by `#gly/checks/item-browser/demo/atlas` choose New Task → the form already has that tag; New in All items offers task, page and bookmark, each with the view's tags ("New task in a tag view").
@@ -57,6 +57,15 @@ All are created by an agent (Claude), so `by:agent` finds them.
 - [ ] G1 Views you saved before this build appear under Saved Views again (imported once, not twice after a restart); saving, renaming, deleting and "Update View" still work, and ⌘Z undoes a save, rename or delete you made ("Save a view").
 - [ ] G2 Under Saved Views there is "Demo: atlas this week", created by Claude over MCP; it shows "Demo: review deck" and "Demo: plan offsite", grouped by due date ("Agent saves a view").
 - [x] G3 (Claude) MCP: `list_views`, `create_view`, `update_view`, `delete_view`, `list_items` by view and by filter work end to end, presets are read-only ("Agent changes and deletes a view", "Preset views are read-only", "Agent runs a view", "Agent filters directly").
+
+## H. Refinements
+
+- [ ] H1 In Tasks add "Due ▸ Within 2 workdays" → tasks due from today through the second working day (weekends and non-working days of Settings ▸ Planning don't count); the chip reads "Due: within 2 workdays"; typing `due:5wd` works too ("Due within working days").
+- [ ] H2 In Pages the ⊕ menu has no Status, Due, Priority or Effort, and Group/Sort offer no task groupings or task order; in Tasks and All items they are there. Host and Exclude Tag are no longer in the menu ("Filters that fit the kinds").
+- [ ] H3 ⊕ ▸ Tag is a nested menu following the tag hierarchy; a group offers "Filter by “…”" first.
+- [ ] H4 Group offers Priority, Effort and Last change; grouping Tasks by priority puts urgent first.
+- [ ] H5 In Bookmarks the tag tree shows only tags that carry bookmarks (counts match the list); "Show all tags" brings back the others; in Pages the counts follow Pages ("Tree follows the view").
+- [ ] H6 Change the filter of a saved view → "Update View" appears next to Reset and writes the change into the view.
 
 ## F. Claude's checks
 

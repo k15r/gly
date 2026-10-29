@@ -153,6 +153,7 @@ struct AgentBanner: View {
 }
 
 struct ContentView: View {
+    @Environment(PlanningModel.self) private var planning
     @Environment(AppModel.self) private var app
     @Environment(TasksModel.self) private var tasks
     @Environment(Navigation.self) private var nav
@@ -173,7 +174,7 @@ struct ContentView: View {
                         if view.query.isEmpty {
                             Label(view.name, systemImage: view.symbol).tag(Navigation.Destination.items(view.id))
                         } else {
-                            SidebarCountRow(title: view.name, symbol: view.symbol, count: SidebarCountRow.matching(view.query))
+                            SidebarCountRow(title: view.name, symbol: view.symbol, count: SidebarCountRow.matching(view.query, workdays: planning.hours.workdays))
                                 .tag(Navigation.Destination.items(view.id))
                         }
                     }
@@ -181,7 +182,7 @@ struct ContentView: View {
                     if !browser.saved.isEmpty {
                         Section("Saved Views") {
                             ForEach(browser.saved) { view in
-                                SidebarCountRow(title: view.name, symbol: view.symbol, count: SidebarCountRow.matching(view.query))
+                                SidebarCountRow(title: view.name, symbol: view.symbol, count: SidebarCountRow.matching(view.query, workdays: planning.hours.workdays))
                                     .id(view.query.description)
                                     .tag(Navigation.Destination.items(view.id))
                                     .contextMenu {
@@ -219,6 +220,7 @@ struct ContentView: View {
             Button("Rename") { if let id = renaming { browser.rename(id, to: renameText) }; renaming = nil }
             Button("Cancel", role: .cancel) { renaming = nil }
         }
+        .onChange(of: planning.hours.workdays, initial: true) { _, days in browser.workdays = days }
         .sheet(isPresented: $nav.showQuickOpen) { QuickOpenView() }
         .sheet(isPresented: $nav.showNewPage) { NewPageSheet() }
         .overlay {
@@ -362,37 +364,37 @@ struct TagTreeView: View {
     @Environment(Navigation.self) private var nav
     @State private var drop = TreeDropState()
     @State private var filter = ""
-    @State private var live = Live<TagCounts>()
+    /// In a browser view, tags without items there are hidden unless asked for.
+    @State private var showAllTags = false
 
     var body: some View {
         TextField("Filter tags", text: $filter).textFieldStyle(.roundedBorder).controlSize(.small)
-        let nodes = TagTreeFilter.apply(filter, to: tasks.tagTree)
+        let counts = browser.tagCounts
+        let pruning = browser.activeViewID != nil && !showAllTags && filter.isEmpty
+        let all = TagTreeFilter.apply(filter, to: tasks.tagTree)
+        let nodes = pruning ? TagTreeFilter.withItems(all, counts: counts.tags, keep: TagTreeClick.activeTags(browser)) : all
         if tasks.tagTree.isEmpty {
             Text("No tags yet").font(.caption).foregroundStyle(.secondary)
         } else if nodes.isEmpty {
             Text("No tag matches").font(.caption).foregroundStyle(.secondary)
         }
-        ForEach(nodes) { node in TagTreeNode(node: node, drop: drop, counts: live.value?.tags ?? [:], forceExpanded: !filter.isEmpty) }
+        ForEach(nodes) { node in TagTreeNode(node: node, drop: drop, counts: counts.tags, forceExpanded: !filter.isEmpty) }
         if filter.isEmpty {
             HStack {
                 Label("Untagged", systemImage: "tray").foregroundStyle(.secondary)
                 Spacer()
-                if let n = live.value?.untagged, n > 0 { Text("\(n)").foregroundStyle(.secondary).monospacedDigit() }
+                if counts.untagged > 0 { Text("\(counts.untagged)").foregroundStyle(.secondary).monospacedDigit() }
             }
             .fontWeight(TagTreeClick.untaggedActive(browser) ? .bold : .regular)
             .treeRow(group: .untagged, state: drop, onTap: { TagTreeClick.untagged(browser: browser, nav: nav) }) { items in
                 ItemMove.perform(items, to: nil, app: app, wiki: wiki, tasks: tasks)
             }
         }
-        // Counts follow the shown view without its tag filters (item-browser I2); outside the browser, all items.
-        Color.clear.frame(height: 0)
-            .task(id: TagTreeClick.countQuery(browser)) {
-                let q = TagTreeClick.countQuery(browser)
-                live.observe(wiki.store) { db in
-                    let items = try BrowseQueries.items(db, q, sort: .changed)
-                    return TagCounts(tags: BrowseFacets.tagCounts(items), untagged: BrowseFacets.untaggedCount(items))
-                }
-            }
+        if browser.activeViewID != nil && filter.isEmpty && (showAllTags || nodes != all) {
+            // Tags without items in this view are hidden, so the tree offers what narrows the view (item-browser I7).
+            Toggle(showAllTags ? "Showing all tags" : "Show all tags", isOn: $showAllTags)
+                .toggleStyle(.checkbox).font(.caption).foregroundStyle(.secondary)
+        }
     }
 }
 
@@ -403,6 +405,17 @@ struct TagCounts: Equatable {
 
 /// The tag tree filtered by typed text: tags whose path contains it, with their parents (specs/tags "Find a tag").
 enum TagTreeFilter {
+    /// Tags with items in the shown view (counts include the tags below), plus the tags in its filter.
+    static func withItems(_ nodes: [TagNode], counts: [String: Int], keep: Set<String>) -> [TagNode] {
+        nodes.compactMap { node in
+            let key = TagName.key(for: node.path)
+            guard (counts[key] ?? 0) > 0 || keep.contains(key) else { return nil }
+            var kept = node
+            kept.children = withItems(node.children, counts: counts, keep: keep)
+            return kept
+        }
+    }
+
     static func apply(_ text: String, to nodes: [TagNode]) -> [TagNode] {
         let t = text.trimmingCharacters(in: .whitespaces).lowercased()
         guard !t.isEmpty else { return nodes }
@@ -426,8 +439,15 @@ enum TagTreeClick {
         return id
     }
 
-    static func countQuery(_ browser: BrowserModel) -> ItemQuery {
-        browser.activeViewID.map { browser.view($0).query.droppingTags() } ?? ItemQuery()
+    /// The shown view's tag filters and their parents (kept in the tree even without items).
+    static func activeTags(_ browser: BrowserModel) -> Set<String> {
+        guard let id = browser.activeViewID else { return [] }
+        var keys = Set<String>()
+        for tag in browser.view(id).query.tags {
+            let segments = TagName.key(for: tag).split(separator: "/")
+            for depth in 1...max(segments.count, 1) { keys.insert(segments.prefix(depth).joined(separator: "/")) }
+        }
+        return keys
     }
 
     /// In a browser view a click sets the tag filter to this tag and ⇧-click adds or removes it; ⌘-click, and any

@@ -83,4 +83,18 @@ final class BrowseFacetTests: XCTestCase {
         let top = BrowseGroups.group(try items("is:task"), by: .tag, query: ItemQuery(), sort: .title, today: today)
         XCTAssertEqual(top.map(\.title), ["project", "Untagged"])
     }
+
+    func testGroupByPriorityEffortAndChange() throws {
+        ok(.createTask(TaskDraft(title: "Urgent", priority: .urgent, effort: .l)))
+        ok(.createTask(TaskDraft(title: "Plain")))
+        ok(.createPage(PageDraft(title: "Page")))
+        let all = try items("")
+        let byPriority = BrowseGroups.group(all, by: .priority, query: ItemQuery(), sort: .title, today: today, calendar: cal)
+        XCTAssertEqual(byPriority.map(\.title), ["Urgent", "No priority", "Not a task"])
+        let byEffort = BrowseGroups.group(all, by: .effort, query: ItemQuery(), sort: .title, today: today, calendar: cal)
+        XCTAssertEqual(byEffort.map(\.title), ["L", "No effort", "Not a task"])
+        let byChange = BrowseGroups.group(all, by: .changed, query: ItemQuery(), sort: .title, today: today, calendar: cal)
+        XCTAssertEqual(byChange.map(\.title), ["Today"])
+        XCTAssertTrue(ItemGrouping.priority.tasksOnly && !ItemGrouping.changed.tasksOnly)
+    }
 }

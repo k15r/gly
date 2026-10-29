@@ -39,7 +39,12 @@ public enum BrowseFacets {
 }
 
 /// How results are grouped (item-browser I5).
-public enum ItemGrouping: String, Codable, CaseIterable, Sendable { case none, kind, due, status, tag }
+public enum ItemGrouping: String, Codable, CaseIterable, Sendable {
+    case none, kind, due, status, priority, effort, changed, tag
+
+    /// Groupings that only sort tasks apart (the others land in "Not a task").
+    public var tasksOnly: Bool { [.due, .status, .priority, .effort].contains(self) }
+}
 
 public struct ItemGroup: Equatable, Identifiable {
     public let id: String
@@ -90,6 +95,22 @@ public enum BrowseGroups {
         case .status:
             return groups([("open", "Open"), ("snoozed", "Snoozed"), ("done", "Done"), ("dropped", "Dropped"), ("other", "Not a task")]) { item in
                 [item.task?.status.rawValue ?? "other"]
+            }
+        case .priority:
+            return groups(Priority.allCases.reversed().map { ($0.rawValue, $0 == .none ? "No priority" : $0.rawValue.capitalized) }
+                          + [("other", "Not a task")]) { item in [item.task?.priority.rawValue ?? "other"] }
+        case .effort:
+            return groups(Effort.allCases.map { ($0.rawValue, $0.rawValue) } + [("none", "No effort"), ("other", "Not a task")]) { item in
+                guard let t = item.task else { return ["other"] }
+                return [t.effort?.rawValue ?? "none"]
+            }
+        case .changed:
+            let start = today.interval(in: calendar).start
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: start) ?? start
+            let week = calendar.date(byAdding: .day, value: -7, to: start) ?? start
+            return groups([("today", "Today"), ("yesterday", "Yesterday"), ("week", "Last 7 days"), ("earlier", "Earlier")]) { item in
+                let m = item.modifiedAt
+                return [m >= start ? "today" : m >= yesterday ? "yesterday" : m >= week ? "week" : "earlier"]
             }
         case .tag:
             return tagGroups(items, query: query)
