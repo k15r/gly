@@ -17,7 +17,7 @@ public struct WorkEntry: Equatable, Sendable {
     public let minutes: Int
 }
 
-public enum TaskStatus: String, Codable, CaseIterable {
+public enum TaskStatus: String, Codable, CaseIterable, Sendable {
     case open, snoozed, done, dropped
 }
 
@@ -28,7 +28,7 @@ public enum Effort: String, Codable, CaseIterable, Comparable, Sendable {
     public static func < (a: Effort, b: Effort) -> Bool { a.rank < b.rank }
 }
 
-public enum Priority: String, Codable, CaseIterable, Comparable {
+public enum Priority: String, Codable, CaseIterable, Comparable, Sendable {
     case none, low, normal, high, urgent
 
     /// Sort rank: urgent = 4 … none = 0.
