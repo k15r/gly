@@ -8,6 +8,8 @@ struct PropertyChip<Popup: View>: View {
     let text: String
     var tint: Color = .primary
     var isEmpty = false
+    /// The small variant of task rows (item rows show the task page's chips on hover).
+    var compact = false
     let help: String
     @ViewBuilder let popup: (_ close: @escaping () -> Void) -> Popup
     @State private var open = false
@@ -16,7 +18,7 @@ struct PropertyChip<Popup: View>: View {
     var body: some View {
         Button { open.toggle() } label: {
             Label(isEmpty ? "+ " + text : text, systemImage: symbol)
-                .modifier(ChipStyle(isEmpty: isEmpty, hovering: hovering, tint: tint))
+                .modifier(ChipStyle(isEmpty: isEmpty, hovering: hovering, tint: tint, compact: compact))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

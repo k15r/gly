@@ -56,10 +56,6 @@ struct TaskRow: View {
     /// Completion shown immediately, committed after a short delay so the tick is visible (and can be undone by clicking again).
     @State private var pendingCompletion: Task<Void, Never>?
     @State private var hovering = false
-    @State private var snoozing = false
-    @State private var estimating = false
-    @State private var dating = false
-    @State private var prioritizing = false
 
     private var showsDone: Bool { task.status == .done || pendingCompletion != nil }
 
@@ -118,6 +114,7 @@ struct TaskRow: View {
                         Spacer(minLength: 8)
                         TagChipLine(tags: task.tags)
                     }
+                    .frame(minHeight: 18)      // keeps the row's height when the hover chips appear
                 }
                 let excerpt = Excerpt.of(task.body)
                 if !excerpt.isEmpty { Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
@@ -146,11 +143,14 @@ struct TaskRow: View {
         }
     }
 
+    /// Open tasks always have the metadata line: on hover it holds the property chips (task page style).
     private var hasChips: Bool {
         task.effort != nil || task.workedMinutes != 0 || task.due != nil || !task.parts.isEmpty || task.isSnoozed(today: clock.today)
+            || (task.status != .done && task.status != .dropped && app.canWrite)
     }
 
-    /// Effort (with what's left), due date, parts and snooze date in the small chip style (tags follow in `TagChipLine`).
+    /// The task's properties as small chips, as on the task page: set ones always, empty ones ("+ Due") on hover;
+    /// each opens its picker in place (tags follow in `TagChipLine`). Priority shows as a chip only on hover (the title has its icon).
     @ViewBuilder
     private func chips(status: RowStatus?, shownDay: LocalDay) -> some View {
         let dayLength = planning.hours.minutesPerDay
@@ -158,66 +158,57 @@ struct TaskRow: View {
         let left = task.remaining(sizes: planning.sizes, dayMinutes: dayLength)
         let progressed = task.workedMinutes != 0 || parts.contains { $0.estimate != nil }
         let snoozedUntil = task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil
-        if task.effort != nil || progressed || task.due != nil || !parts.isEmpty || snoozedUntil != nil {
-            HStack(spacing: 4) {
-                if let effort = task.effort {
-                    let text = progressed && left != nil ? "\(effort.label) · \(left == 0 ? "nothing" : formatEffort(Double(left!), dayLength: dayLength)) left" : effort.label
-                    Label(text, systemImage: "gauge.with.dots.needle.33percent").modifier(ChipStyle(compact: true)).help("Effort")
-                } else if progressed, let left {
-                    Label("\(formatEffort(Double(left), dayLength: dayLength)) left", systemImage: "gauge.with.dots.needle.33percent")
-                        .modifier(ChipStyle(compact: true)).help("Left from the estimated checklist items")
+        let editable = app.canWrite && task.status != .done && task.status != .dropped
+        let showEmpty = hovering && editable
+        let effortEmpty = task.effort == nil && !progressed
+        let effortText: String = {
+            if let effort = task.effort {
+                return progressed && left != nil ? "\(effort.label) · \(left == 0 ? "nothing" : formatEffort(Double(left!), dayLength: dayLength)) left" : effort.label
+            }
+            return progressed && left != nil ? "\(formatEffort(Double(left!), dayLength: dayLength)) left" : "Effort"
+        }()
+        HStack(spacing: 4) {
+            if showEmpty {
+                PropertyChip(symbol: task.priority.symbol ?? "flag", text: task.priority == .none ? "Priority" : task.priority.label,
+                             tint: task.priority.tint, isEmpty: task.priority == .none, compact: true, help: "Priority") { close in
+                    PriorityPicker(current: task.priority) { p in send(.updateTask(id: task.id, TaskPatch(priority: p))); close() }
                 }
-                if let due = task.due {
-                    let overdue = status?.kind == .overdue || status?.kind == .cantFit
-                    Label(TaskPropertyRow.shortDue(due), systemImage: "calendar")
-                        .modifier(ChipStyle(tint: overdue ? StatusKind.overdue.color : .primary, compact: true)).help("Due date")
+            }
+            if !effortEmpty || showEmpty {
+                PropertyChip(symbol: "gauge.with.dots.needle.33percent", text: effortText, isEmpty: effortEmpty, compact: true, help: "Effort") { close in
+                    EffortPicker(task: task, onDone: close)
                 }
-                if !parts.isEmpty {
-                    Label("\(parts.filter(\.done).count)/\(parts.count)", systemImage: "checklist")
-                        .modifier(ChipStyle(compact: true)).help("Checklist items done")
+                .disabled(!editable)
+            }
+            if task.due != nil || showEmpty {
+                let overdue = status?.kind == .overdue || status?.kind == .cantFit
+                PropertyChip(symbol: "calendar", text: task.due.map(TaskPropertyRow.shortDue) ?? "Due",
+                             tint: overdue ? StatusKind.overdue.color : .primary, isEmpty: task.due == nil, compact: true, help: "Due date") { close in
+                    DuePicker(task: task, today: clock.today) { due in send(.updateTask(id: task.id, TaskPatch(due: .some(due)))); close() }
                 }
-                if let snoozedUntil {
-                    Label("until \(DayView.weekday(snoozedUntil))", systemImage: "moon.zzz")
-                        .modifier(ChipStyle(tint: StatusKind.backFromSnooze.color, compact: true)).help("Snoozed until \(DayView.title(for: snoozedUntil))")
+                .disabled(!editable)
+            }
+            if !parts.isEmpty {
+                Label("\(parts.filter(\.done).count)/\(parts.count)", systemImage: "checklist")
+                    .modifier(ChipStyle(compact: true)).help("Checklist items done")
+            }
+            if snoozedUntil != nil || showEmpty {
+                PropertyChip(symbol: "moon.zzz", text: snoozedUntil.map { "until \(DayView.weekday($0))" } ?? "Snooze",
+                             tint: snoozedUntil == nil ? .primary : StatusKind.backFromSnooze.color, isEmpty: snoozedUntil == nil, compact: true,
+                             help: snoozedUntil.map { "Snoozed until \(DayView.title(for: $0))" } ?? "Hide the task until a day; its due date stays") { close in
+                    SnoozePicker(task: task, until: snoozedUntil, today: clock.today, onDone: close)
                 }
+                .disabled(!editable)
             }
         }
     }
 
-    /// Snooze, effort, open (on hover); the same actions stay in the context menu.
+    private func send(_ c: Command) { Task { await app.send(c) } }
+
+    /// Open (on hover); the properties are edited in the chip line, and all actions stay in the context menu.
     private var quickActions: some View {
-        HStack(spacing: 2) {
-            Button { snoozing = true } label: { Image(systemName: "moon.zzz") }
-                .help("Snooze")
-                .popover(isPresented: $snoozing, arrowEdge: .bottom) {
-                    SnoozePicker(task: task, until: task.isSnoozed(today: clock.today) ? task.snoozedUntil.flatMap(LocalDay.init) : nil,
-                                 today: clock.today) { snoozing = false }.padding(12)
-                }
-            Button { dating = true } label: { Image(systemName: "calendar") }
-                .help("Due date")
-                .popover(isPresented: $dating, arrowEdge: .bottom) {
-                    DuePicker(task: task, today: clock.today) { due in
-                        Task { await app.send(.updateTask(id: task.id, TaskPatch(due: .some(due)))) }
-                        dating = false
-                    }
-                    .padding(12)
-                }
-            Button { prioritizing = true } label: { Image(systemName: "flag") }
-                .help("Priority")
-                .popover(isPresented: $prioritizing, arrowEdge: .bottom) {
-                    PriorityPicker(current: task.priority) { p in
-                        Task { await app.send(.updateTask(id: task.id, TaskPatch(priority: p))) }
-                        prioritizing = false
-                    }
-                    .padding(12)
-                }
-            Button { estimating = true } label: { Image(systemName: "gauge.with.dots.needle.33percent") }
-                .help("Effort")
-                .popover(isPresented: $estimating, arrowEdge: .bottom) { EffortPicker(task: task) { estimating = false }.padding(12) }
-            Button(action: onEdit) { Image(systemName: "arrow.up.forward.square") }.help("Open")
-        }
-        .buttonStyle(.borderless).foregroundStyle(.secondary)
-        .disabled(!app.canWrite)
+        Button(action: onEdit) { Image(systemName: "arrow.up.forward.square") }.help("Open")
+            .buttonStyle(.borderless).foregroundStyle(.secondary)
     }
 
     /// Records what today asks for as worked today, or takes it back (specs/daily-planning "Record today's part").

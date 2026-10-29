@@ -29,7 +29,7 @@ All are created by an agent (Claude), so `by:agent` finds them.
 ## C. Results (task 2.3)
 
 - [ ] C1 In All items click "Demo: dashboard" → its page; back, ⌘-click it → https://example.com/dashboard opens in the browser ("Open a bookmark from the browser"). ⌘-click on a page or task opens its page.
-- [ ] C2 Task rows in the browser have the status bar (red for the overdue one) and, on hover, snooze, due date, priority, effort and open buttons; right-click shows the task actions ("Task row keeps its actions").
+- [ ] C2 Task rows in the browser have the status bar (red for the overdue one) and, on hover, the task page's property chips in the metadata line (set ones editable, empty ones as "+ Priority", "+ Effort", "+ Due", "+ Snooze", each opening its picker in place; the row keeps its height) plus Open on the right; right-click shows the task actions ("Task row keeps its actions").
 - [ ] C4 Group ▸ Due date in Tasks (demo-filtered) → "Overdue", "This week", "Later", "No due date" in that order; Group ▸ Tag and Status group accordingly; Sort menus reorder; clicking a group heading (chevron) collapses and expands it ("Group by due date").
 - [ ] C5 In Tasks filtered by `#gly/checks/item-browser/demo/atlas` choose New Task → the form already has that tag; New in All items offers task, page and bookmark, each with the view's tags ("New task in a tag view").
 - [ ] C7 Give a demo task eight tags (or narrow the window): its row shows the tags that fit and "+N"; hovering "+N" opens a small popup with the others (a click keeps it open; its chips open tag pages); nothing is cut off or overlaps ("Many tags").
