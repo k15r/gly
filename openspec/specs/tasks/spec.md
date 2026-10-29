@@ -110,7 +110,7 @@ A change to a task SHALL be reflected in every open view (day view, task list, t
 - **THEN** it also disappears from the day view at the same time
 
 ### Requirement: Task page
-Opening a task (from a list, the day view, the tag tree, a link, a backlink or search) SHALL show it in the main area, laid out like a page: the title; a row with completion, priority, effort, due date, status/snooze and tags; the notes with the read view and editing (⌘E); and its backlinks. It SHALL take part in back/forward navigation.
+Opening a task (from a list, the day view, the tag tree, a link, a backlink or search) SHALL show it in the main area like a page: a title row with completion button, title and menu (snooze, drop, delete); property chips for priority, effort, due date, snooze and tags, each showing its value (or a faded "+ Due" when empty) and opening a popover; the notes in the live-preview editor; and its backlinks. Each change SHALL be one undo step. It SHALL take part in back/forward navigation.
 
 #### Scenario: Open a task from a link
 - **WHEN** the user follows a link to a task from a page
@@ -123,6 +123,18 @@ Opening a task (from a list, the day view, the tag tree, a link, a backlink or s
 #### Scenario: Set effort on the task page
 - **WHEN** the user picks `L` in the effort control of the task page
 - **THEN** the effort is saved at once as one undo step
+
+#### Scenario: Set a due date in the calendar
+- **WHEN** the user opens the due date chip and picks next Friday in its calendar
+- **THEN** the task is due next Friday, the chip reads that date, and the change is one undo step
+
+#### Scenario: Snooze from the chip
+- **WHEN** the user opens the snooze chip of a task due Friday and picks next Monday (a quick pick or the calendar)
+- **THEN** the task is snoozed until next Monday, the chip reads "Snoozed until Mon", and the due date is unchanged
+
+#### Scenario: Empty properties
+- **WHEN** a task has no due date and no effort
+- **THEN** the property row shows faded "+ Due" and "+ Effort" chips
 
 ### Requirement: Snooze shows its cost
 Where the user snoozes a task from a menu, the snooze options SHALL say that the task's due date stays as it is, and each option SHALL warn when the task, coming back on that date, would no longer fit before its due date (its effort is more than the free time from the start of the return day until its due date). Tasks without due date or without effort SHALL show no warning.

@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Task page
-Opening a task (from a list, the day view, the tag tree, a link, a backlink or search) SHALL show it in the main area, laid out like a page: a title row with the completion button, the title and a menu (snooze, drop, delete); a row of property chips for priority, effort (with what's left), due date, snooze and tags, each showing its value or, when empty, a faded invitation such as "+ Due", and each opening a small popover to change it; the notes in the live-preview editor; and its backlinks. Every change SHALL be saved at once as one undo step. It SHALL take part in back/forward navigation.
+Opening a task (from a list, the day view, the tag tree, a link, a backlink or search) SHALL show it in the main area like a page: a title row with completion button, title and menu (snooze, drop, delete); property chips for priority, effort, due date, snooze and tags, each showing its value (or a faded "+ Due" when empty) and opening a popover; the notes in the live-preview editor; and its backlinks. Each change SHALL be one undo step. It SHALL take part in back/forward navigation.
 
 #### Scenario: Open a task from a link
 - **WHEN** the user follows a link to a task from a page
