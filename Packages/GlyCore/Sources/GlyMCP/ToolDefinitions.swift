@@ -35,7 +35,9 @@ public enum ToolDefinitions {
     static let linkNote = "Markdown may link to pages, tasks and tags: write [[Exact Title]] (resolved if exactly one page, task or tag has that title or name), narrow it with a prefix ([[page:Title]], [[task:Title]], [[tag:project/atlas]]) or a tag path ([[person/alex/Goals]] = the page or task titled Goals that carries the tag person/alex), or reuse the canonical form [label](gly://item/<id>) / [label](gly://tag/<id>) returned by tools. Titles may repeat (e.g. a Goals page per person). Resolution happens once; afterwards the link points to the id. Unresolved links stay as 'missing page' links and are listed in `unresolved` and `unresolved_links` (with candidates when several items matched – retry with a tag path or prefix). Ordinary web links ([text](https://…)) are fine too."
     static let pageShape = "A page is {id, title, text, tags, created_at, modified_at, modified_by, links: [{id, kind, title, display, tags, state}], backlinks: [{id, kind, title, display, tags, excerpt}]}; kind is page, task or tag; state is live, deleted or missing; display adds a qualifier (\"Goals · person/alex\") when titles repeat."
 
-    public static let all: [Tool] = [
+    public static let all: [Tool] = core + bookmarkTools
+
+    static let core: [Tool] = [
         Tool(name: "get_schedule",
              description: "The user's schedule for one day: appointments from all visible calendars (in start order; all-day ones flagged; counts_as = blocks/maybe/free for the user's free time, with reason; has_notes when the meeting has notes; calendar_id, base_id and original_start identify it for get_meeting_notes / update_meeting_notes) and the tasks the gly day view shows (due that day; for today and later days also the ones overdue as seen from that day, flagged), plus free_minutes (free working time that day, for today from now on). For today and later days also: today (that day's tasks overdue, due that day, or needing work that day; reason = overdue/due_today/needs_work, needed_today_minutes = minimum work that day to finish on time, cant_fit when even all free time until the due date isn't enough), needed_today_minutes (sum) and without_estimate, and coming_up (other tasks due within the planning horizon after that day, each with start_by = last day to start). A later day is a forecast: it assumes nothing is done before it. If calendar access is missing, tasks are still returned and appointments_unavailable explains why. \(dateNote) \(taskShape)",
              inputSchema: object(["date": string("Day to show (YYYY-MM-DD). Default: today.")]),
@@ -173,14 +175,14 @@ public enum ToolDefinitions {
              ], required: ["calendar_id", "base_id", "original_start"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
         Tool(name: "list_trash",
-             description: "List deleted pages and tasks, most recently deleted first: {items: [{id, kind (page|task), title, tags (as when deleted), excerpt, status (tasks), deleted_at (YYYY-MM-DDTHH:mm, local time), deleted_by}], older_count}. By default the last 30 days; older_count says how many older ones exist (all: true lists everything). Nothing in the trash is ever erased.",
+             description: "List deleted pages, tasks and bookmarks, most recently deleted first: {items: [{id, kind (page|task|bookmark), title, tags (as when deleted), excerpt, status (tasks), deleted_at (YYYY-MM-DDTHH:mm, local time), deleted_by}], older_count}. By default the last 30 days; older_count says how many older ones exist (all: true lists everything). Nothing in the trash is ever erased.",
              inputSchema: object([
                 "all": .object(["type": "boolean", "description": "List all deleted items, not just the last 30 days."]),
              ], required: []),
              annotations: .init(readOnlyHint: true, openWorldHint: false)),
         Tool(name: "restore",
-             description: "Restore a deleted page or task by id (from list_trash), with the fields and tags it had when deleted; links to it work again. Use it to fix a wrong delete. Returns the item like get_page / get_task.",
-             inputSchema: object(["id": string("Id of the deleted page or task.")], required: ["id"]),
+             description: "Restore a deleted page, task or bookmark by id (from list_trash), with the fields and tags it had when deleted; links to it work again. Use it to fix a wrong delete. Returns the item like get_page / get_task (a bookmark as in list_bookmarks).",
+             inputSchema: object(["id": string("Id of the deleted page, task or bookmark.")], required: ["id"]),
              annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false)),
     ]
 }

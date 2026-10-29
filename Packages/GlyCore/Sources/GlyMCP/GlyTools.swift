@@ -63,6 +63,10 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
             case "update_page": value = try updatePage(args, writer: writer(client: client))
             case "delete_page": value = try deletePage(args, writer: writer(client: client))
             case "search": value = try search(args)
+            case "create_bookmark": value = try createBookmark(args, writer: writer(client: client))
+            case "update_bookmark": value = try updateBookmark(args, writer: writer(client: client))
+            case "list_bookmarks": value = try listBookmarks(args)
+            case "delete_bookmark": value = try deleteBookmark(args, writer: writer(client: client))
             case "get_context": value = try context(args)
             case "get_tag_page": value = try tagPage(args)
             case "update_tag_page": value = try updateTagPage(args, writer: writer(client: client))
@@ -465,7 +469,11 @@ public final class GlyTools: @unchecked Sendable { // swiftlint:disable:this typ
             throw ToolError("\(id) is not in the trash (list_trash shows what is).")
         }
         try perform(.restore(id: id), writer: writer)
-        return entry.kind == .page ? try pageValue(id) : try taskWithLinks(id)
+        switch entry.kind {
+        case .page: return try pageValue(id)
+        case .bookmark: return Self.bookmarkValue(try bookmark(id))
+        default: return try taskWithLinks(id)
+        }
     }
 
     static func timestamp(_ date: Date) -> String {

@@ -17,7 +17,7 @@
 
 ## 4. Agents
 
-- [ ] 4.1 MCP tools (B7); verify with MCP tests for "Agent saves a link" (incl. existing URL), "Agent finds a link", update, delete and attribution
+- [x] 4.1 MCP tools (B7); verify with MCP tests for "Agent saves a link" (incl. existing URL), "Agent finds a link", update, delete and attribution
 
 ## 5. End to end
 
