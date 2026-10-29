@@ -501,7 +501,13 @@ struct TreeLeafRow: View {
         case .page: nav.go(.page(leaf.itemID))
         case .task: nav.go(.task(leaf.itemID))
         case .meeting: nav.go(.meeting(.notes(leaf.itemID)))
-        case .bookmark: nav.go(.bookmark(leaf.itemID))
+        case .bookmark:
+            // Like everywhere: a click opens the bookmark's page, ⌘-click its URL.
+            if NSEvent.modifierFlags.contains(.command), let b = wiki.bookmarks.first(where: { $0.id == leaf.itemID }) {
+                BookmarkOpen.url(b.url)
+            } else {
+                nav.go(.bookmark(leaf.itemID))
+            }
         case .tag: break
         }
     }
