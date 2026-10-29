@@ -13,7 +13,7 @@ enum MeetingRef: Hashable {
 @Observable
 final class Navigation {
     enum Destination: Hashable {
-        case day, tasks, pages, trash
+        case day, tasks, pages, bookmarks, trash
         case page(String)       // page id
         case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
@@ -24,6 +24,9 @@ final class Navigation {
     private var backStack: [Destination] = []
     private var forwardStack: [Destination] = []
     var day = LocalDay(date: Date())
+
+    /// A bookmark the Bookmarks list opens for editing when it appears (⌥ on a search result).
+    var bookmarkEditRequest: String?
 
     /// An item to open with the cursor in its text (⌘Return in quick capture), live-preview L5.
     var editRequest: String?

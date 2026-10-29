@@ -70,6 +70,30 @@ final class MarkdownStylerTests: XCTestCase {
         XCTAssertFalse(runs(t).contains { $0.style == .hidden })
     }
 
+    /// bookmarks B3: a bookmarked URL's link carries its bookmark, which picks the icon and the tooltip.
+    func testBookmarkedWebLinks() {
+        let t = "[Dashboard](https://grafana.example/d/latency) and [Other](https://other.example) https://grafana.example/d/latency"
+        let mark = BookmarkMark(title: "Latency dashboard", description: "p99 by service", tags: ["project/atlas"])
+        let lookup: (String) -> BookmarkMark? = { $0 == "https://grafana.example/d/latency" ? mark : nil }
+        let all = MarkdownStyler.runs(for: t, appearance: { _ in .missing }, bookmark: lookup)
+        func style(_ s: String) -> [StyleRun.Style] { let r = (t as NSString).range(of: s); return all.filter { $0.range == r }.map(\.style) }
+        XCTAssertEqual(style("Dashboard"), [.webLink(url: "https://grafana.example/d/latency", bookmark: mark)])
+        XCTAssertEqual(style("Other"), [.webLink(url: "https://other.example")])
+        let bare = (t as NSString).range(of: "https://grafana.example/d/latency", options: .backwards)
+        XCTAssertEqual(all.filter { $0.range == bare }.map(\.style), [.webLink(url: "https://grafana.example/d/latency", bookmark: mark)])
+        XCTAssertEqual(mark.tooltip(url: "https://grafana.example/d/latency"),
+                       "Latency dashboard\np99 by service\n#project/atlas\nhttps://grafana.example/d/latency")
+
+        let text = NSMutableAttributedString(string: t)
+        MarkdownAttributes.apply(all, to: text)
+        let at = (t as NSString).range(of: "Dashboard").location, other = (t as NSString).range(of: "Other").location
+        XCTAssertEqual((text.attribute(.wdDecoration, at: at, effectiveRange: nil) as? LinkDecoration)?.symbol, "bookmark")
+        XCTAssertEqual((text.attribute(.wdDecoration, at: other, effectiveRange: nil) as? LinkDecoration)?.symbol, "globe")
+        XCTAssertEqual(text.attribute(.toolTip, at: at, effectiveRange: nil) as? String, mark.tooltip(url: "https://grafana.example/d/latency"))
+        XCTAssertEqual(text.attribute(.wdWebIcon, at: other, effectiveRange: nil) as? String, "https://other.example", "the icon is a button")
+        XCTAssertNil(text.attribute(.wdWebIcon, at: bare.location, effectiveRange: nil), "bare URLs have no icon")
+    }
+
     func testApplyingNeverChangesTheString() {
         let t = "# H\n- [ ] a **b** `c`\n[x](gly://item/\(id)) [[m]] https://example.com"
         let s = NSMutableAttributedString(string: t)

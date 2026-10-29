@@ -9,6 +9,9 @@ import GlyEditor
 struct GlyMarkdownEditor: View {
     @Environment(WikiModel.self) private var wiki
     @Environment(AppModel.self) private var app
+    @Environment(TasksModel.self) private var tasks
+    @Environment(TagColorModel.self) private var tagColors
+    @Environment(Navigation.self) private var nav
     @Environment(\.linkOpener) private var opener
     let text: String
     var onChange: ((String) -> Void)?
@@ -23,7 +26,14 @@ struct GlyMarkdownEditor: View {
                        suggestions: { wiki.suggestions($0) },
                        linkMenu: { wiki.linkMenu($0) },
                        initialCaret: initialCaret,
-                       showsSource: app.showMarkdownSource)
+                       showsSource: app.showMarkdownSource,
+                       bookmark: { wiki.bookmarkMark($0) },
+                       restyleKey: wiki.bookmarksVersion,
+                       bookmarkEditor: { [app, wiki, tasks, tagColors, nav] request, close in
+                           // Hosted by the editor's own popover: the environment goes along explicitly.
+                           AnyView(BookmarkEditor(url: request.url, label: request.label, wiki: wiki, onDone: close)
+                               .environment(app).environment(wiki).environment(tasks).environment(tagColors).environment(nav))
+                       })
     }
 }
 
@@ -34,7 +44,8 @@ struct GlyMarkdownReadView: View {
     /// Saves a checkbox toggle (one undo step each).
     var onChange: ((String) -> Void)?
     var body: some View {
-        MarkdownReadView(text: text, appearance: { wiki.appearance($0) }, onChange: onChange, linkMenu: { wiki.linkMenu($0) })
+        MarkdownReadView(text: text, appearance: { wiki.appearance($0) }, onChange: onChange, linkMenu: { wiki.linkMenu($0) },
+                         bookmark: { wiki.bookmarkMark($0) })
     }
 }
 
@@ -328,6 +339,14 @@ struct TagPageView: View {
                         }.buttonStyle(.plain)
                     }
                 }
+                // specs/bookmarks "Tag page section": bookmarks with this tag or one below it.
+                let key = TagName.key(for: data.name)
+                let bookmarks = wiki.bookmarks.filter { b in b.tags.contains { let k = TagName.key(for: $0); return k == key || k.hasPrefix(key + "/") } }
+                if !bookmarks.isEmpty {
+                    section("Bookmarks", count: bookmarks.count) {
+                        ForEach(bookmarks) { b in TagPageBookmarkRow(bookmark: b) }
+                    }
+                }
                 if !data.meetings.isEmpty {
                     section("Meetings", count: data.meetings.count) {
                         ForEach(data.meetings) { meeting in
@@ -356,6 +375,28 @@ struct TagPageView: View {
             Text("\(title) (\(count))").font(.headline)
             if count == 0 { Text("None").font(.callout).foregroundStyle(.secondary) } else { content() }
         }
+    }
+}
+
+/// A bookmark on a tag page: a click opens the URL, the context menu edits it.
+struct TagPageBookmarkRow: View {
+    @Environment(AppModel.self) private var app
+    let bookmark: BookmarkItem
+    @State private var editing = false
+
+    var body: some View {
+        Button { if let url = URL(string: bookmark.url) { NSWorkspace.shared.open(url) } } label: {
+            HStack {
+                Label(bookmark.title, systemImage: "bookmark")
+                Text(bookmark.host).font(.caption).foregroundStyle(.secondary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(BookmarkMark(title: bookmark.title, description: bookmark.description, tags: bookmark.tags).tooltip(url: bookmark.url))
+        .contextMenu { Button("Edit…") { editing = true }.disabled(!app.canWrite) }
+        .popover(isPresented: $editing, arrowEdge: .trailing) { BookmarkEditor(bookmark: bookmark) { editing = false } }
     }
 }
 
@@ -392,7 +433,7 @@ struct QuickOpenView: View {
     var body: some View {
         let rows = self.rows
         VStack(alignment: .leading, spacing: 0) {
-            TextField("Search pages, tasks and tags", text: $query)
+            TextField("Search pages, tasks, bookmarks and tags", text: $query)
                 .textFieldStyle(.plain).font(.title3).padding(12)
                 .focused($focused)
                 .onSubmit { choose(rows) }
@@ -453,7 +494,10 @@ struct QuickOpenView: View {
             case .task: nav.go(.task(hit.ref.id))
             case .tag: nav.go(.tag(hit.ref.title))
             case .meeting: nav.go(.meeting(.notes(hit.ref.id)))
-            case .bookmark: if let url = hit.url.flatMap(URL.init(string:)) { NSWorkspace.shared.open(url) }
+            case .bookmark:
+                // ⌥ edits the bookmark in the Bookmarks list; otherwise its URL opens (B5).
+                if NSEvent.modifierFlags.contains(.option) { nav.bookmarkEditRequest = hit.ref.id; nav.go(.bookmarks) }
+                else if let url = hit.url.flatMap(URL.init(string:)) { NSWorkspace.shared.open(url) }
             }
         case .create(let title):
             Task { await opener?.createPage(title: title) }

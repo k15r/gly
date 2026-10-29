@@ -27,9 +27,10 @@ struct SidebarCountRow: View {
     static let pages: @Sendable (Database) throws -> Int = { db in
         try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_items WHERE kind = 'info'") ?? 0
     }
+    static let bookmarks: @Sendable (Database) throws -> Int = { db in try BookmarkQueries.count(db) }
     static let recentlyDeleted: @Sendable (Database) throws -> Int = { db in
         let cutoff = Date().addingTimeInterval(-Double(TrashQueries.defaultDays) * 86400)
-        return try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM items WHERE kind IN ('info', 'task') AND deleted_at >= ?", arguments: [cutoff]) ?? 0
+        return try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM items WHERE kind IN ('info', 'task', 'bookmark') AND deleted_at >= ?", arguments: [cutoff]) ?? 0
     }
 }
 

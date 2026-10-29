@@ -16,6 +16,14 @@ public struct LinkSuggestion: Identifiable, Equatable {
     }
 }
 
+/// A web link the user wants to bookmark or whose bookmark to edit (bookmarks B3): its URL and label.
+public struct BookmarkLinkRequest: Equatable {
+    public let url: String
+    /// The link's label; empty for a bare URL.
+    public let label: String
+    public init(url: String, label: String) { self.url = url; self.label = label }
+}
+
 /// Markdown editor with live preview (markdown rendered in place, raw syntax only on the caret's lines, live-preview L1–L4),
 /// link chips, checklists and the `[[` picker (design P8).
 ///
@@ -36,6 +44,11 @@ public struct MarkdownEditor: NSViewRepresentable {
     public var initialCaret: Int?
     /// Edit → Show Markdown Source: every line shows its raw syntax (live-preview L4).
     public var showsSource: Bool
+    /// The bookmark of a web link's URL (bookmarks B3); changes of `restyleKey` restyle the text with fresh lookups.
+    public var bookmark: (String) -> BookmarkMark?
+    public var restyleKey: Int
+    /// Content of the bookmark popover a web link's icon and context menu open; nil = no bookmark actions.
+    public var bookmarkEditor: ((BookmarkLinkRequest, _ close: @escaping () -> Void) -> AnyView)?
 
     public init(text: String,
                 onChange: ((String) -> Void)? = nil,
@@ -45,10 +58,14 @@ public struct MarkdownEditor: NSViewRepresentable {
                 suggestions: @escaping (String) -> [LinkSuggestion],
                 linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard,
                 initialCaret: Int? = nil,
-                showsSource: Bool = false) {
+                showsSource: Bool = false,
+                bookmark: @escaping (String) -> BookmarkMark? = { _ in nil },
+                restyleKey: Int = 0,
+                bookmarkEditor: ((BookmarkLinkRequest, @escaping () -> Void) -> AnyView)? = nil) {
         self.text = text; self.onChange = onChange; self.onCommit = onCommit
         self.appearance = appearance; self.onOpenLink = onOpenLink; self.suggestions = suggestions; self.linkMenu = linkMenu
         self.initialCaret = initialCaret; self.showsSource = showsSource
+        self.bookmark = bookmark; self.restyleKey = restyleKey; self.bookmarkEditor = bookmarkEditor
     }
 
     public func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -91,10 +108,11 @@ public struct MarkdownEditor: NSViewRepresentable {
     }
 
     public func updateNSView(_ scroll: NSScrollView, context: Context) {
-        let sourceChanged = context.coordinator.parent.showsSource != showsSource
+        let old = context.coordinator.parent
+        let restyle = old.showsSource != showsSource || old.restyleKey != restyleKey
         context.coordinator.parent = self
         context.coordinator.externalUpdate(text)
-        if sourceChanged { context.coordinator.restyle() }
+        if restyle { context.coordinator.restyle() }
     }
 
     public static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
@@ -149,7 +167,7 @@ public struct MarkdownEditor: NSViewRepresentable {
             guard let tv = textView, let storage = tv.textStorage else { return }
             let selection = tv.selectedRanges
             revealed = currentRevealed()
-            let runs = MarkdownStyler.livePreview(MarkdownStyler.runs(for: tv.string, appearance: parent.appearance),
+            let runs = MarkdownStyler.livePreview(MarkdownStyler.runs(for: tv.string, appearance: parent.appearance, bookmark: parent.bookmark),
                                                   text: tv.string, revealed: revealed)
             storage.beginEditing()
             MarkdownAttributes.apply(runs, to: storage)
@@ -246,6 +264,40 @@ public struct MarkdownEditor: NSViewRepresentable {
                 }
             }
             return false
+        }
+
+        // MARK: Bookmarks (B3)
+
+        private var bookmarkPopover: NSPopover?
+
+        /// The web link at a character index: its URL, label range and label (bare URLs: empty label).
+        func webLink(at index: Int) -> (url: String, range: NSRange, label: String)? {
+            guard let tv = textView, let storage = tv.textStorage else { return nil }
+            for i in [index, index - 1] where i >= 0 && i < storage.length {
+                var range = NSRange()
+                guard let url = storage.attribute(.wdLink, at: i, effectiveRange: &range) as? String,
+                      let u = URL(string: url), !LinkParser.isOwn(u) else { continue }
+                let text = (tv.string as NSString).substring(with: range)
+                return (url, range, text == url ? "" : text)
+            }
+            return nil
+        }
+
+        var offersBookmarks: Bool { parent.bookmarkEditor != nil }
+        func isBookmarked(_ url: String) -> Bool { parent.bookmark(url) != nil }
+
+        /// Opens the bookmark popover below a web link's label.
+        func showBookmarkEditor(url: String, label: String, range: NSRange) {
+            guard let tv = textView, let content = parent.bookmarkEditor else { return }
+            commitNow()
+            bookmarkPopover?.close()
+            let popover = NSPopover()
+            popover.behavior = .transient
+            let close: () -> Void = { [weak popover] in popover?.close() }
+            popover.contentViewController = NSHostingController(rootView: content(BookmarkLinkRequest(url: url, label: label), close))
+            let rect = tv.segmentRects(for: range).first ?? .zero
+            popover.show(relativeTo: rect.insetBy(dx: -LinkDecoration.iconSpace / 2, dy: 0), of: tv, preferredEdge: .maxY)
+            bookmarkPopover = popover
         }
 
         /// The link menu at the link; replacements edit the text (undo, session save), actions go to the app.
@@ -440,11 +492,52 @@ public final class GlyTextView: NSTextView {
         return rects
     }
 
+    /// The web link whose drawn icon is at `point` (B3): its URL, label range and label.
+    private func webIcon(at point: NSPoint) -> (url: String, range: NSRange, label: String)? {
+        guard let storage = textStorage, storage.length > 0 else { return nil }
+        var hit: (String, NSRange)?
+        storage.enumerateAttribute(.wdWebIcon, in: NSRange(location: 0, length: storage.length)) { value, range, stop in
+            guard let url = value as? String, let first = segmentRects(for: range).first else { return }
+            let icon = NSRect(x: first.minX - LinkDecoration.iconSpace, y: first.minY, width: LinkDecoration.iconSpace, height: first.height)
+            if icon.contains(point) { hit = (url, range); stop.pointee = true }
+        }
+        guard let (url, range) = hit else { return nil }
+        return (url, range, (string as NSString).substring(with: range))
+    }
+
     public override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        if let coordinator, coordinator.offersBookmarks, let link = webIcon(at: point) {
+            coordinator.showBookmarkEditor(url: link.url, label: link.label, range: link.range)
+            return
+        }
         let index = characterIndexForInsertion(at: point)
         if let coordinator, coordinator.handleClick(at: index, command: event.modifierFlags.contains(.command)) { return }
         super.mouseDown(with: event)
+    }
+
+    /// Web links add "Add to bookmarks…" or "Edit bookmark…" and "Copy Link" before the standard entries (B3).
+    public override func menu(for event: NSEvent) -> NSMenu? {
+        let menu = super.menu(for: event) ?? NSMenu()
+        let index = characterIndexForInsertion(at: convert(event.locationInWindow, from: nil))
+        guard let coordinator, let link = coordinator.webLink(at: index) else { return menu }
+        var items: [NSMenuItem] = []
+        func item(_ title: String, _ action: @escaping () -> Void) -> NSMenuItem {
+            let target = CandidateAction(action)
+            let i = NSMenuItem(title: title, action: #selector(CandidateAction.run), keyEquivalent: "")
+            i.target = target; i.representedObject = target           // the item keeps its action alive
+            return i
+        }
+        if coordinator.offersBookmarks {
+            let title = coordinator.isBookmarked(link.url) ? "Edit Bookmark…" : "Add to Bookmarks…"
+            items.append(item(title) { coordinator.showBookmarkEditor(url: link.url, label: link.label, range: link.range) })
+        }
+        items.append(item("Copy Link") {
+            NSPasteboard.general.clearContents(); NSPasteboard.general.setString(link.url, forType: .string)
+        })
+        items.append(.separator())
+        for (offset, i) in items.enumerated() { menu.insertItem(i, at: offset) }
+        return menu
     }
 }
 

@@ -15,6 +15,8 @@ public extension NSAttributedString.Key {
     static let wdBullet = NSAttributedString.Key("wdBullet")
     static let wdQuoteBar = NSAttributedString.Key("wdQuoteBar")
     static let wdCheckboxGlyph = NSAttributedString.Key("wdCheckboxGlyph")
+    /// The label of a markdown web link whose icon is a button (bookmarks B3); value is the URL.
+    static let wdWebIcon = NSAttributedString.Key("wdWebIcon")
 }
 
 /// What `GlyTextView` draws around a link label, in space reserved by kerning (never part of the text).
@@ -133,16 +135,18 @@ public enum MarkdownAttributes {
                 text.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue | NSUnderlineStyle.patternDot.rawValue, range: r)
                 text.addAttribute(.wdLink, value: LinkParser.missingURL(title), range: r)
                 text.addAttribute(.toolTip, value: "Missing page – ⌘-click to create “\(title)”", range: r)
-            case .webLink(let url):
-                // Markdown web links get a globe after their "["; bare URLs show the address itself.
+            case .webLink(let url, let bookmark):
+                // Markdown web links get a globe after their "[" (a bookmark when bookmarked, B3); bare URLs show the
+                // address itself. The icon is a button: `wdWebIcon` marks the label whose icon it is.
                 if r.location > 0, (text.string as NSString).substring(with: NSRange(location: r.location - 1, length: 1)) == "[" {
-                    text.addAttribute(.wdDecoration, value: LinkDecoration(symbol: "globe", qualifier: nil), range: r)
+                    text.addAttribute(.wdDecoration, value: LinkDecoration(symbol: bookmark == nil ? "globe" : "bookmark", qualifier: nil), range: r)
+                    text.addAttribute(.wdWebIcon, value: url, range: r)
                     text.addAttribute(.kern, value: LinkDecoration.iconSpace, range: NSRange(location: r.location - 1, length: 1))
                 }
                 text.addAttribute(.foregroundColor, value: NSColor.linkColor, range: r)
                 text.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: r)
                 text.addAttribute(.wdLink, value: url, range: r)
-                text.addAttribute(.toolTip, value: url, range: r)
+                text.addAttribute(.toolTip, value: bookmark?.tooltip(url: url) ?? url, range: r)
             }
         }
     }

@@ -28,10 +28,18 @@ final class WikiModel {
     private(set) var pages: [PageItem] = []
     private(set) var untagged: [TreeLeaf] = []
     var pageTagFilter: TagName? { didSet { observePages() } }
+    /// All live bookmarks (bookmarks B3, B5), by normalized URL for the editor's lookups; `bookmarksVersion` changes
+    /// with every update, so editors restyle their links.
+    private(set) var bookmarks: [BookmarkItem] = [] {
+        didSet { bookmarksByURL = Dictionary(bookmarks.map { ($0.url, $0) }, uniquingKeysWith: { a, _ in a }); bookmarksVersion += 1 }
+    }
+    private(set) var bookmarksVersion = 0
+    @ObservationIgnored private var bookmarksByURL: [String: BookmarkItem] = [:]
 
     @ObservationIgnored private(set) var store: ReadOnlyStore?
     @ObservationIgnored private var pagesObservation: AnyDatabaseCancellable?
     @ObservationIgnored private var untaggedObservation: AnyDatabaseCancellable?
+    @ObservationIgnored private var bookmarksObservation: AnyDatabaseCancellable?
 
     func attach(_ store: ReadOnlyStore?) {
         guard let store, self.store !== store else { return }
@@ -40,6 +48,16 @@ final class WikiModel {
         untaggedObservation = store.observe(ValueObservation.tracking { try TagQueries.untaggedItems($0) },
                                             onError: { print("untagged observation: \($0)") },
                                             onChange: { [weak self] in self?.untagged = $0 })
+        bookmarksObservation = store.observe(ValueObservation.tracking { try BookmarkQueries.list($0) },
+                                             onError: { print("bookmarks observation: \($0)") },
+                                             onChange: { [weak self] in self?.bookmarks = $0 })
+    }
+
+    /// The bookmark of a URL as typed or linked (compared normalized).
+    func bookmark(for url: String) -> BookmarkItem? { BookmarkURL.normalize(url).flatMap { bookmarksByURL[$0] } }
+
+    func bookmarkMark(_ url: String) -> BookmarkMark? {
+        bookmark(for: url).map { BookmarkMark(title: $0.title, description: $0.description, tags: $0.tags) }
     }
 
     private func observePages() {
@@ -102,21 +120,30 @@ final class WikiModel {
             guard let path else { return true }
             return tags.contains { let k = TagName.key(for: $0); return k == path || k.hasPrefix(path + "/") }
         }
-        var refs: [(id: String, kind: LinkRef.Kind, title: String, tags: [String], modified: Date?)] =
-            exact.map { ($0.id, $0.kind, $0.title, $0.tags, nil) }
-        for hit in hits where kinds.contains(hit.ref.kind) {
+        var refs: [(id: String, kind: LinkRef.Kind, title: String, tags: [String], modified: Date?, url: String?)] =
+            exact.map { ($0.id, $0.kind, $0.title, $0.tags, nil, nil) }
+        // Bookmarks come along unless a prefix asks for one kind (bookmarks B5).
+        for hit in hits where kinds.contains(hit.ref.kind) || (hit.ref.kind == .bookmark && kinds.count > 1) {
             // Items must carry the path's tag (or one below it); tags must lie below the path.
             let fits = hit.ref.kind == .tag ? path.map { TagName.key(for: hit.ref.title).hasPrefix($0 + "/") } ?? true : under(hit.tags)
             guard fits, !refs.contains(where: { $0.id == hit.ref.id }) else { continue }
-            refs.append((hit.ref.id, hit.ref.kind, hit.ref.title, hit.tags, hit.modifiedAt))
+            refs.append((hit.ref.id, hit.ref.kind, hit.ref.title, hit.tags, hit.modifiedAt, hit.url))
         }
         refs = Array(refs.prefix(6))
         let names = displayNames(refs.map(\.id))
         return refs.map { r in
-            let insert = r.kind == .tag ? LinkParser.canonical(label: r.title, tag: r.id) : LinkParser.canonical(label: r.title, item: r.id)
+            // A bookmark goes in as a plain web link, so the text stays portable (specs/bookmarks "Insert a bookmark").
+            let insert = if r.kind == .bookmark, let url = r.url { Self.webLink(label: r.title, url: url) }
+                else if r.kind == .tag { LinkParser.canonical(label: r.title, tag: r.id) }
+                else { LinkParser.canonical(label: r.title, item: r.id) }
             return LinkSuggestion(id: r.id, symbol: r.kind.linkSymbol, title: names[r.id]?.display ?? r.title,
                                   subtitle: Self.secondLine(kind: r.kind, tags: r.tags, modified: r.modified), insert: insert)
         }
+    }
+
+    /// `[label](url)`; brackets in the label become parentheses so the link stays one link.
+    static func webLink(label: String, url: String) -> String {
+        "[" + label.replacingOccurrences(of: "[", with: "(").replacingOccurrences(of: "]", with: ")") + "](" + url + ")"
     }
 
     /// What an ambiguous typed link could mean, as picker entries (link-disambiguation K5).

@@ -14,6 +14,22 @@ public enum LinkAppearance: Equatable {
     var qualifier: String? { if case .live(_, _, let q) = self { q } else { nil } }
 }
 
+/// A bookmarked web link's details (bookmarks B3): its icon becomes a bookmark, its tooltip names the bookmark.
+public struct BookmarkMark: Equatable {
+    public var title: String
+    public var description: String
+    public var tags: [String]
+    public init(title: String, description: String = "", tags: [String] = []) {
+        self.title = title; self.description = description; self.tags = tags
+    }
+
+    /// "Latency dashboard", "p99 by service", "#project/atlas", then the URL.
+    public func tooltip(url: String) -> String {
+        [title, description.isEmpty ? nil : description, tags.isEmpty ? nil : tags.map { "#" + $0 }.joined(separator: " "), url]
+            .compactMap { $0 }.joined(separator: "\n")
+    }
+}
+
 extension LinkRef.Kind {
     /// SF Symbol shown before links of this kind.
     public var linkSymbol: String {
@@ -36,7 +52,7 @@ public struct StyleRun: Equatable {
         case chip(LinkAppearance, url: String)  // label of a gly link
         case hidden                       // collapsed `[` and `](gly://…)` of a glyash link
         case missingLink(title: String)   // title inside `[[…]]`
-        case webLink(url: String)         // label of a web link or a bare URL
+        case webLink(url: String, bookmark: BookmarkMark? = nil)  // label of a web link or a bare URL
         // Live preview (live-preview L1): syntax off the caret lines.
         case bullet                       // a list marker drawn as a bullet (keeps its width)
         case quoteBar                     // a quote marker drawn as a bar (keeps its width)
@@ -126,7 +142,9 @@ public enum MarkdownStyler {
 
     // The line-by-line pass carries fence and list state across lines; splitting it would only thread that state around.
     /// - Parameter appearance: current title/state of a gly link target.
-    public static func runs(for text: String, appearance: (ParsedLink.Target) -> LinkAppearance) -> [StyleRun] { // swiftlint:disable:this function_body_length
+    /// - Parameter bookmark: the bookmark of a web link's URL, if it is bookmarked.
+    public static func runs(for text: String, appearance: (ParsedLink.Target) -> LinkAppearance, // swiftlint:disable:this function_body_length
+                            bookmark: (String) -> BookmarkMark? = { _ in nil }) -> [StyleRun] {
         let ns = text as NSString
         var runs: [StyleRun] = []
         var inFence = false
@@ -199,14 +217,14 @@ public enum MarkdownStyler {
         // Web links: `[text](https://…)` with visible, dimmed syntax; bare URLs.
         for m in webLink.matches(in: text, range: full) where !taken(m.range) {
             let url = ns.substring(with: m.range(at: 2))
-            runs.append(StyleRun(m.range(at: 1), .webLink(url: url)))
+            runs.append(StyleRun(m.range(at: 1), .webLink(url: url, bookmark: bookmark(url))))
             runs.append(StyleRun(NSRange(location: m.range.location, length: 1), .syntax))
             runs.append(StyleRun(NSRange(location: NSMaxRange(m.range(at: 1)), length: NSMaxRange(m.range) - NSMaxRange(m.range(at: 1))), .syntax))
             linkRanges.append(m.range)
         }
         for m in detector.matches(in: text, range: full) where !taken(m.range) {
             guard let url = m.url, ["http", "https"].contains(url.scheme ?? "") else { continue }
-            runs.append(StyleRun(m.range, .webLink(url: url.absoluteString)))
+            runs.append(StyleRun(m.range, .webLink(url: url.absoluteString, bookmark: bookmark(url.absoluteString))))
         }
 
         // Emphasis outside code and links.

@@ -136,7 +136,8 @@ public enum MarkdownBlocks {
 extension MarkdownBlocks {
     /// Inline markdown as `Text`, with a kind icon before gly and web links and the duplicate qualifier after
     /// gly links (link-disambiguation K3). Display only; the source text is untouched.
-    public static func inlineText(_ text: String, appearance: (ParsedLink.Target) -> LinkAppearance) -> Text {
+    public static func inlineText(_ text: String, appearance: (ParsedLink.Target) -> LinkAppearance,
+                                  bookmark: (String) -> BookmarkMark? = { _ in nil }) -> Text {
         let attributed = inline(text, appearance: appearance)
         var result = Text("")
         var lastLink: URL?
@@ -155,7 +156,9 @@ extension MarkdownBlocks {
                 if let kind = a.kind { result = result + Text(Image(systemName: kind.linkSymbol)).foregroundColor(.secondary) + Text(" ") }
                 qualifier = a.qualifier
             } else if ["http", "https", "mailto", "message"].contains(url.scheme ?? "") {
-                result = result + Text(Image(systemName: "globe")).foregroundColor(.secondary) + Text(" ")
+                // A bookmarked URL shows a bookmark (bookmarks B3).
+                let symbol = bookmark(url.absoluteString) == nil ? "globe" : "bookmark"
+                result = result + Text(Image(systemName: symbol)).foregroundColor(.secondary) + Text(" ")
             }
             result = result + piece
             if let qualifier { result = result + Text(" · " + qualifier).font(.caption).foregroundColor(.secondary) }
@@ -172,11 +175,13 @@ public struct MarkdownReadView: View {
     let onChange: ((String) -> Void)?
     /// The menu a link without live target opens (trash-bin T5); nil = open the link.
     let linkMenu: (ParsedLink.Target) -> LinkMenuModel?
+    let bookmark: (String) -> BookmarkMark?
     @Environment(\.openURL) private var openURL
 
     public init(text: String, appearance: @escaping (ParsedLink.Target) -> LinkAppearance, onChange: ((String) -> Void)? = nil,
-                linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard) {
-        self.text = text; self.appearance = appearance; self.onChange = onChange; self.linkMenu = linkMenu
+                linkMenu: @escaping (ParsedLink.Target) -> LinkMenuModel? = LinkMenuModel.standard,
+                bookmark: @escaping (String) -> BookmarkMark? = { _ in nil }) {
+        self.text = text; self.appearance = appearance; self.onChange = onChange; self.linkMenu = linkMenu; self.bookmark = bookmark
     }
 
     public var body: some View {
@@ -240,5 +245,5 @@ public struct MarkdownReadView: View {
         }
     }
 
-    private func inline(_ t: String) -> Text { MarkdownBlocks.inlineText(t, appearance: appearance) }
+    private func inline(_ t: String) -> Text { MarkdownBlocks.inlineText(t, appearance: appearance, bookmark: bookmark) }
 }

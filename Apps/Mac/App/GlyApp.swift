@@ -162,6 +162,7 @@ struct ContentView: View {
                     Label("Day", systemImage: "calendar").tag(Navigation.Destination.day)
                     SidebarCountRow(title: "Tasks", symbol: "checklist", count: SidebarCountRow.openTasks).tag(Navigation.Destination.tasks)
                     SidebarCountRow(title: "Pages", symbol: "doc.text", count: SidebarCountRow.pages).tag(Navigation.Destination.pages)
+                    SidebarCountRow(title: "Bookmarks", symbol: "bookmark", count: SidebarCountRow.bookmarks).tag(Navigation.Destination.bookmarks)
                     SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
                     Section("Tags") { TagTreeView() }
                 }
@@ -173,6 +174,7 @@ struct ContentView: View {
                 case .day: DayContainer()
                 case .tasks: TaskListContainer()
                 case .pages: PagesListView()
+                case .bookmarks: BookmarksListView()
                 case .trash: TrashView()
                 // One view per item: a title being edited can't carry over into the next page or task.
                 case .page(let id): PageView(id: id).id(id)
