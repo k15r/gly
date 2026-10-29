@@ -50,4 +50,39 @@ final class CaptureParserTests: XCTestCase {
         XCTAssertTrue(parse("#only tomorrow").isEmpty, "only syntax: no title, nothing to create")
         XCTAssertTrue(parse("   ").isEmpty)
     }
+
+    // MARK: Bookmarks (bookmarks B6)
+
+    func testBookmarkURLTitleAndTags() {
+        let d = parse("https://Wiki.example/runbook #project/atlas", .bookmark)
+        XCTAssertEqual(d.url, "https://wiki.example/runbook")
+        XCTAssertEqual(d.title, "")
+        XCTAssertEqual(d.tags, ["project/atlas"])
+        XCTAssertFalse(d.isEmpty, "a URL is enough; the title comes from the page")
+        XCTAssertEqual(d.preview(today: tue, fetching: true), "Bookmark · fetching title… · wiki.example · project/atlas")
+        XCTAssertEqual(d.preview(today: tue, fetchedTitle: "Runbook"), "Bookmark · Runbook · wiki.example · project/atlas")
+        XCTAssertEqual(d.bookmarkDraft(fetchedTitle: "Runbook"), BookmarkDraft(url: "https://wiki.example/runbook", title: "Runbook", tags: ["project/atlas"]))
+
+        let titled = parse("On-call runbook https://wiki.example/runbook tomorrow !", .bookmark)
+        XCTAssertEqual(titled.title, "On-call runbook tomorrow", "no due date for bookmarks")
+        XCTAssertEqual(titled.bookmarkDraft(fetchedTitle: "Fetched").title, "On-call runbook tomorrow", "a typed title wins")
+        XCTAssertNil(titled.due)
+        XCTAssertEqual(titled.priority, .none)
+
+        XCTAssertTrue(parse("just words", .bookmark).isEmpty, "no URL, nothing to create")
+        XCTAssertEqual(parse("words", .bookmark).preview(today: tue), "Bookmark · (no URL)")
+    }
+
+    func testTabCyclesTheKinds() {
+        XCTAssertEqual(CaptureKind.task.next, .page)
+        XCTAssertEqual(CaptureKind.page.next, .bookmark)
+        XCTAssertEqual(CaptureKind.bookmark.next, .task)
+    }
+
+    func testPageTitle() {
+        XCTAssertEqual(PageTitle.extract(html: "<html><head><TITLE lang=en>\n  Runbook &amp; On-call\n</title>"), "Runbook & On-call")
+        XCTAssertEqual(PageTitle.extract(html: "<title>Caf&#233; &#x2014; &quot;menu&quot; &bogus; a & b</title>"), "Café — \"menu\" &bogus; a & b")
+        XCTAssertNil(PageTitle.extract(html: "<title>   </title>"))
+        XCTAssertNil(PageTitle.extract(html: "<h1>No title</h1>"))
+    }
 }

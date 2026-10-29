@@ -163,11 +163,17 @@ struct BookmarksListView: View {
                 }
             }
         }
-        .onAppear {
-            guard let id = nav.bookmarkEditRequest else { return }
-            nav.bookmarkEditRequest = nil
-            editing = wiki.bookmarks.first { $0.id == id }
-        }
+        // A request (⌥ on a search result, ⌘↩ in quick capture) may come before the new bookmark is observed.
+        .onAppear(perform: takeEditRequest)
+        .onChange(of: nav.bookmarkEditRequest) { takeEditRequest() }
+        .onChange(of: wiki.bookmarks) { takeEditRequest() }
+    }
+
+    private func takeEditRequest() {
+        guard let id = nav.bookmarkEditRequest, let b = wiki.bookmarks.first(where: { $0.id == id }) else { return }
+        nav.bookmarkEditRequest = nil
+        query = ""; tag = nil
+        editing = b
     }
 
     private var allTags: [String] {

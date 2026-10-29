@@ -10,9 +10,8 @@ struct CaptureView: View {
         let draft = controller.draft
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image(systemName: controller.kind == .task ? "circle" : "doc.text").font(.title2).foregroundStyle(.secondary)
-                TextField(controller.kind == .task ? "New task – #tag, tomorrow, fri, 3 Nov, !" : "New page – #tag",
-                          text: $controller.text)
+                Image(systemName: symbol).font(.title2).foregroundStyle(.secondary)
+                TextField(placeholder, text: $controller.text)
                     .textFieldStyle(.plain).font(.title2)
                     .focused($focused)
                     .onKeyPress(.return, phases: .down) { press in
@@ -20,7 +19,7 @@ struct CaptureView: View {
                         return .handled
                     }
                     .onKeyPress(.tab) {
-                        controller.kind = controller.kind == .task ? .page : .task
+                        controller.kind = controller.kind.next
                         return .handled
                     }
                     .onKeyPress(.escape) {
@@ -29,10 +28,10 @@ struct CaptureView: View {
                     }
             }
             HStack {
-                Text(draft.isEmpty && controller.text.isEmpty ? (controller.kind == .task ? "Task" : "Page") : draft.preview(today: LocalDay(date: Date())))
+                Text(controller.text.isEmpty ? controller.kind.label : preview(draft))
                     .font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 Spacer()
-                Text("Tab: \(controller.kind == .task ? "Page" : "Task")   ↩ save   ⌘↩ save & open   esc")
+                Text("Tab: \(controller.kind.next.label)   ↩ save   ⌘↩ save & open   esc")
                     .font(.caption).foregroundStyle(.tertiary)
             }
         }
@@ -41,5 +40,22 @@ struct CaptureView: View {
         .background(.regularMaterial)
         .onAppear { focused = true }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in focused = true }
+    }
+
+    private var symbol: String {
+        switch controller.kind { case .task: "circle"; case .page: "doc.text"; case .bookmark: "bookmark" }
+    }
+
+    private var placeholder: String {
+        switch controller.kind {
+        case .task: "New task – #tag, tomorrow, fri, 3 Nov, !"
+        case .page: "New page – #tag"
+        case .bookmark: "New bookmark – URL, title, #tag"
+        }
+    }
+
+    private func preview(_ draft: CaptureDraft) -> String {
+        let url = draft.url ?? ""
+        return draft.preview(today: LocalDay(date: Date()), fetchedTitle: controller.fetchedTitles[url], fetching: controller.fetching.contains(url))
     }
 }

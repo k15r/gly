@@ -179,3 +179,40 @@ extension CommandHandler {
         return c?.host ?? c?.path ?? url
     }
 }
+
+/// The `<title>` of a fetched page, for quick capture (bookmarks B6): whitespace collapsed, common entities decoded.
+public enum PageTitle {
+    /// Pages are read up to this many bytes; the title is in the head.
+    public static let maxBytes = 64 * 1024
+
+    public static func extract(html: String) -> String? {
+        guard let open = html.range(of: #"<title\b[^>]*>"#, options: [.regularExpression, .caseInsensitive]),
+              let close = html.range(of: "</title>", options: .caseInsensitive, range: open.upperBound..<html.endIndex) else { return nil }
+        let raw = html[open.upperBound..<close.lowerBound].split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let title = decodeEntities(raw)
+        return title.isEmpty ? nil : title
+    }
+
+    static func decodeEntities(_ s: String) -> String {
+        guard s.contains("&") else { return s }
+        let named = ["amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'", "nbsp": " ", "ndash": "–", "mdash": "—"]
+        var out = ""
+        var rest = Substring(s)
+        while let amp = rest.firstIndex(of: "&") {
+            out += rest[..<amp]
+            let after = rest[rest.index(after: amp)...]
+            guard let semi = after.prefix(10).firstIndex(of: ";") else { out += "&"; rest = after; continue }
+            let name = String(after[..<semi])
+            var decoded: String?
+            if name.hasPrefix("#x") || name.hasPrefix("#X") {
+                decoded = UInt32(name.dropFirst(2), radix: 16).flatMap(Unicode.Scalar.init).map { String(Character($0)) }
+            } else if name.hasPrefix("#") {
+                decoded = UInt32(name.dropFirst()).flatMap(Unicode.Scalar.init).map { String(Character($0)) }
+            } else {
+                decoded = named[name.lowercased()]
+            }
+            if let decoded { out += decoded; rest = after[after.index(after: semi)...] } else { out += "&"; rest = after }
+        }
+        return out + rest
+    }
+}
