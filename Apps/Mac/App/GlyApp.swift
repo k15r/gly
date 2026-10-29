@@ -107,8 +107,11 @@ struct GlyApp: App {
         calendars.show(day: nav.day)
     }
 
+    /// A focused text field undoes its own typing; when it has nothing to undo (e.g. the title still has focus after a change
+    /// in a property popover), ⌘Z undoes the last store change instead.
     private func undoRedo(store command: Command, text selector: Selector) {
-        if NSApp.keyWindow?.firstResponder is NSText {
+        if let text = NSApp.keyWindow?.firstResponder as? NSText, let manager = text.undoManager,
+           command == .undo ? manager.canUndo : manager.canRedo {
             NSApp.sendAction(selector, to: nil, from: nil)
         } else {
             Task { await app.undoRedo(command) }
