@@ -52,6 +52,12 @@ All are created by an agent (Claude), so `by:agent` finds them.
 - [ ] E3 On the `…/demo/atlas` tag page add `due:week` → only the tasks due this week, still grouped, description above ("Narrow a tag page"); the kind switch (All/Tasks/Pages/Bookmarks/Meetings) narrows to one kind.
 - [ ] E4 ⌘K, type `demo`, choose "Show all results" → All items opens filtered by the text, where chips can be added ("Show all results"); Return on a bookmark result opens its page, ⌘Return its URL.
 
+## G. Views in the store, agents (tasks 5.2, 5.3)
+
+- [ ] G1 Views you saved before this build appear under Saved Views again (imported once, not twice after a restart); saving, renaming, deleting and "Update View" still work, and ⌘Z undoes a save, rename or delete you made ("Save a view").
+- [ ] G2 Under Saved Views there is "Demo: atlas this week", created by Claude over MCP; it shows "Demo: review deck" and "Demo: plan offsite", grouped by due date ("Agent saves a view").
+- [x] G3 (Claude) MCP: `list_views`, `create_view`, `update_view`, `delete_view`, `list_items` by view and by filter work end to end, presets are read-only ("Agent changes and deletes a view", "Preset views are read-only", "Agent runs a view", "Agent filters directly").
+
 ## F. Claude's checks
 
 - [ ] F1 (Claude) While you watch Tasks filtered by `#gly/checks/item-browser/demo/atlas`, Claude creates a task with that tag over MCP → it appears without any action ("Agent adds a task").

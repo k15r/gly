@@ -7,7 +7,7 @@ The system SHALL provide MCP tools to list the views (the preset views and the s
 
 #### Scenario: Agent saves a view
 - **WHEN** an agent calls `create_view` with the name "Atlas this week" and the filter `is:task #project/atlas due:week`
-- **THEN** "Atlas this week" appears under Saved Views in the sidebar, and ⌘Z in gly removes it
+- **THEN** "Atlas this week" appears under Saved Views in the sidebar, recorded in the history as one step by the agent
 
 #### Scenario: Agent changes and deletes a view
 - **WHEN** an agent calls `update_view` with a new filter for "Atlas this week", then `delete_view`
