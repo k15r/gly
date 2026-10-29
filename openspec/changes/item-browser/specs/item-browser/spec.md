@@ -63,6 +63,10 @@ Every result SHALL be one row with the kind's icon, the title, the start of its 
 - **WHEN** the user clicks a bookmark in All items, then ⌘-clicks it
 - **THEN** the first click opens its page, the ⌘-click its URL in the default browser
 
+#### Scenario: Same layout for every kind
+- **WHEN** a task, a page and a bookmark are listed one below the other
+- **THEN** each shows its title on the first line, its metadata (task chips, the bookmark's host, the last change) on the left of the second line with its tags right-aligned on the same line, and the start of its text on the third line
+
 #### Scenario: Many tags
 - **WHEN** a task has eight tags and its row has room for three
 - **THEN** the row shows the first three tags and "+5", and hovering "+5" shows the other five

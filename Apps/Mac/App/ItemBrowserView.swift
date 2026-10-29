@@ -259,19 +259,24 @@ struct ItemRow: View {
             // The status bar's place, so titles line up with task rows.
             RoundedRectangle(cornerRadius: 1.5).fill(Color.clear).frame(width: 3, height: 16)
             Image(systemName: item.kind.linkKind.symbol).foregroundStyle(.secondary).frame(width: 18)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(item.title).lineLimit(1)
-                    if item.kind == .bookmark, let url = item.url {
-                        Text(URLComponents(string: url)?.host ?? url).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            // Same layout as task rows: title, then metadata left and tags right, then the start of the text.
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.title).lineLimit(1)
+                HStack(spacing: 4) {
+                    Group {
+                        if item.kind == .bookmark, let url = item.url {
+                            Text(URLComponents(string: url)?.host ?? url)
+                        } else {
+                            Text("edited ") + Text(item.modifiedAt, format: .relative(presentation: .named))
+                        }
                     }
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
+                    Spacer(minLength: 8)
+                    TagChipLine(tags: item.tags)
                 }
                 let excerpt = item.excerpt
                 if !excerpt.isEmpty { Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }
-            Spacer(minLength: 8)
-            TagChipLine(tags: item.tags).layoutPriority(-1)
-            Text(item.modifiedAt, format: .relative(presentation: .named)).font(.caption).foregroundStyle(.tertiary).lineLimit(1)
         }
         .padding(.vertical, 2)
         .help(item.url ?? "")

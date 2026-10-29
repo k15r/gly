@@ -109,10 +109,16 @@ struct TaskRow: View {
                             .font(.caption.bold()).foregroundStyle(status.kind.color).help(status.tooltip)
                     }
                 }
-                HStack(spacing: 4) {
-                    chips(status: status, shownDay: shownDay).fixedSize()
-                    TagChipLine(tags: task.tags)
+                // Same layout for every row: title, then metadata left and tags right, then the start of the text.
+                if hasChips || !task.tags.isEmpty {
+                    HStack(spacing: 4) {
+                        chips(status: status, shownDay: shownDay).fixedSize()
+                        Spacer(minLength: 8)
+                        TagChipLine(tags: task.tags)
+                    }
                 }
+                let excerpt = Excerpt.of(task.body)
+                if !excerpt.isEmpty { Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }
             Spacer(minLength: 4)
             if let todaysPart { todaysPartButton(todaysPart) }
@@ -136,6 +142,10 @@ struct TaskRow: View {
         case .backFromSnooze: "back from snooze"
         case .done: "done"
         }
+    }
+
+    private var hasChips: Bool {
+        task.effort != nil || task.workedMinutes != 0 || task.due != nil || !task.parts.isEmpty || task.isSnoozed(today: clock.today)
     }
 
     /// Effort (with what's left), due date, parts and snooze date in the small chip style (tags follow in `TagChipLine`).
