@@ -50,7 +50,7 @@ struct ItemBrowserView<Header: View>: View {
             Button("Save") {
                 let name = viewName.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { return }
-                nav.go(.items(browser.saveView(from: viewID, name: name)))
+                Task { if let id = await browser.saveView(from: viewID, name: name) { nav.go(.items(id)) } }
             }
             Button("Cancel", role: .cancel) {}
         } message: { Text("The filter, grouping and sorting appear as a view in the sidebar.") }

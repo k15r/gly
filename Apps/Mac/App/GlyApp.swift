@@ -28,7 +28,7 @@ struct GlyApp: App {
                 .environment(\.openURL, OpenURLAction { url in opener.open(url); return .handled })
                 .frame(minWidth: 960, minHeight: 580)
                 .task { await startUp() }
-                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store); tagColors.attach(app.store); meetingMarks.attach(app.store) }
+                .onChange(of: app.store === nil) { tasks.attach(app.store, writer: app.writer); wiki.attach(app.store); planning.attach(app.store); tagColors.attach(app.store); meetingMarks.attach(app.store); browser.attach(app.store, app: app) }
                 .onChange(of: nav.day) { syncDay() }
                 .onChange(of: clock.today) { syncDay() }
         }
