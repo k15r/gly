@@ -125,6 +125,13 @@ final class BrowseQueryTests: XCTestCase {
         XCTAssertEqual(try titles("is:task status:done", sort: .taskOrder), ["Finished second", "Finished first"], "most recently completed first")
     }
 
+    func testCount() throws {
+        task("A", tags: ["x"]); task("B"); ok(.createPage(PageDraft(title: "P", tags: ["x"])))
+        XCTAssertEqual(try db.read { try BrowseQueries.count($0, ItemQuery.parse("#x"), now: now, calendar: cal) }, 2)
+        XCTAssertEqual(try db.read { try BrowseQueries.count($0, ItemQuery.parse("is:task"), now: now, calendar: cal) }, 2)
+        XCTAssertEqual(try db.read { try BrowseQueries.count($0, ItemQuery.parse("nothing"), now: now, calendar: cal) }, 0)
+    }
+
     func testRowsCarryTasksURLsAndTags() throws {
         let t = task("T", tags: ["a"])
         ok(.createBookmark(BookmarkDraft(url: "https://example.com", title: "B", description: "line one\nline two")))

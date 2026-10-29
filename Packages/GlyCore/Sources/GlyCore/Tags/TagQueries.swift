@@ -35,7 +35,7 @@ public struct TagNode: Equatable, Identifiable {
     public let isTag: Bool
     /// Open tasks tagged with this path or anything below it.
     public let openCount: Int
-    public let children: [TagNode]
+    public var children: [TagNode]
     /// Open tasks, then pages, tagged with exactly this path (the tag tree shows everything tagged).
     public var items: [TreeLeaf] = []
 }

@@ -54,6 +54,12 @@ public enum BrowseQueries {
         }
     }
 
+    /// How many items match (sidebar counts).
+    public static func count(_ db: Database, _ query: ItemQuery, now: Date = Date(), calendar: Calendar = .current) throws -> Int {
+        guard let (sql, arguments) = statement(query, sort: .changed, now: now, calendar: calendar, limit: nil) else { return 0 }
+        return try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM (\(sql))", arguments: arguments) ?? 0
+    }
+
     /// AND-ed conditions with their arguments.
     struct Conditions {
         var sql: [String] = []

@@ -59,8 +59,10 @@ struct GlyApp: App {
                 Button("Today") { nav.day = clock.today; nav.go(.day) }.keyboardShortcut("t")
                 Divider()
                 Button("Day") { nav.go(.day) }.keyboardShortcut("1")
-                Button("Tasks") { nav.go(.tasks) }.keyboardShortcut("2")
-                Button("Pages") { nav.go(.pages) }.keyboardShortcut("3")
+                Button("Tasks") { nav.go(.items(ItemView.tasks.id)) }.keyboardShortcut("2")
+                Button("Pages") { nav.go(.items(ItemView.pages.id)) }.keyboardShortcut("3")
+                Button("Bookmarks") { nav.go(.items(ItemView.bookmarks.id)) }.keyboardShortcut("4")
+                Button("All Items") { nav.go(.items(ItemView.all.id)) }.keyboardShortcut("0")
             }
             CommandMenu("Developer") {
                 Button("Re-check Agent") { Task { await app.refreshAgentState() } }
@@ -152,6 +154,9 @@ struct ContentView: View {
     @Environment(AppModel.self) private var app
     @Environment(TasksModel.self) private var tasks
     @Environment(Navigation.self) private var nav
+    @Environment(BrowserModel.self) private var browser
+    @State private var renaming: String?
+    @State private var renameText = ""
 
     var body: some View {
         @Bindable var nav = nav
@@ -161,10 +166,32 @@ struct ContentView: View {
             NavigationSplitView {
                 List(selection: Binding(get: { nav.current }, set: { if let d = $0 { nav.go(d) } })) {
                     Label("Day", systemImage: "calendar").tag(Navigation.Destination.day)
-                    SidebarCountRow(title: "Tasks", symbol: "checklist", count: SidebarCountRow.openTasks).tag(Navigation.Destination.tasks)
-                    SidebarCountRow(title: "Pages", symbol: "doc.text", count: SidebarCountRow.pages).tag(Navigation.Destination.pages)
-                    SidebarCountRow(title: "Bookmarks", symbol: "bookmark", count: SidebarCountRow.bookmarks).tag(Navigation.Destination.bookmarks)
+                    // The browser's preset views (specs/item-browser "Item browser and preset views").
+                    ForEach(ItemView.presets) { view in
+                        if view.query.isEmpty {
+                            Label(view.name, systemImage: view.symbol).tag(Navigation.Destination.items(view.id))
+                        } else {
+                            SidebarCountRow(title: view.name, symbol: view.symbol, count: SidebarCountRow.matching(view.query))
+                                .tag(Navigation.Destination.items(view.id))
+                        }
+                    }
                     SidebarCountRow(title: "Trash", symbol: "trash", count: SidebarCountRow.recentlyDeleted).tag(Navigation.Destination.trash)
+                    if !browser.saved.isEmpty {
+                        Section("Saved Views") {
+                            ForEach(browser.saved) { view in
+                                SidebarCountRow(title: view.name, symbol: view.symbol, count: SidebarCountRow.matching(view.query))
+                                    .id(view.query.description)
+                                    .tag(Navigation.Destination.items(view.id))
+                                    .contextMenu {
+                                        Button("Rename…") { renameText = view.name; renaming = view.id }
+                                        Button("Delete View", role: .destructive) {
+                                            if nav.current == .items(view.id) { nav.go(.items(ItemView.all.id)) }
+                                            browser.delete(view.id)
+                                        }
+                                    }
+                            }
+                        }
+                    }
                     Section("Tags") { TagTreeView() }
                 }
                 // The main pane's minimum (600) follows from the window minimum (960) minus the widest sidebar (360).
@@ -187,6 +214,11 @@ struct ContentView: View {
                 case .meeting(let ref): MeetingPageView(ref: ref)
                 }
             }
+        }
+        .alert("Rename View", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("Name", text: $renameText)
+            Button("Rename") { if let id = renaming { browser.rename(id, to: renameText) }; renaming = nil }
+            Button("Cancel", role: .cancel) { renaming = nil }
         }
         .sheet(isPresented: $nav.showQuickOpen) { QuickOpenView() }
         .sheet(isPresented: $nav.showNewPage) { NewPageSheet() }
@@ -339,29 +371,116 @@ private struct OptionalDrag: ViewModifier {
 /// tag rows open their tag page; open tasks and pages are leaves under their exact tags; untagged items at the end.
 /// Dropping onto a tag or onto any item of its group moves the dragged item there (⌥ adds the tag instead);
 /// the group being dropped into is highlighted.
+/// The tag tree (specs/tags "Tag tree", item-browser I7): tags only, a filter field, counts of the current view's
+/// items, and clicks that filter the current view (⇧ adds); outside the browser a click opens the tag's view.
 struct TagTreeView: View {
     @Environment(TasksModel.self) private var tasks
     @Environment(WikiModel.self) private var wiki
     @Environment(AppModel.self) private var app
+    @Environment(BrowserModel.self) private var browser
+    @Environment(Navigation.self) private var nav
     @State private var drop = TreeDropState()
-    @State private var untaggedExpanded = false
+    @State private var filter = ""
+    @State private var live = Live<TagCounts>()
 
     var body: some View {
-        if tasks.tagTree.isEmpty && wiki.untagged.isEmpty {
+        TextField("Filter tags", text: $filter).textFieldStyle(.roundedBorder).controlSize(.small)
+        let nodes = TagTreeFilter.apply(filter, to: tasks.tagTree)
+        if tasks.tagTree.isEmpty {
             Text("No tags yet").font(.caption).foregroundStyle(.secondary)
+        } else if nodes.isEmpty {
+            Text("No tag matches").font(.caption).foregroundStyle(.secondary)
         }
-        ForEach(tasks.tagTree) { node in TagTreeNode(node: node, drop: drop) }
-        if !wiki.untagged.isEmpty {
-            DisclosureGroup(isExpanded: $untaggedExpanded) {
-                ForEach(wiki.untagged) { leaf in TreeLeafRow(leaf: leaf, fromTag: nil, drop: drop) }
-            } label: {
-                Label("Untagged (\(wiki.untagged.count))", systemImage: "tray").foregroundStyle(.secondary)
-                    .treeRow(group: .untagged, state: drop, onTap: { untaggedExpanded.toggle() }) { items in
-                        ItemMove.perform(items, to: nil, app: app, wiki: wiki, tasks: tasks)
-                    }
+        ForEach(nodes) { node in TagTreeNode(node: node, drop: drop, counts: live.value?.tags ?? [:], forceExpanded: !filter.isEmpty) }
+        if filter.isEmpty {
+            HStack {
+                Label("Untagged", systemImage: "tray").foregroundStyle(.secondary)
+                Spacer()
+                if let n = live.value?.untagged, n > 0 { Text("\(n)").foregroundStyle(.secondary).monospacedDigit() }
             }
-            .springLoaded(.untagged, state: drop, expanded: $untaggedExpanded)
+            .fontWeight(TagTreeClick.untaggedActive(browser) ? .bold : .regular)
+            .treeRow(group: .untagged, state: drop, onTap: { TagTreeClick.untagged(browser: browser, nav: nav) }) { items in
+                ItemMove.perform(items, to: nil, app: app, wiki: wiki, tasks: tasks)
+            }
         }
+        // Counts follow the shown view without its tag filters (item-browser I2); outside the browser, all items.
+        Color.clear.frame(height: 0)
+            .task(id: TagTreeClick.countQuery(browser)) {
+                let q = TagTreeClick.countQuery(browser)
+                live.observe(wiki.store) { db in
+                    let items = try BrowseQueries.items(db, q, sort: .changed)
+                    return TagCounts(tags: BrowseFacets.tagCounts(items), untagged: BrowseFacets.untaggedCount(items))
+                }
+            }
+    }
+}
+
+struct TagCounts: Equatable {
+    var tags: [String: Int]
+    var untagged: Int
+}
+
+/// The tag tree filtered by typed text: tags whose path contains it, with their parents (specs/tags "Find a tag").
+enum TagTreeFilter {
+    static func apply(_ text: String, to nodes: [TagNode]) -> [TagNode] {
+        let t = text.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !t.isEmpty else { return nodes }
+        return nodes.compactMap { node in
+            if node.path.lowercased().contains(t) { return node }
+            let children = apply(t, to: node.children)
+            guard !children.isEmpty else { return nil }
+            var kept = node
+            kept.children = children
+            return kept
+        }
+    }
+}
+
+/// What a click in the tag tree does (specs/tags "Tag tree").
+@MainActor
+enum TagTreeClick {
+    /// The browser view a click filters: a preset or saved view shown in the main area (tag views open other tags).
+    static func target(_ browser: BrowserModel) -> String? {
+        guard let id = browser.activeViewID, !browser.view(id).isTagView else { return nil }
+        return id
+    }
+
+    static func countQuery(_ browser: BrowserModel) -> ItemQuery {
+        browser.activeViewID.map { browser.view($0).query.droppingTags() } ?? ItemQuery()
+    }
+
+    static func tag(_ path: String, browser: BrowserModel, nav: Navigation) {
+        let adding = NSEvent.modifierFlags.contains(.shift)
+        if let id = target(browser) {
+            var q = browser.view(id).query
+            if !adding { q.tags = []; q.untagged = false }
+            q.add(.tag(path))
+            browser.setQuery(id, q)
+        } else if adding, let id = browser.activeViewID {
+            browser.setQuery(id, browser.view(id).query.adding(.tag(path)))     // a tag view narrowed by another tag
+        } else {
+            nav.go(.tag(path))
+        }
+    }
+
+    static func untagged(browser: BrowserModel, nav: Navigation) {
+        if let id = target(browser) {
+            var q = browser.view(id).query
+            q.tags = []; q.excludedTags = []; q.untagged = true
+            browser.setQuery(id, q)
+        } else {
+            browser.setQuery(ItemView.all.id, ItemQuery().adding(.untagged))
+            nav.go(.items(ItemView.all.id))
+        }
+    }
+
+    static func isActive(_ path: String, browser: BrowserModel) -> Bool {
+        guard let id = browser.activeViewID else { return false }
+        return browser.view(id).query.tags.contains { TagName.key(for: $0) == TagName.key(for: path) }
+    }
+
+    static func untaggedActive(_ browser: BrowserModel) -> Bool {
+        browser.activeViewID.map { browser.view($0).query.untagged } ?? false
     }
 }
 
@@ -395,46 +514,50 @@ struct NewSubtagPrompt: ViewModifier {
     }
 }
 
-/// One tag node with its child tags, open tasks and pages.
+/// One tag node with its child tags (no items: the browser shows them, specs/tags "Tag tree").
 struct TagTreeNode: View {
     @Environment(Navigation.self) private var nav
     @Environment(WikiModel.self) private var wiki
     @Environment(TasksModel.self) private var tasks
     @Environment(AppModel.self) private var app
     @Environment(TagColorModel.self) private var tagColors
+    @Environment(BrowserModel.self) private var browser
     let node: TagNode
     let drop: TreeDropState
+    let counts: [String: Int]
+    var forceExpanded = false
     @State private var expanded = false
     @State private var newSubtag = false
     @State private var renaming = false
     @State private var deleting = false
 
     var body: some View {
-        if node.children.isEmpty && node.items.isEmpty {
+        if node.children.isEmpty {
             row
         } else {
-            DisclosureGroup(isExpanded: $expanded) {
-                ForEach(node.children) { TagTreeNode(node: $0, drop: drop) }
-                ForEach(node.items) { TreeLeafRow(leaf: $0, fromTag: node.path, drop: drop) }
+            DisclosureGroup(isExpanded: Binding(get: { expanded || forceExpanded }, set: { expanded = $0 })) {
+                ForEach(node.children) { TagTreeNode(node: $0, drop: drop, counts: counts, forceExpanded: forceExpanded) }
             } label: { row }
             .springLoaded(.tag(node.path), state: drop, expanded: $expanded)
         }
     }
 
     private var row: some View {
-        HStack(spacing: 6) {
+        let count = counts[TagName.key(for: node.path)] ?? 0
+        let active = TagTreeClick.isActive(node.path, browser: browser) || nav.current == .tag(node.path)
+        return HStack(spacing: 6) {
             Circle().fill(tagColors.color(node.path)).frame(width: 7, height: 7)
-            Text(node.segment).fontWeight(nav.current == .tag(node.path) ? .bold : .regular)
+            Text(node.segment).fontWeight(active ? .bold : .regular)
             Spacer()
-            if node.openCount > 0 { Text("\(node.openCount)").foregroundStyle(.secondary).monospacedDigit() }
+            if count > 0 { Text("\(count)").foregroundStyle(.secondary).monospacedDigit() }
         }
-        .treeRow(group: .tag(node.path), state: drop, onTap: {
-            nav.go(.tag(node.path))
-            if !node.children.isEmpty || !node.items.isEmpty { withAnimation { expanded = true } }   // opening a tag shows its contents too
-        }) { items in
+        .help("Click: show only items tagged \(node.path) · ⇧-click: add to the filter")
+        .treeRow(group: .tag(node.path), state: drop, onTap: { TagTreeClick.tag(node.path, browser: browser, nav: nav) }) { items in
             ItemMove.perform(items, to: node.path, app: app, wiki: wiki, tasks: tasks)
         }
         .contextMenu {
+            Button("Open Tag Page") { nav.go(.tag(node.path)) }
+            Divider()
             Button("New Subtag…") { newSubtag = true }.disabled(!app.canWrite)
             Menu("Color") { TagColorMenuItems(name: node.path) }.disabled(!app.canWrite)
             Divider()

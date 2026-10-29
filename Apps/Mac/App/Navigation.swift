@@ -89,7 +89,7 @@ final class Navigation {
     /// ⌘N: a page where pages are shown, otherwise a task.
     func requestNew() {
         switch current {
-        case .pages, .page: showNewPage = true
+        case .pages, .page, .items(ItemView.pages.id): showNewPage = true
         default: newTaskRequest += 1
         }
     }

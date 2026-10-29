@@ -21,6 +21,10 @@ struct SidebarCountRow: View {
         .task(id: app.store.map(ObjectIdentifier.init)) { [count] in live.observe(app.store) { try count($0) } }
     }
 
+    /// Items of a browser view.
+    static func matching(_ query: ItemQuery) -> @Sendable (Database) throws -> Int {
+        { db in try BrowseQueries.count(db, query) }
+    }
     static let openTasks: @Sendable (Database) throws -> Int = { db in
         try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM live_items WHERE kind = 'task' AND status IN ('open', 'snoozed')") ?? 0
     }
