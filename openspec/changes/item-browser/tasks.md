@@ -3,7 +3,7 @@
 ## 1. Core
 
 - [x] 1.1 `ItemQuery` with token parsing and canonical text (I1); verify with parser tests for every token of the spec "Filter bar", unknown tokens as text, and parse/print round trips
-- [ ] 1.2 `BrowseQueries.items` (I1): SQL for kinds, tags with descendants, exclusions, untagged, status, due, priority, effort, changed, author, host and FTS text, plus the sort orders; verify with tests for "Typed tokens", "Exclude a tag", "Agent changes", "Filter by prefix", "No partial segment match", task-list order and done-tasks order, and a 5,000-item performance test (< 100 ms)
+- [x] 1.2 `BrowseQueries.items` (I1): SQL for kinds, tags with descendants, exclusions, untagged, status, due, priority, effort, changed, author, host and FTS text, plus the sort orders; verify with tests for "Typed tokens", "Exclude a tag", "Agent changes", "Filter by prefix", "No partial segment match", task-list order and done-tasks order, and a 5,000-item performance test (< 100 ms)
 - [ ] 1.3 Facets and view-relative tag counts (I2), grouping (I5); verify with tests for "Who is involved", "Group by due date", "Tag hierarchy with counts", "Counts follow the view", "Empty tag"
 
 ## 2. Browser

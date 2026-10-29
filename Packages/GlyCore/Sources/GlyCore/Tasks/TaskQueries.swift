@@ -124,7 +124,11 @@ public enum TaskQueries {
     }
 
     static func fetchTasks(_ db: Database, sql: String, arguments: StatementArguments) throws -> [TaskItem] {
-        let rows = try Row.fetchAll(db, sql: sql, arguments: arguments)
+        try tasks(from: try Row.fetchAll(db, sql: sql, arguments: arguments), db: db)
+    }
+
+    /// Tasks from `items` rows (with their tags and recorded work).
+    static func tasks(from rows: [Row], db: Database) throws -> [TaskItem] {
         guard !rows.isEmpty else { return [] }
         let ids = rows.map { $0["id"] as String }
         let tagsByItem = try tagsByItem(db, ids: ids)
