@@ -66,10 +66,10 @@ final class TagQueryTests: XCTestCase {
     }
 
     func testLeafExcerpt() {
-        XCTAssertEqual(TreeLeaf.excerpt(of: "# Goals 2027\n\n- [ ] **Ship** [Atlas](gly://item/0F8B6C3E-2D4A-4E1B-9C7D-5A6B7C8D9E0F)\n- grow `team`"),
+        XCTAssertEqual(Excerpt.of("# Goals 2027\n\n- [ ] **Ship** [Atlas](gly://item/0F8B6C3E-2D4A-4E1B-9C7D-5A6B7C8D9E0F)\n- grow `team`"),
                        "Goals 2027 Ship Atlas grow team")
-        XCTAssertEqual(TreeLeaf.excerpt(of: String(repeating: "word ", count: 50), maxLength: 12), "word word…")
-        XCTAssertEqual(TreeLeaf.excerpt(of: ""), "")
+        XCTAssertEqual(Excerpt.of(String(repeating: "word ", count: 50), maxLength: 12), "word word…")
+        XCTAssertEqual(Excerpt.of(""), "")
     }
 
     func testEmptyAndDoneOnlyTagsShow() throws {

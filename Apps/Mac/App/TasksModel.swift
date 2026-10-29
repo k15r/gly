@@ -8,21 +8,17 @@ import GlyCore
 @Observable
 final class TasksModel {
     private(set) var dayTasks: [DayTask] = []
-    private(set) var list: [TaskItem] = []
     private(set) var tagTree: [TagNode] = []
     /// What the user's next undo / redo would do (Edit menu titles).
     private(set) var undoLabel: String?
     private(set) var redoLabel: String?
     /// Recent changes made by agents (Settings → Agents).
     private(set) var agentChanges: [AgentChange] = []
-    var mode: TaskListMode = .open { didSet { observeList() } }
-    var tagFilter: TagName? { didSet { observeList() } }
 
     private(set) var day: LocalDay = LocalDay(date: Date())
     private(set) var today: LocalDay = LocalDay(date: Date())
     private var store: ReadOnlyStore?
     private var dayObservation: AnyDatabaseCancellable?
-    private var listObservation: AnyDatabaseCancellable?
     private var tagObservation: AnyDatabaseCancellable?
     private var undoObservation: AnyDatabaseCancellable?
     private var agentObservation: AnyDatabaseCancellable?
@@ -30,7 +26,7 @@ final class TasksModel {
     func attach(_ store: ReadOnlyStore?, writer: String) {
         guard let store, self.store !== store else { return }
         self.store = store
-        observeDay(); observeList(); observeTags()
+        observeDay(); observeTags()
         undoObservation = store.observe(ValueObservation.tracking { db in
                                             UndoLabels(undo: try db.undoLabel(writer: writer), redo: try db.redoLabel(writer: writer))
                                         },
@@ -49,7 +45,7 @@ final class TasksModel {
         self.day = day
         self.today = today
         observeDay()
-        if todayChanged { observeList(); observeTags() }
+        if todayChanged { observeTags() }
     }
 
     func task(id: String) -> TaskItem? {
@@ -68,14 +64,6 @@ final class TasksModel {
         dayObservation = store.observe(ValueObservation.tracking { try TaskQueries.tasksForDay($0, day: day, today: today) },
                                        onError: { print("day observation: \($0)") },
                                        onChange: { [weak self] in self?.dayTasks = $0 })
-    }
-
-    private func observeList() {
-        guard let store else { return }
-        let mode = self.mode, today = self.today, tag = self.tagFilter
-        listObservation = store.observe(ValueObservation.tracking { try TaskQueries.taskList($0, mode: mode, today: today, tag: tag) },
-                                        onError: { print("list observation: \($0)") },
-                                        onChange: { [weak self] in self?.list = $0 })
     }
 
     private func observeTags() {

@@ -42,6 +42,8 @@ struct ItemBrowserView<Header: View>: View {
         .onAppear { browser.activeViewID = viewID; collapsed = [] }
         .onDisappear { if browser.activeViewID == viewID { browser.activeViewID = nil } }
         .sheet(item: $newTask) { TaskEditor(target: $0) }
+        // ⌘N (Navigation.requestNew): a task with the view's tags, as "New Task".
+        .onChange(of: nav.newTaskRequest) { newTask = .new(due: nil, tags: browser.view(viewID).query.tags) }
         .alert("Save View", isPresented: $savingView) {
             TextField("Name", text: $viewName)
             Button("Save") {

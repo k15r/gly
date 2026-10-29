@@ -182,10 +182,9 @@ final class MeetingNotesTests: XCTestCase {
     func testTaggedMeetingInTreeAndOnTagPage() throws {
         let id = ok(.saveMeetingNotes(MeetingTarget(appt("S1", day: "2026-11-03")), body: "notes", tags: ["person/alex"])).id!
         ok(.createPage(PageDraft(title: "Profile", tags: ["person/alex"])))
-        let tree = try db.read { try TagQueries.tagTree($0, today: "2026-11-03") }
-        let alex = tree.first?.children.first { $0.segment == "alex" }
-        XCTAssertEqual(alex?.items.map(\.kind), [.page, .meeting])
-        XCTAssertEqual(alex?.items.last?.itemID, id)
+        let items = try db.read { try BrowseQueries.items($0, ItemQuery.parse("#person/alex"), sort: .title) }
+        XCTAssertEqual(items.map(\.kind), [.meeting, .page])
+        XCTAssertEqual(items.first?.id, id)
         let tagPage = try db.read { try TagPageQueries.page($0, name: try TagName("person"), today: self.today) }
         XCTAssertEqual(tagPage.meetings.map(\.id), [id], "Person's meetings (incl. tags below)")
     }
@@ -202,10 +201,9 @@ final class MeetingNotesTests: XCTestCase {
         let id = ok(.saveMeetingNotes(MeetingTarget(appt("S1", day: "2026-11-03")), body: "notes")).id!
         let oneOff = appt("W", title: "Standup", day: "2026-11-04", recurring: false)
         ok(.setBlocking(AppointmentSnapshot(oneOff), scope: .occurrence, value: .ignore))     // no notes: not listed
-        let untagged = try db.read { try TagQueries.untaggedItems($0) }
-        XCTAssertEqual(untagged.map(\.itemID), [id])
-        XCTAssertEqual(untagged.first?.kind, .meeting)
+        let q = ItemQuery.parse("is:meeting untagged")
+        XCTAssertEqual(try db.read { try BrowseQueries.items($0, q, sort: .title) }.map(\.id), [id])
         ok(.updateMeetingNotes(id: id, body: nil, tags: ["person/alex"]))
-        XCTAssertEqual(try db.read { try TagQueries.untaggedItems($0) }, [])
+        XCTAssertEqual(try db.read { try BrowseQueries.items($0, q, sort: .title) }, [])
     }
 }

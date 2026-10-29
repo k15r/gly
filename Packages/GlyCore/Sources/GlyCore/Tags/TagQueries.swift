@@ -36,28 +36,12 @@ public struct TagNode: Equatable, Identifiable {
     /// Open tasks tagged with this path or anything below it.
     public let openCount: Int
     public var children: [TagNode]
-    /// Open tasks, then pages, tagged with exactly this path (the tag tree shows everything tagged).
-    public var items: [TreeLeaf] = []
 }
 
-/// An item listed in the tag tree; `otherTags` are its other tags ("also in …").
-/// Annotated appointments will be a further kind later.
-public struct TreeLeaf: Equatable, Identifiable {
-    public var id: String { itemID }
-    public let kind: LinkRef.Kind
-    public let itemID: String
-    public let title: String
-    public let otherTags: [String]
-    /// Tasks only: snoozed (shown marked).
-    public let snoozed: Bool
-    /// The start of the text as one plain line (tells same-titled items apart in the tree).
-    public let excerpt: String
-    public init(kind: LinkRef.Kind, id: String, title: String, otherTags: [String], snoozed: Bool = false, excerpt: String = "") {
-        self.kind = kind; self.itemID = id; self.title = title; self.otherTags = otherTags; self.snoozed = snoozed; self.excerpt = excerpt
-    }
-
+/// The start of a text as one plain line (lists, rows and the Trash tell same-titled items apart with it).
+public enum Excerpt {
     /// Plain text (links as labels, markdown markers dropped), whitespace collapsed, shortened to `maxLength`.
-    public static func excerpt(of body: String, maxLength: Int = 120) -> String {
+    public static func of(_ body: String, maxLength: Int = 120) -> String {
         let lines = LinkParser.plainText(body).components(separatedBy: .newlines).map { line in
             line.replacingOccurrences(of: #"^\s*(#{1,6}\s+|[-*+]\s+(\[[ xX]\]\s+)?|\d+[.)]\s+|>\s*)"#, with: "", options: .regularExpression)
                 .replacingOccurrences(of: #"(\*\*|__|~~|`)"#, with: "", options: .regularExpression)
@@ -100,7 +84,6 @@ public enum TagQueries {
                 if displayByPath[key] == nil || depth == segments.count { displayByPath[key] = displayByPath[key] ?? path }
             }
         }
-        let leaves = try leavesByTag(db)
         func children(of parent: String?) -> [TagNode] {
             let depth = parent.map { $0.split(separator: "/").count + 1 } ?? 1
             return itemsByPath.keys
@@ -110,43 +93,9 @@ public enum TagQueries {
                     let display = displayByPath[key]!
                     return TagNode(segment: String(display.split(separator: "/").last!), path: display,
                                    isTag: tagPaths.contains(key), openCount: itemsByPath[key]!.count,
-                                   children: children(of: key), items: leaves[key] ?? [])
+                                   children: children(of: key))
                 }
         }
         return children(of: nil)
-    }
-
-    /// Open tasks (task-list order), live pages (by title), meetings with notes, then bookmarks (by title), per exact tag key, each with its other tags.
-    static func leavesByTag(_ db: Database) throws -> [String: [TreeLeaf]] {
-        let rows = try Row.fetchAll(db, sql: """
-            SELECT i.id, i.kind, i.title, i.status, i.body, t.name, t.name_key FROM live_items i
-            JOIN live_item_tags it ON it.item_id = i.id JOIN live_tags t ON t.id = it.tag_id
-            WHERE (i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind IN ('info', 'bookmark') OR (i.kind = 'event_note' AND i.body != '')
-            ORDER BY i.kind DESC, CASE WHEN i.kind IN ('info', 'bookmark') THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL), t.name_key
-            """)
-        var tagsOfItem: [String: [String]] = [:]
-        for r in rows { tagsOfItem[r["id"], default: []].append(r["name"]) }
-        var result: [String: [TreeLeaf]] = [:]
-        for r in rows {
-            let id: String = r["id"], name: String = r["name"]
-            result[r["name_key"], default: []].append(TreeLeaf(
-                kind: LinkRef.Kind(itemKind: r["kind"]), id: id, title: r["title"],
-                otherTags: (tagsOfItem[id] ?? []).filter { $0 != name }, snoozed: (r["status"] as String?) == "snoozed",
-                excerpt: TreeLeaf.excerpt(of: r["body"] ?? "")))
-        }
-        return result
-    }
-
-    /// Open tasks, live pages, meetings with notes and bookmarks without any tag (the "Untagged" node): tasks first.
-    public static func untaggedItems(_ db: Database) throws -> [TreeLeaf] {
-        try Row.fetchAll(db, sql: """
-            SELECT i.id, i.kind, i.title, i.status, i.body FROM live_items i
-            WHERE ((i.kind = 'task' AND i.status IN ('open', 'snoozed')) OR i.kind IN ('info', 'bookmark') OR (i.kind = 'event_note' AND i.body != ''))
-              AND i.id NOT IN (SELECT item_id FROM live_item_tags)
-            ORDER BY i.kind DESC, CASE WHEN i.kind IN ('info', 'bookmark') THEN i.title END COLLATE NOCASE, \(TaskQueries.openOrderSQL)
-            """).map { r in
-                TreeLeaf(kind: LinkRef.Kind(itemKind: r["kind"]), id: r["id"], title: r["title"],
-                         otherTags: [], snoozed: (r["status"] as String?) == "snoozed", excerpt: TreeLeaf.excerpt(of: r["body"] ?? ""))
-            }
     }
 }

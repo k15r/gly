@@ -9,7 +9,7 @@ public struct BrowseItem: Equatable, Identifiable {
     /// The start of the text (enough for an excerpt).
     public let textStart: String
     /// The start of the text as one line; computed when a row shows it, not for every result.
-    public var excerpt: String { TreeLeaf.excerpt(of: textStart) }
+    public var excerpt: String { Excerpt.of(textStart) }
     public let tags: [String]
     public let createdAt: Date
     public let modifiedAt: Date

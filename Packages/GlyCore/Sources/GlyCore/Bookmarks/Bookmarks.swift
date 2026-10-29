@@ -119,7 +119,7 @@ public enum BookmarkQueries {
             let body: String = r["body"], kind: String = r["kind"]
             let line = body.components(separatedBy: .newlines).first { $0.contains(bookmark.url) } ?? ""
             return Backlink(source: LinkRef(kind: kind == "tag" ? .tag : LinkRef.Kind(itemKind: kind), id: r["id"], title: r["title"]),
-                            excerpt: TreeLeaf.excerpt(of: line))
+                            excerpt: Excerpt.of(line))
         }
     }
 

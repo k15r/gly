@@ -35,7 +35,7 @@ public enum TrashQueries {
             let delete = try deleteEntry(db, itemID: id)
             return TrashEntry(id: id, kind: LinkRef.Kind(itemKind: r["kind"]), title: r["title"],
                               tags: try delete.map { try tags(db, deletedIn: $0.batch, itemID: id) } ?? [],
-                              excerpt: TreeLeaf.excerpt(of: r["body"] ?? ""),
+                              excerpt: Excerpt.of(r["body"] ?? ""),
                               status: (r["status"] as String?).flatMap(TaskStatus.init(rawValue:)),
                               deletedAt: delete?.at ?? r["deleted_at"], deletedBy: delete?.writer, batch: delete?.batch)
         }

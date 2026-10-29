@@ -104,68 +104,6 @@ struct BacklinksView: View {
 
 // MARK: - Pages list
 
-struct PagesListView: View {
-    @Environment(WikiModel.self) private var wiki
-    @Environment(Navigation.self) private var nav
-    @Environment(AppModel.self) private var app
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Pages").font(.title2.bold())
-                if let tag = wiki.pageTagFilter {
-                    HStack(spacing: 4) {
-                        TagChip(name: tag.display)
-                        Button { wiki.pageTagFilter = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain)
-                    }
-                }
-                Spacer()
-                Button { nav.showNewPage = true } label: { Label("New Page", systemImage: "plus") }.disabled(!app.canWrite)
-            }
-            .padding()
-            Divider()
-            if wiki.pages.isEmpty {
-                Text(wiki.pageTagFilter == nil ? "No pages yet" : "No pages with this tag").foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                let names = wiki.displayNames(wiki.pages.map(\.id))
-                List(wiki.pages) { page in
-                    // A plain row with a tap, not a Button: a Button swallows the mouse-down and the row couldn't be dragged.
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "doc.text").font(.system(size: 15, weight: .medium)).foregroundStyle(Color.accentColor)
-                            .frame(width: 30, height: 30)
-                            .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
-                        VStack(alignment: .leading, spacing: 3) {
-                            // The title stands alone: a qualifier tag is emphasized among the chips instead,
-                            // and a date qualifier ("created …", identical tags) is the created date on the right.
-                            let qualifier = names[page.id]?.qualifier
-                            let qualifierIsTag = qualifier.map { page.tags.contains($0) } ?? false
-                            Text(page.title).font(.headline).lineLimit(1)
-                            let excerpt = TreeLeaf.excerpt(of: page.body)
-                            if !excerpt.isEmpty { Text(excerpt).font(.callout).foregroundStyle(.secondary).lineLimit(1) }
-                            if !page.tags.isEmpty {
-                                HStack(spacing: 4) {
-                                    ForEach(page.tags, id: \.self) { TagChip(name: $0, emphasized: qualifierIsTag && $0 == qualifier) }
-                                }.padding(.top, 1)
-                            }
-                        }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("edited ") + Text(page.modifiedAt, format: .relative(presentation: .named))
-                            Text("created ") + Text(page.createdAt, format: .dateTime.day().month(.abbreviated).year())
-                        }
-                        .font(.caption).foregroundStyle(.tertiary)
-                    }
-                    .padding(.vertical, 4)
-                    .contentShape(Rectangle())
-                    .onTapGesture { nav.go(.page(page.id)) }
-                    .draggableItem(.page, id: page.id, title: page.title)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Page view
 
 struct PageDetail: Equatable {

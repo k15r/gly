@@ -13,7 +13,7 @@ enum MeetingRef: Hashable {
 @Observable
 final class Navigation {
     enum Destination: Hashable {
-        case day, tasks, pages, bookmarks, trash
+        case day, trash
         case page(String)       // page id
         case task(String)       // task id (task page)
         case tag(String)        // tag path (display)
@@ -89,7 +89,7 @@ final class Navigation {
     /// ⌘N: a page where pages are shown, otherwise a task.
     func requestNew() {
         switch current {
-        case .pages, .page, .items(ItemView.pages.id): showNewPage = true
+        case .page, .items(ItemView.pages.id): showNewPage = true
         default: newTaskRequest += 1
         }
     }

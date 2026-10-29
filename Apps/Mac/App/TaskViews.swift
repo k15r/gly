@@ -320,49 +320,6 @@ struct TagChip: View {
     }
 }
 
-/// Task list (specs/tasks "Task list"): Open / Done / Dropped, filtered by the selected tag.
-struct TaskListView: View {
-    @Environment(Navigation.self) private var nav
-    @Environment(AppModel.self) private var app
-    @Environment(TasksModel.self) private var tasks
-    @State private var editing: TaskEditorTarget?
-
-    var body: some View {
-        @Bindable var tasks = tasks
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Picker("", selection: $tasks.mode) {
-                    Text("Open").tag(TaskListMode.open)
-                    Text("Done").tag(TaskListMode.done)
-                    Text("Dropped").tag(TaskListMode.dropped)
-                }
-                .pickerStyle(.segmented).fixedSize()
-                if let tag = tasks.tagFilter {
-                    HStack(spacing: 4) {
-                        TagChip(name: tag.display)
-                        Button { tasks.tagFilter = nil } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain)
-                    }
-                }
-                Spacer()
-                Button { editing = .new(due: nil) } label: { Label("New Task", systemImage: "plus") }
-                    .disabled(!app.canWrite)
-            }
-            .padding()
-            Divider()
-            if tasks.list.isEmpty {
-                Text(tasks.mode == .open ? "No open tasks" : "Nothing here").foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List(tasks.list) { task in
-                    TaskRow(task: task, onEdit: { nav.go(.task(task.id)) })
-                        .draggableItem(.task, id: task.id, title: task.title)
-                }
-            }
-        }
-        .sheet(item: $editing) { TaskEditor(target: $0) }
-    }
-}
-
 /// New-task form with explicit confirm (specs/tasks "Create a task", "Edit a task").
 struct TaskEditor: View {
     @Environment(AppModel.self) private var app

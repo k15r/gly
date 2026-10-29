@@ -25,9 +25,6 @@ final class Live<Value> {
 @MainActor
 @Observable
 final class WikiModel {
-    private(set) var pages: [PageItem] = []
-    private(set) var untagged: [TreeLeaf] = []
-    var pageTagFilter: TagName? { didSet { observePages() } }
     /// All live bookmarks (bookmarks B3, B5), by normalized URL for the editor's lookups; `bookmarksVersion` changes
     /// with every update, so editors restyle their links.
     private(set) var bookmarks: [BookmarkItem] = [] {
@@ -37,17 +34,11 @@ final class WikiModel {
     @ObservationIgnored private var bookmarksByURL: [String: BookmarkItem] = [:]
 
     @ObservationIgnored private(set) var store: ReadOnlyStore?
-    @ObservationIgnored private var pagesObservation: AnyDatabaseCancellable?
-    @ObservationIgnored private var untaggedObservation: AnyDatabaseCancellable?
     @ObservationIgnored private var bookmarksObservation: AnyDatabaseCancellable?
 
     func attach(_ store: ReadOnlyStore?) {
         guard let store, self.store !== store else { return }
         self.store = store
-        observePages()
-        untaggedObservation = store.observe(ValueObservation.tracking { try TagQueries.untaggedItems($0) },
-                                            onError: { print("untagged observation: \($0)") },
-                                            onChange: { [weak self] in self?.untagged = $0 })
         bookmarksObservation = store.observe(ValueObservation.tracking { try BookmarkQueries.list($0) },
                                              onError: { print("bookmarks observation: \($0)") },
                                              onChange: { [weak self] in self?.bookmarks = $0 })
@@ -60,13 +51,6 @@ final class WikiModel {
         bookmark(for: url).map { BookmarkMark(title: $0.title, description: $0.description, tags: $0.tags) }
     }
 
-    private func observePages() {
-        guard let store else { return }
-        let tag = pageTagFilter
-        pagesObservation = store.observe(ValueObservation.tracking { try PageQueries.list($0, tag: tag) },
-                                         onError: { print("pages observation: \($0)") },
-                                         onChange: { [weak self] in self?.pages = $0 })
-    }
 
     func page(_ id: String) -> PageItem? { try? store?.read { try PageQueries.page($0, id: id) } }
 

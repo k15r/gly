@@ -144,16 +144,13 @@ final class BookmarkTests: XCTestCase {
         XCTAssertEqual(failure(.deleteBookmark(id: page))?.code, .notFound)
     }
 
-    func testBookmarksAreTagTreeLeaves() throws {
+    func testBookmarksInTagViews() throws {
         let id = create("Latency dashboard", dashboard, description: "p99 by service", tags: ["project/atlas"])
         let loose = create("Recipes", "https://food.example")
-        let tree = try db.read { try TagQueries.tagTree($0, today: "2026-10-29") }
-        let atlas = try XCTUnwrap(tree.first?.children.first)
-        XCTAssertEqual(atlas.items.map(\.kind), [.bookmark])
-        XCTAssertEqual(atlas.items.first?.itemID, id)
-        XCTAssertEqual(atlas.items.first?.excerpt, "p99 by service")
-        XCTAssertEqual(atlas.openCount, 0, "counts are open tasks")
-        XCTAssertTrue(try db.read { try TagQueries.untaggedItems($0) }.contains { $0.itemID == loose && $0.kind == .bookmark })
+        let tagged = try db.read { try BrowseQueries.items($0, ItemQuery.parse("#project"), sort: .title) }
+        XCTAssertEqual(tagged.map(\.id), [id])
+        XCTAssertEqual(tagged.first?.excerpt, "p99 by service")
+        XCTAssertEqual(try db.read { try BrowseQueries.items($0, ItemQuery.parse("untagged"), sort: .title) }.map(\.id), [loose])
     }
 
     func testDescriptionEditSessionIsOneStep() throws {

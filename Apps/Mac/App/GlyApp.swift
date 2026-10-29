@@ -200,9 +200,6 @@ struct ContentView: View {
             } detail: {
                 switch nav.current {
                 case .day: DayContainer()
-                case .tasks: TaskListContainer()
-                case .pages: PagesListView()
-                case .bookmarks: BookmarksListView()
                 case .trash: TrashView()
                 // One view per item: a title being edited can't carry over into the next page or task.
                 case .page(let id): PageView(id: id).id(id)
@@ -290,16 +287,6 @@ struct DayContainer: View {
     }
 }
 
-struct TaskListContainer: View {
-    @Environment(Navigation.self) private var nav
-    @State private var editing: TaskEditorTarget?
-    var body: some View {
-        TaskListView()
-            .onChange(of: nav.newTaskRequest) { editing = .new(due: nil) }
-            .sheet(item: $editing) { TaskEditor(target: $0) }
-    }
-}
-
 /// Which tag group a drag is over, so the whole group (tag row + its items) can be highlighted.
 @MainActor
 @Observable
@@ -348,15 +335,6 @@ extension View {
             } isTargeted: { over in
                 if over { state.target = group } else if state.target == group { state.target = nil }
             }
-    }
-}
-
-extension View {
-    /// Lets a task or page row from a list be dragged onto the tag tree; dropping adds that tag (no source tag to replace).
-    func draggableItem(_ kind: LinkRef.Kind, id: String, title: String) -> some View {
-        draggable(kind.rawValue + "\n" + id + "\n") {
-            Label(title, systemImage: kind == .task ? "circle" : "doc.text").padding(6)
-        }
     }
 }
 
@@ -566,90 +544,6 @@ struct TagTreeNode: View {
         }
         .modifier(TagManagementPrompts(name: node.path, renaming: $renaming, deleting: $deleting))
         .modifier(NewSubtagPrompt(parent: node.path, isPresented: $newSubtag, onCreate: { expanded = true }))
-    }
-}
-
-/// A task or page leaf in the tag tree. Dropping onto it drops into its tag group.
-struct TreeLeafRow: View {
-    @Environment(Navigation.self) private var nav
-    @Environment(WikiModel.self) private var wiki
-    @Environment(TasksModel.self) private var tasks
-    @Environment(AppModel.self) private var app
-    let leaf: TreeLeaf
-    let fromTag: String?
-    let drop: TreeDropState
-
-    private var symbol: String {
-        switch leaf.kind {
-        case .page: "doc.text"
-        case .task: leaf.snoozed ? "moon.zzz" : "circle"
-        case .tag: "tag"
-        case .meeting: "calendar"
-        case .bookmark: "bookmark"
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: symbol).foregroundStyle(leaf.snoozed ? Color.blue : .secondary).imageScale(.small)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(leaf.title).lineLimit(1)
-                    .fontWeight([.page(leaf.itemID), .task(leaf.itemID), .bookmark(leaf.itemID)].contains(nav.current) ? .bold : .regular)
-                    .foregroundStyle(leaf.snoozed ? .secondary : .primary)
-                // The start of the text, so items (same-titled ones especially) can be told apart without opening them.
-                if !leaf.excerpt.isEmpty {
-                    Text(leaf.excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            Spacer()
-            if !leaf.otherTags.isEmpty {
-                Image(systemName: "link").font(.caption2).foregroundStyle(.tertiary)
-            }
-        }
-        .help(([leaf.excerpt.isEmpty ? nil : leaf.excerpt, leaf.snoozed ? "Snoozed" : nil,
-                leaf.otherTags.isEmpty ? nil : "Also in " + leaf.otherTags.joined(separator: ", ")])
-            .compactMap { $0 }.joined(separator: "\n"))
-        .treeRow(group: fromTag.map { .tag($0) } ?? .untagged, state: drop,
-                 drag: leaf.kind.rawValue + "\n" + leaf.itemID + "\n" + (fromTag ?? ""),
-                 onTap: open) { items in
-            ItemMove.perform(items, to: fromTag, app: app, wiki: wiki, tasks: tasks)
-        }
-        .contextMenu {
-            Button("Open", action: open)
-            Divider()
-            // Goes to the Trash like any delete: no confirmation, ⌘Z or the Trash brings it back.
-            Button("Delete", role: .destructive) { delete() }.disabled(!app.canWrite)
-        }
-    }
-
-    private func open() {
-        switch leaf.kind {
-        case .page: nav.go(.page(leaf.itemID))
-        case .task: nav.go(.task(leaf.itemID))
-        case .meeting: nav.go(.meeting(.notes(leaf.itemID)))
-        case .bookmark:
-            // Like everywhere: a click opens the bookmark's page, ⌘-click its URL.
-            if NSEvent.modifierFlags.contains(.command), let b = wiki.bookmarks.first(where: { $0.id == leaf.itemID }) {
-                BookmarkOpen.url(b.url)
-            } else {
-                nav.go(.bookmark(leaf.itemID))
-            }
-        case .tag: break
-        }
-    }
-
-    private func delete() {
-        let id = leaf.itemID
-        Task {
-            switch leaf.kind {
-            case .page: await app.send(.deletePage(id: id))
-            case .task: await app.send(.deleteTask(id: id))
-            case .meeting: await app.send(.deleteMeetingNotes(id: id))
-            case .bookmark: await app.send(.deleteBookmark(id: id))
-            case .tag: return
-            }
-            if [.page(id), .task(id), .meeting(.notes(id)), .bookmark(id)].contains(nav.current) { nav.back() }
-        }
     }
 }
 
