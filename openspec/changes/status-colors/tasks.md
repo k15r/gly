@@ -6,11 +6,11 @@
 
 ## 2. Rows
 
-- [ ] 2.1 `TaskRow` rebuilt (C3): status bar, compact chips, hover quick actions, priority symbol, no priority menu; appointment bars aligned (C4); verify manually "Overdue task row", "Quick action", "Same meaning everywhere", "Not by color alone" in the day view, task list, tag page and search
+- [x] 2.1 `TaskRow` rebuilt (C3): status bar, compact chips, hover quick actions, priority symbol, no priority menu; appointment bars aligned (C4); verify manually "Overdue task row", "Quick action", "Same meaning everywhere", "Not by color alone" in the day view, task list, tag page and search
 
 ## 3. End to end
 
-- [ ] 3.1 Write `docs/manual-checks-status-colors.md` (neutral test data), push it with `scripts/manual-checks.py push`; done when `pull` reports every check passed
+- [x] 3.1 Write `docs/manual-checks-status-colors.md` (neutral test data), push it with `scripts/manual-checks.py push`; done when `pull` reports every check passed
 
 ## Workflow follow-up
 
