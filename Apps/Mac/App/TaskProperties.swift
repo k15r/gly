@@ -101,7 +101,7 @@ struct TaskPropertyRow: View {
 
     private var dueChip: some View {
         let overdue = task.due.flatMap { LocalDay($0.day) }.map { $0 < clock.today } ?? false
-        return PropertyChip(symbol: "calendar", text: task.due.map(Self.shortDue) ?? "Due", tint: overdue ? .red : .primary,
+        return PropertyChip(symbol: "calendar", text: task.due.map(Self.shortDue) ?? "Due", tint: overdue ? StatusKind.overdue.color : .primary,
                             isEmpty: task.due == nil, help: "Due date") { close in
             DuePicker(task: task, today: clock.today) { due in send(.updateTask(id: task.id, TaskPatch(due: .some(due)))); close() }
         }

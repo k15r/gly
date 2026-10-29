@@ -198,7 +198,7 @@ struct DayView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(task.title)
                             HStack(spacing: 6) {
-                                if let until = task.snoozedUntil.flatMap(LocalDay.init) { Text("until \(Self.title(for: until))").foregroundStyle(.blue) }
+                                if let until = task.snoozedUntil.flatMap(LocalDay.init) { Text("until \(Self.title(for: until))").foregroundStyle(StatusKind.backFromSnooze.color) }
                                 if let due = task.due { Text("due \(TaskRow.dueText(due))").foregroundStyle(.secondary) }
                             }
                             .font(.caption)
